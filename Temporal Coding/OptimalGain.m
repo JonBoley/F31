@@ -1,0 +1,86 @@
+function [gain1,gain2,err1,err2] = OptimalGain(levels,gains,directory,impairment,note)
+% [gain1,gain2,err1,err2] = OptimalGain(levels,gains,directory,impairment,note)
+% example:
+% OptimalGain(30:10:100,-40:10:40,'archive\phone12\','mixed','Nov_24_08')
+
+w_spont = [.6 .2 .2]; %spont weights
+existing_levels=[];
+WarnMe = 0;
+level_index=1;
+for level=levels
+    if exist([directory num2str(level) 'dBSPL\' impairment '\0dBgain_' note '.mat'])
+        existing_levels = [existing_levels, level];
+        load([directory num2str(level) 'dBSPL\' impairment '\0dBgain_' note], '-regexp', '^neurogramB');
+        index=1;
+        for gain = gains
+            if exist([directory num2str(level) 'dBSPL\' impairment '\' num2str(gain) 'dBgain_' note '.mat'])
+                load([directory num2str(level) 'dBSPL\' impairment '\' num2str(gain) 'dBgain_' note], '-regexp', '^neurogramA','^Env','^Tfs');
+                err1(level_index,index) = mean(mean(abs(neurogramB1-neurogramA1))); % short window
+                err2(level_index,index) = mean(mean(abs(neurogramB2-neurogramA2))); % long window
+                err3(level_index,index) = mean(mean(abs(neurogramB3-neurogramA3))); % no window
+
+                env(level_index,index) = mean(Env*w_spont'); % take avg across CF (weighted SR's)
+                BigEnv(index,:) = Env*w_spont';
+%                 figure(98), %subplot(9,2,index), plot(Env); 
+%                 hold on; plot(Env*w_spont'); hold off; %axis off;
+%                 title(['Env, ' num2str(gain) 'dB gain']);
+                tfs(level_index,index) = mean(Tfs*w_spont');
+                BigTfs(index,:) = Tfs*w_spont';
+%                 figure(99), %subplot(9,2,index), plot(Tfs); 
+%                 title(['Tfs, ' num2str(gain) 'dB gain']);
+%                 hold on; plot(Tfs*w_spont'); hold off; %axis off;
+
+                %         figure(1), subplot(length(gains),2,(2*index)-1), imagesc(neurogramB1'/max(max(neurogramB1)),[0 1]); axis off; title('Normal');
+                %         subplot(length(gains),2,2*index), imagesc(neurogramA1'/max(max(neurogramB1)),[0 1]); axis off; title(sprintf('Gain = %ddB',gain));
+                %         figure(2), subplot(length(gains),2,(2*index)-1), imagesc(neurogramB2'/max(max(neurogramB2)),[0 1]); axis off; title('Normal');
+                %         subplot(length(gains),2,2*index), imagesc(neurogramA2'/max(max(neurogramB2)),[0 1]); axis off; title(sprintf('Gain = %ddB',gain));
+                clear -regexp ^neurogramA ^Env ^Tfs
+                index = index+1;
+            else
+                WarnMe = 1;  %display warning
+            end % if gain exists
+        end
+    clear -regexp ^neurogramB
+    [C,I] = min(err1(level_index,:));
+    gain1(level_index) = gains(I);
+    [C,I] = min(err2(level_index,:));
+    gain2(level_index) = gains(I);
+    [C,I] = min(err3(level_index,:));
+    gain3(level_index) = gains(I);
+    [C,I] = max(env(level_index,:).*isfinite(env(level_index,:)));
+    gain4(level_index) = gains(I);
+    [C,I] = max(tfs(level_index,:).*isfinite(tfs(level_index,:)));
+    gain5(level_index) = gains(I);
+    level_index=level_index+1;
+    end % if level exists
+
+    %     pause;
+end
+
+figure, subplot(2,2,1), plot(existing_levels,gain2,'x','MarkerSize',8);
+axis([0 120 min(gains(1),gains(end)) max(gains(1),gains(end))]);
+title(sprintf('NAL Gain Adjustment\n(Average Discharge Rate)'));
+xlabel('Input SPL (dB)'); ylabel('Gain Adjustment (dB)');
+
+subplot(2,2,2), plot(existing_levels,gain1,'x','MarkerSize',8);
+axis([0 120 min(gains(1),gains(end)) max(gains(1),gains(end))]);
+title(sprintf('NAL Gain Adjustment\n(Short-Term Discharge Rate)'));
+xlabel('Input SPL (dB)'); ylabel('Gain Adjustment (dB)');
+
+% subplot(2,3,3), plot(existing_levels,gain3,'x','MarkerSize',8);
+% axis([0 120 min(gains(1),gains(end)) max(gains(1),gains(end))]);
+% title(sprintf('NAL Gain Adjustment\n(Expected Discharge Rate)'));
+% xlabel('Input SPL (dB)'); ylabel('Gain Adjustment (dB)');
+
+subplot(2,2,3), plot(existing_levels,gain4,'x','MarkerSize',8);
+axis([0 120 min(gains(1),gains(end)) max(gains(1),gains(end))]);
+title(sprintf('NAL Gain Adjustment\n(Envelope Coding)'));
+xlabel('Input SPL (dB)'); ylabel('Gain Adjustment (dB)');
+
+subplot(2,2,4), plot(existing_levels,gain5,'x','MarkerSize',8);
+axis([0 120 min(gains(1),gains(end)) max(gains(1),gains(end))]);
+title(sprintf('NAL Gain Adjustment\n(TFS Coding)'));
+xlabel('Input SPL (dB)'); ylabel('Gain Adjustment (dB)');
+
+if WarnMe, warndlg('Some gain values did not exist!'); end
+
