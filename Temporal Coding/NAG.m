@@ -125,7 +125,7 @@ NAL_filter_gains = 10.^(interp1(0.5:6.5,NAL_IG,0:7,'linear','extrap')/20);
 b = firpm(16,NAL_filter_freqs,NAL_filter_gains);
 
 phones = 1:length(phonemeindx);
-levels = 65;%[45 65 85];
+levels = 45;%[45 65 85];
 gains = -40:5:40;
 note = 'Mar_04_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
 
@@ -265,7 +265,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if Nreps2>2000, break; end; 
+                            if (Nreps2>2000 & Nreps2>=1), break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -296,7 +296,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if Nreps2>2000, break; end; 
+                            if (Nreps2>2000 & Nreps2>=1), break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -322,7 +322,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if Nreps2>2000, break; end; 
+                            if (Nreps2>2000 & Nreps2>=1), break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -350,7 +350,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if Nreps2>2000, break; end; 
+                            if (Nreps2>2000 & Nreps2>=1), break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -379,8 +379,12 @@ for OALevel_dBSPL=levels
                         paramsIN.MAXspikes=3000;
                         paramsIN.PSD_LHfreqs_Hz=[0 64; 0 50];  %additional freq ranges to compute CCCenv for
 
-                        %                     [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal(SpikeTrains,paramsIN,0);
-                        [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_4(SpikeTrains,paramsIN,0);
+                        try
+                            %	[SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal(SpikeTrains,paramsIN,0);
+                            [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_4(SpikeTrains,paramsIN,0);
+                        catch
+                            dbstop;
+                        end
 
                         Difcor(Fiber_Number,spont_index) = SACSCCmetrics.DCpeak_A;
                         Sumcor(Fiber_Number,spont_index) = ...
