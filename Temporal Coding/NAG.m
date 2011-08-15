@@ -457,7 +457,7 @@ for OALevel_dBSPL=levels
         end % end Gain_Adjust
 
         [short,avg,rate,env,tfs] = OptimalGain2(levels,gains,sprintf('archive\\phone%d\\%s\\',phone,strategy_list{STRATEGY}),impairment,note);
-        OptimumGain(phone_index,:) = short;
+        eval(sprintf('OptimumGain(phone_index,:)=%s',strategy_list{STRATEGY}));
     
         phone_index = phone_index+1;
     end % end phone
