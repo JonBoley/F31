@@ -16,6 +16,9 @@
 GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
 
+strategy_list = {'short','avg','rate','env','tfs'};
+STRATEGY = 1;
+
 %% Initialization Routine
 % Get Input Audio File Name
 PathName = 'C:\Research\MATLAB\Temporal Coding\TIMIT\test\dr1\faks0\';
@@ -265,7 +268,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            if (Nreps2>2000 & Nreps2>=1), sptimes=0; break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -296,7 +299,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            if (Nreps2>2000 & Nreps2>=1), sptimes=0; break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -322,7 +325,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            if (Nreps2>2000 & Nreps2>=1), sptimes=0; break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -350,7 +353,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            if (Nreps2>2000 & Nreps2>=1), sptimes=0; break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -421,10 +424,10 @@ for OALevel_dBSPL=levels
             Mydiff2(level_index,gain_index) = mean(mean(abs(neurogramB2-neurogramA2)));
 
             % Save file
-            MatFileName = sprintf('archive\\phone%d\\%1.0fdBSPL\\%s\\%1.0fdBgain_%s',...
-                phone,OALevel_dBSPL,impairment,Gain_Adjust,note);
-            if ~exist(sprintf('archive\\phone%d\\%1.0fdBSPL\\%s',phone,OALevel_dBSPL,impairment),'dir')
-                mkdir(sprintf('archive\\phone%d\\%1.0fdBSPL\\%s',phone,OALevel_dBSPL,impairment));
+            MatFileName = sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s\\%1.0fdBgain_%s',...
+                phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment,Gain_Adjust,note);
+            if ~exist(sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s',phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment),'dir')
+                mkdir(sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s',phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment));
             end
 
             save(MatFileName,'PathName','FileName','neurogramA1','neurogramA2','neurogramA3');
@@ -453,7 +456,8 @@ for OALevel_dBSPL=levels
             gain_index=gain_index+1;
         end % end Gain_Adjust
 
-        OptimumGain(phone_index,:) = OptimalGain2(levels,gains,sprintf('archive\\phone%d\\',phone),impairment,note);
+        [short,avg,rate,env,tfs] = OptimalGain2(levels,gains,sprintf('archive\\phone%d\\%s\\',phone,strategy_list{STRATEGY}),impairment,note);
+        OptimumGain(phone_index,:) = short;
     
         phone_index = phone_index+1;
     end % end phone
