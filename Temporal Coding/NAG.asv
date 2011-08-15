@@ -4,7 +4,7 @@
 % Jon Boley                     %
 % jdboley(a)purdue.edu          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
+%
 % function NAG(analysis)
 % options for analysis:
 %   'longrate'  (optimal gain restores log-term rate to normal)
@@ -16,15 +16,18 @@
 GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
 
+strategy_list = {'short','avg','rate','env','tfs'};
+STRATEGY = 1;
+
 %% Initialization Routine
-% Get Input Audio File Name    
-PathName = 'C:\Audio Research\Audio\TIMIT\test\dr1\faks0\';
+% Get Input Audio File Name
+PathName = 'C:\Research\MATLAB\Temporal Coding\TIMIT\test\dr1\faks0\';
 FileName = 'sa1.wav';
 if (true) % change to false if you want to ask the user for an input file
     phonemeindx = textread([PathName FileName(1:end-3) 'phn'],'%*d %d %*s');
 else
     [FileName,PathName,FilterIndex] = uigetfile('*.wav',...
-        'Select Input Audio File','C:\Audio Research\Audio\TIMIT\test\dr1\faks0\sa1.wav');
+        'Select Input Audio File','C:\Research\MATLAB\Temporal Coding\TIMIT\test\dr1\faks0\sa1.wav');
     % Get TIMIT phoneme structure if needed
     reply = menu('Load TIMIT phoneme structure?','YES','NO');
     if (reply==1), % load index for end of each phoneme
@@ -102,7 +105,7 @@ REUG = [0 0 0 0 0 0 0]; % fake it for now
 
 % NAL equations
 % frequency shaping (250,500,1000,2000,3000,4000,6000Hz)
-k_NAL = [-18 -8 1 -1 -2 -2 -2]; % dB 
+k_NAL = [-18 -8 1 -1 -2 -2 -2]; % dB
 H_3FA = sum(dBLoss(2:4)) / 3; % sum up loss at 500Hz,1kHz,2kHz
 X = 0.15*H_3FA;
 R = 0.31; % NAL-RP formula  (not quite half-gain rule)
@@ -119,10 +122,16 @@ fprintf('jdboley(a)purdue.edu\n%s\n',file.date);
 [input_orig,Fs] = readnist([PathName FileName]);
 input_orig = input_orig/max(input_orig);
 
+% Apply NAL Gain
+NAL_filter_freqs = 2.^interp1(0.5:6.5,log2(FREQUENCIES),0:7,'linear','extrap')/(Fs/2);
+NAL_filter_gains = 10.^(interp1(0.5:6.5,NAL_IG,0:7,'linear','extrap')/20);
+b = firpm(16,NAL_filter_freqs,NAL_filter_gains);
+
 phones = 1:length(phonemeindx);
-levels = 90:10:100;
-gains = 40:-5:-40;
-note = 'Mar_03_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
+levels = 45;%[45 65 85];
+gains = -40:5:40;
+note = 'Mar_04_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
+
 sponts = [50, 5, 0.25];
 N_win_short = round(.000256*ANmodel_Fs_Hz); % 256us
 N_win_long = round(.008*ANmodel_Fs_Hz); % 8ms
@@ -130,67 +139,97 @@ W_win_short = hann(N_win_short)/sum(hann(N_win_short));
 W_win_long = hann(N_win_long)/sum(hann(N_win_long));
 w_spont = [.6 .2 .2]; %[60%HSR 20%MSR 20%LSR]
 
-
-OptimumGain = NaN*ones(length(phones),length(levels));
-
-
-phone_index=1;
-for phone=phones
-    disp(sprintf('Processing phoneme #%d',phone));
-
-%%%%%%% Will need to include all previous phonemes
-%     input = input_orig(1:phonemeindx(phone));
-    % Note: neurogram for each phoneme has been extended in time
-
-    % Just do one phoneme for now
-%     input=input_orig(phonemeindx(phone-1):phonemeindx(phone));
-    input=input_orig(phonemeindx(9):phonemeindx(15)); % use entire word for now
-    dur_sec = length(input)/Fs;
+level_index=1;
+for OALevel_dBSPL=levels
+    disp(sprintf('Processing level of %ddBSPL',OALevel_dBSPL));
     
-    % Resample for AN model
-    dBSPL_before=20*log10(sqrt(mean(input.^2))/(20e-6));
-    sfreq=Fs;
-    sfreqNEW=ANmodel_Fs_Hz;
-    P=round(sfreqNEW/10); Q=round(sfreq/10);  %Integers used to up sample
-    if(P/Q*sfreq~=sfreqNEW), disp('Integer sfreq conversion NOT exact'); end
-    Nfir=30;  % proportional to FIR filter length used for resampling: higher Nfir, better accuracy & longer comp time
-    input_model_phone=resample(input,P,Q,Nfir);
-    dBSPL_after=20*log10(sqrt(mean(input_model_phone.^2))/(20e-6));
-    if abs(dBSPL_before-dBSPL_after)>2;
-        error('RESAMPLING CHANGED input dBSPL by %f dB',dBSPL_after-dBSPL_before)
-    end
-%     clear input;
+    PhonemeLevel = NaN*ones(length(phones),length(levels));
+    OptimumGain = NaN*ones(length(phones),length(levels));
 
-    Mydiff1 = zeros(length(levels),length(gains));
-    Mydiff2 = zeros(length(levels),length(gains));
+    dBSPL_before=20*log10(sqrt(mean(input_orig.^2))/(20e-6));
+    input_orig = input_orig*10^((OALevel_dBSPL-dBSPL_before)/20);
     
-    level_index=1;
-    for OALevel_dBSPL=levels
-        disp(sprintf('Processing level of %ddBSPL',OALevel_dBSPL));
-        gain_index=1;
+    % Apply NAL gain
+    input_orig_NAL = filter(b,1,input_orig);
+    % Remove group delay (to maintain phoneme alignment)
+    % (NOTE: it would be interesting to play with the group delay here)
+    input_orig_NAL = [input_orig_NAL(ceil(length(b)/2):end); zeros(floor(length(b)/2),1)];
+    
+    phone_index=1;
+    for phone=phones
+        disp(sprintf('Processing phoneme #%d',phone));
+
+        %%%%%%% Will need to include all previous phones
+        % Note: neurogram for each phoneme has been extended in time
+        input=input_orig(1:min(phonemeindx(phone),length(input_orig)));
+        input_NAL=input_orig_NAL(1:min(phonemeindx(phone),length(input_orig_NAL)));
+        dur_sec = length(input)/Fs;
         
-        input_model_normal = input_model_phone*10^((OALevel_dBSPL-dBSPL_after)/20);
-        % REFIT and WINDOWwavefile at ANmodel_Fs
-        % Repeat or truncate waveform to fit requested stimulus duration:
+        
+        if phone_index<=1
+            PhonemeLevel(phone_index,level_index) = ...
+                20*log10(sqrt(mean(input(1:min(phonemeindx(phone),length(input))).^2))/(20e-6));
+        else % if phone_index>1
+            PhonemeLevel(phone_index,level_index) = ...
+                20*log10(sqrt(mean(input(phonemeindx(phone-1):min(phonemeindx(phone),length(input))).^2))/(20e-6));
+            
+            % Apply OptimumGain to previous phones. (NOTE: We could add attack/release here)
+            StartIndex = 1; % start of phone
+            EndIndex = min(phonemeindx(1),length(input_NAL)); % end of phone
+            input_NAL(StartIndex:EndIndex) = ...
+                input_NAL(StartIndex:EndIndex)*10^((OptimumGain(1,level_index))/20);
+            for PhoneNum=2:(phone-1)
+                StartIndex = phonemeindx(PhoneNum-1)+1;
+                EndIndex = min(phonemeindx(PhoneNum),length(input_NAL));
+                input_NAL(StartIndex:EndIndex) = ...
+                    input_NAL(StartIndex:EndIndex)*10^((OptimumGain(PhoneNum,level_index))/20);
+            end
+        end
+
+        % Resample original version for AN model
+        dBSPL_before=20*log10(sqrt(mean(input.^2))/(20e-6));
+        sfreq=Fs;
+        sfreqNEW=ANmodel_Fs_Hz;
+        P=round(sfreqNEW/10); Q=round(sfreq/10);  %Integers used to up sample
+        if(P/Q*sfreq~=sfreqNEW), disp('Integer sfreq conversion NOT exact'); end
+        Nfir=30;  % proportional to FIR filter length used for resampling: higher Nfir, better accuracy & longer comp time
+        input_model_normal=resample(input,P,Q,Nfir);
+        dBSPL_after=20*log10(sqrt(mean(input_model_normal.^2))/(20e-6));
+        if abs(dBSPL_before-dBSPL_after)>2;
+            error('RESAMPLING CHANGED input dBSPL by %f dB',dBSPL_after-dBSPL_before)
+        end
         input_model_normal = refit_waveform(input_model_normal,ANmodel_Fs_Hz,dur_sec*1000);
-        % Window waveform using linear rise/fall:
         input_model_normal = window_waveform(input_model_normal,ANmodel_Fs_Hz,dur_sec*1000);
+        
+        % Resample NAL version for AN model
+        dBSPL_before=20*log10(sqrt(mean(input_NAL.^2))/(20e-6));
+        sfreq=Fs;
+        sfreqNEW=ANmodel_Fs_Hz;
+        P=round(sfreqNEW/10); Q=round(sfreq/10);  %Integers used to up sample
+        if(P/Q*sfreq~=sfreqNEW), disp('Integer sfreq conversion NOT exact'); end
+        Nfir=30;  % proportional to FIR filter length used for resampling: higher Nfir, better accuracy & longer comp time
+        input_model_NAL=resample(input_NAL,P,Q,Nfir);
+        dBSPL_after=20*log10(sqrt(mean(input_model_NAL.^2))/(20e-6));
+        if abs(dBSPL_before-dBSPL_after)>2;
+            error('RESAMPLING CHANGED input dBSPL by %f dB',dBSPL_after-dBSPL_before)
+        end
+        input_model_NAL = refit_waveform(input_model_NAL,ANmodel_Fs_Hz,dur_sec*1000);
+        input_model_NAL = window_waveform(input_model_NAL,ANmodel_Fs_Hz,dur_sec*1000);
+        
+        if phone_index<=1
+            StartIndex_mdl = 1;
+        else
+            StartIndex_mdl = phonemeindx(phone_index-1)+1;
+        end
+        EndIndex_mdl = min(phonemeindx(phone_index),length(input_model_NAL));
+        
+        Mydiff1 = zeros(length(levels),length(gains));
+        Mydiff2 = zeros(length(levels),length(gains));
 
-        % Apply OptimumGain to previous phonemes, and adjust gain of this phoneme.
-        % (NOTE: Will need to add attack/release here)
-%         EndIndex = floor(P/Q*phonemeindx(1));
-%         input_model(1:EndIndex) = input_model(1:EndIndex)*...
-%                 10^((OALevel_dBSPL-dBSPL_after+OptimumGain(1,level_index))/20);
-%         for PhoneNum=2:(phone-1)
-%             StartIndex = floor(P/Q*phonemeindx(PhoneNum-1));
-%             EndIndex = floor(P/Q*phonemeindx(PhoneNum));
-%             input_model(StartIndex:EndIndex) = input_model(StartIndex:EndIndex)*...
-%                 10^((OALevel_dBSPL-dBSPL_after+OptimumGain(PhoneNum,level_index))/20);
-%         end
-
+        gain_index=1;
         for Gain_Adjust=gains
             disp(sprintf('Adjusting prescribed gain by %ddB',Gain_Adjust));
-            
+
             % initialization
             SynOutA = cell(numCFs,length(sponts));
             SynOutB = cell(numCFs,length(sponts));
@@ -207,97 +246,127 @@ for phone=phones
                 Env = NaN*ones(numCFs,length(sponts));
                 Tfs = NaN*ones(numCFs,length(sponts));
             end
-            
+
             for Fiber_Number=1:numCFs
                 fprintf('.'); if (mod(Fiber_Number,5)==0), fprintf(' '); end
                 if (Fiber_Number==numCFs), fprintf('\n'); end
                 %disp(sprintf('Processing fiber #%d of %d',Fiber_Number,numCFs));
+                
                 spont_index=1;
-                % Interpolate prescription
-                NAL = interp1(FREQUENCIES,NAL_IG,CF_kHz(Fiber_Number)*1000);
-%                 DSL = interp1(FREQUENCIES,DSL_IG,CF_kHz(Fiber_Number)*1000);
-
-                adjustment = max(OALevel_dBSPL+NAL+Gain_Adjust-dBSPL_after,-dBSPL_after); % dB
-%                 adjustment = max(OALevel_dBSPL+DSL+Gain_Adjust-dBSPL_after,-dBSPL_after);
-                input_model = input_model_phone*10^((adjustment)/20);
-
-                % REFIT and WINDOWwavefile at ANmodel_Fs
-                % Repeat or truncate waveform to fit requested stimulus duration:
-                input_model = refit_waveform(input_model,ANmodel_Fs_Hz,dur_sec*1000);
-                % Window waveform using linear rise/fall:
-                input_model = window_waveform(input_model,ANmodel_Fs_Hz,dur_sec*1000);
-
                 for fibertype = 3:-1:1 %High, Med, Low Spont
-%                     SR_sps = sponts
+                    %                     SR_sps = sponts
                     %disp(sprintf('Processing spont rate of %d',SR_sps));
                     % Run fiber (A+)
-%                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
-%                         = zbcatmodel(input_model.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc_impaired,Cihc_impaired,SR_sps);
-                    vihc = catmodel_IHC(input_model.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
+                    %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
+                    %                         = zbcatmodel(input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc_impaired,Cihc_impaired,SR_sps);
+                    vihc = catmodel_IHC(input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
-                    SynOutA{Fiber_Number,spont_index} = sout;
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
+                        sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz); 
+                        nspikes=length(sptimes);
+                        Nreps2=Nreps; 
+                        while nspikes<2000, 
+                            Nreps2=Nreps2*2; 
+                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
+                            sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
+                            nspikes=length(sptimes);
+                        end
                         % Format spikes into NEL spikes format then cell array
-                        NELspikes=ANmodelSTs2nel(sptimes,Nreps);
+                        NELspikes=ANmodelSTs2nel(sptimes,Nreps2);
                         SpikeTrainsA_plus=nelSTs2cell(NELspikes);
-                        if length(SpikeTrainsA_plus)<Nreps
-                           SpikeTrainsA_plus = [SpikeTrainsA_plus cell(1,Nreps-length(SpikeTrainsA_plus))]; 
+                        if length(SpikeTrainsA_plus)<Nreps2
+                            SpikeTrainsA_plus = [SpikeTrainsA_plus cell(1,Nreps2-length(SpikeTrainsA_plus))];
                         end
                         SpikesA_plus{Fiber_Number,spont_index} = SpikeTrainsA_plus;
                     end
+                    sout=sout(StartIndex_mdl:EndIndex_mdl);
+                    SynOutA{Fiber_Number,spont_index} = sout;
                     if (ANALYZE_SPIKES)
                         Rate(Fiber_Number,spont_index) = mean(sout); % SAVE RATE INFO
                     end
 
                     % Run fiber (A-)
-%                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
-%                         = zbcatmodel(-input_model.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc_impaired,Cihc_impaired,SR_sps);
-                    vihc = catmodel_IHC(-input_model.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
+                    %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
+                    %                         = zbcatmodel(-input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc_impaired,Cihc_impaired,SR_sps);
+                    vihc = catmodel_IHC(-input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
+                        sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz); 
+                        nspikes=length(sptimes);
+                        Nreps2=Nreps; 
+                        while nspikes<2000, 
+                            Nreps2=Nreps2*2; 
+                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
+                            sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
+                            nspikes=length(sptimes);
+                        end
                         % Format spikes into NEL spikes format then cell array
-                        NELspikes=ANmodelSTs2nel(sptimes,Nreps);
+                        NELspikes=ANmodelSTs2nel(sptimes,Nreps2);
                         SpikeTrainsA_minus=nelSTs2cell(NELspikes);
-                        if length(SpikeTrainsA_minus)<Nreps
-                           SpikeTrainsA_minus = [SpikeTrainsA_minus cell(1,Nreps-length(SpikeTrainsA_minus))]; 
+                        if length(SpikeTrainsA_minus)<Nreps2
+                            SpikeTrainsA_minus = [SpikeTrainsA_minus cell(1,Nreps2-length(SpikeTrainsA_minus))];
                         end
                         SpikesA_minus{Fiber_Number,spont_index} = SpikeTrainsA_minus;
                     end
 
                     % Run fiber (B+) - always normal
-%                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
-%                         = zbcatmodel(input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc,Cihc,SR_sps);  
+                    %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
+                    %                         = zbcatmodel(input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc,Cihc,SR_sps);
                     vihc = catmodel_IHC(input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
-                    SynOutB{Fiber_Number,spont_index} = sout;
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
+                        sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz); 
+                        nspikes=length(sptimes);
+                        Nreps2=Nreps; 
+                        while nspikes<2000, 
+                            Nreps2=Nreps2*2; 
+                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
+                            sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
+                            nspikes=length(sptimes);
+                        end
                         % Format spikes into NEL spikes format then cell array
-                        NELspikes=ANmodelSTs2nel(sptimes,Nreps);
+                        NELspikes=ANmodelSTs2nel(sptimes,Nreps2);
                         SpikeTrainsB_plus=nelSTs2cell(NELspikes);
-                        if length(SpikeTrainsB_plus)<Nreps
-                           SpikeTrainsB_plus = [SpikeTrainsB_plus cell(1,Nreps-length(SpikeTrainsB_plus))]; 
+                        if length(SpikeTrainsB_plus)<Nreps2
+                            SpikeTrainsB_plus = [SpikeTrainsB_plus cell(1,Nreps2-length(SpikeTrainsB_plus))];
                         end
                         SpikesB_plus{Fiber_Number,spont_index} = SpikeTrainsB_plus;
                     end
+                    sout=sout(StartIndex_mdl:EndIndex_mdl);
+                    SynOutB{Fiber_Number,spont_index} = sout;
+                    
                     % Run fiber (B-) - always normal
-%                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
-%                         = zbcatmodel(-input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc,Cihc,SR_sps);
+                    %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
+                    %                         = zbcatmodel(-input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc,Cihc,SR_sps);
                     vihc = catmodel_IHC(-input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
+                        sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz); 
+                        nspikes=length(sptimes);
+                        Nreps2=Nreps; 
+                        while nspikes<2000, 
+                            Nreps2=Nreps2*2; 
+                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
+                            sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
+                            nspikes=length(sptimes);
+                        end
                         % Format spikes into NEL spikes format then cell array
-                        NELspikes=ANmodelSTs2nel(sptimes,Nreps);
+                        NELspikes=ANmodelSTs2nel(sptimes,Nreps2);
                         SpikeTrainsB_minus=nelSTs2cell(NELspikes);
-                        if length(SpikeTrainsB_minus)<Nreps
-                           SpikeTrainsB_minus = [SpikeTrainsB_minus cell(1,Nreps-length(SpikeTrainsB_minus))]; 
+                        if length(SpikeTrainsB_minus)<Nreps2
+                            SpikeTrainsB_minus = [SpikeTrainsB_minus cell(1,Nreps2-length(SpikeTrainsB_minus))];
                         end
                         SpikesB_minus{Fiber_Number,spont_index} = SpikeTrainsB_minus;
                     end
-                    if (ANALYZE_SPIKES)   
+                    if (ANALYZE_SPIKES)
                         % Calculate env & tfs coding
                         % Spike Analysis
                         % Organize variables for CCCanal
@@ -313,8 +382,12 @@ for phone=phones
                         paramsIN.MAXspikes=3000;
                         paramsIN.PSD_LHfreqs_Hz=[0 64; 0 50];  %additional freq ranges to compute CCCenv for
 
-    %                     [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal(SpikeTrains,paramsIN,0);
-                        [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_4(SpikeTrains,paramsIN,0);
+                        try
+                            %	[SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal(SpikeTrains,paramsIN,0);
+                            [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_4(SpikeTrains,paramsIN,0);
+                        catch
+                            dbstop;
+                        end
 
                         Difcor(Fiber_Number,spont_index) = SACSCCmetrics.DCpeak_A;
                         Sumcor(Fiber_Number,spont_index) = ...
@@ -323,7 +396,7 @@ for phone=phones
                             SACSCCmetrics.CCCenvs(find(strcmp('0-300, subBIAS',SACSCCmetrics.CCCenvs_legend)));
                         Tfs(Fiber_Number,spont_index) = SACSCCmetrics.CCCtfs;
                     end %if
-                    
+
                     if Fiber_Number==1 && spont_index==1
                         neurogramA1 = zeros(length(SynOutA{1,1}),numCFs);%impaired
                         neurogramA2 = zeros(length(SynOutA{1,1}),numCFs);%impaired
@@ -338,8 +411,8 @@ for phone=phones
                         neurogramB1(:,Fiber_Number) = neurogramB1(:,Fiber_Number) + ...
                             w_spont(spont_index)*SynOutB{Fiber_Number,spont_index}';
                     end
-                    spont_index=spont_index+1;    
-                end % end SR_sps
+                    spont_index=spont_index+1;
+                end % end fibertype (or SR_sps with the old model)
                 neurogramA3(:,Fiber_Number) = neurogramA1(:,Fiber_Number);
                 neurogramB3(:,Fiber_Number) = neurogramB1(:,Fiber_Number); % unfiltered version
                 neurogramA2(:,Fiber_Number) = filter(W_win_long,1,neurogramA1(:,Fiber_Number));
@@ -349,15 +422,16 @@ for phone=phones
             end % end Fiber_Number
             Mydiff1(level_index,gain_index) = mean(mean(abs(neurogramB1-neurogramA1)));
             Mydiff2(level_index,gain_index) = mean(mean(abs(neurogramB2-neurogramA2)));
-            
+
             % Save file
-            MatFileName = sprintf('archive\\phone%d\\%1.0fdBSPL\\%s\\%1.0fdBgain_%s',...
-                phone,OALevel_dBSPL,impairment,Gain_Adjust,note);
-            if ~exist(sprintf('archive\\phone%d\\%1.0fdBSPL\\%s',phone,OALevel_dBSPL,impairment),'dir')
-                mkdir(sprintf('archive\\phone%d\\%1.0fdBSPL\\%s',phone,OALevel_dBSPL,impairment));
+            MatFileName = sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s\\%1.0fdBgain_%s',...
+                phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment,Gain_Adjust,note);
+            if ~exist(sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s',phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment),'dir')
+                mkdir(sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s',phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment));
             end
 
             save(MatFileName,'PathName','FileName','neurogramA1','neurogramA2','neurogramA3');
+            save(MatFileName,'PhonemeLevel','OptimumGain','-append');
             if (Gain_Adjust==0)
                 save(MatFileName,'neurogramB1','neurogramB2','neurogramB3','-append');
             end
@@ -370,7 +444,7 @@ for phone=phones
             if (ANALYZE_SPIKES)
                 save(MatFileName,'Difcor','Sumcor','Env','Tfs','-append');
             end
-            
+
             clear SynOutA SynOutB
             if (GEN_SPIKES)
                 clear SpikesA_plus SpikesA_minus SpikesB_plus SpikesB_minus
@@ -378,16 +452,17 @@ for phone=phones
             if (ANALYZE_SPIKES)
                 clear Rate Difcor Sumcor Env Tfs
             end
-            
+
             gain_index=gain_index+1;
         end % end Gain_Adjust
-        
-        level_index=level_index+1;
-    end % end OALevel_dBSPL
+
+        [short,avg,rate,env,tfs] = OptimalGain2(levels,gains,sprintf('archive\\phone%d\\%s\\',phone,strategy_list{STRATEGY}),impairment,note);
+        OptimumGain(phone_index,:) = short;
     
-    OptimumGain(phone_index,:) = OptimalGain2(levels,gains,sprintf('archive\\phone%d\\',phone),impairment,note);
-    
-    phone_index = phone_index+1;
-end % end phone
+        phone_index = phone_index+1;
+    end % end phone
+
+	level_index=level_index+1;
+end % end OALevel_dBSPL
 
 
