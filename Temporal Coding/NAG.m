@@ -15,6 +15,7 @@
 
 GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
+matlabpool; % enable parallel computing
 
 strategy_list = {'short','avg','rate','env','tfs'};
 STRATEGY = 1;
@@ -128,9 +129,9 @@ NAL_filter_gains = 10.^(interp1(0.5:6.5,NAL_IG,0:7,'linear','extrap')/20);
 b = firpm(16,NAL_filter_freqs,NAL_filter_gains);
 
 phones = 1:length(phonemeindx);
-levels = 45;%[45 65 85];
+levels = 65;%[45 65 85];
 gains = -40:5:40;
-note = 'Mar_04_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
+note = 'Aug_17_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
 
 sponts = [50, 5, 0.25];
 N_win_short = round(.000256*ANmodel_Fs_Hz); % 256us
@@ -226,17 +227,6 @@ for OALevel_dBSPL=levels
         Mydiff1 = zeros(length(levels),length(gains));
         Mydiff2 = zeros(length(levels),length(gains));
         
-        if (ANALYZE_SPIKES)
-            % specify params to be used
-            clear paramsIN
-            paramsIN.durA_msec=dur_sec*1000;
-            paramsIN.durB_msec=dur_sec*1000;
-            paramsIN.CF_A_Hz=CF_kHz(Fiber_Number)*1000;
-            paramsIN.CF_B_Hz=CF_kHz(Fiber_Number)*1000;
-            paramsIN.MAXspikes=3000;
-            paramsIN.PSD_LHfreqs_Hz=[0 64; 0 50];  %additional freq ranges to compute CCCenv for
-        end
-
         gain_index=1;
         for Gain_Adjust=gains
             disp(sprintf('Adjusting prescribed gain by %ddB',Gain_Adjust));
@@ -269,10 +259,26 @@ for OALevel_dBSPL=levels
                 for z=1:numCFs, Tfs{z} = NaN*ones(length(sponts)); end
             end
 
+            %default PARAMS
+            if (ANALYZE_SPIKES)
+                paramsIN = cell(numCFs,1);
+            end
+            
+            warning('off','MATLAB:mir_warning_maybe_uninitialized_temporary');
             parfor Fiber_Number=1:numCFs
                 fprintf('.'); if (mod(Fiber_Number,5)==0), fprintf(' '); end
                 if (Fiber_Number==numCFs), fprintf('\n'); end
                 %disp(sprintf('Processing fiber #%d of %d',Fiber_Number,numCFs));
+                
+                if (ANALYZE_SPIKES)
+                    % specify params to be used
+                    paramsIN{Fiber_Number}.durA_msec=dur_sec*1000;
+                    paramsIN{Fiber_Number}.durB_msec=dur_sec*1000;
+                    paramsIN{Fiber_Number}.CF_A_Hz=CF_kHz(Fiber_Number)*1000;
+                    paramsIN{Fiber_Number}.CF_B_Hz=CF_kHz(Fiber_Number)*1000;
+                    paramsIN{Fiber_Number}.MAXspikes=3000;
+                    paramsIN{Fiber_Number}.PSD_LHfreqs_Hz=[0 64; 0 50];  %additional freq ranges to compute CCCenv for
+                end
                 
                 spont_index=1;
                 for fibertype = 3:-1:1 %High, Med, Low Spont
@@ -398,28 +404,28 @@ for OALevel_dBSPL=levels
 
                         try
                             %	[SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal(SpikeTrains,paramsIN,0);
-                            [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_4(SpikeTrains,paramsIN,0);
+                            [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_4(SpikeTrains,paramsIN{Fiber_Number},0);
                         catch exception
                             dbstop;
                             rethrow(exception);
                         end
 
-                        Difcor{Fiber_Number}{spont_index} = SACSCCmetrics.DCpeak_A;
-                        Sumcor{Fiber_Number}{spont_index} = ...
+                        Difcor{Fiber_Number}(spont_index) = SACSCCmetrics.DCpeak_A;
+                        Sumcor{Fiber_Number}(spont_index) = ...
                             SACSCCmetrics.SCpeaks_A(find(strcmp('IFFTraw',SACSCCmetrics.SCpeaks_legend)));
-                        Env{Fiber_Number}{spont_index} = ...
+                        Env{Fiber_Number}(spont_index) = ...
                             SACSCCmetrics.CCCenvs(find(strcmp('0-300, subBIAS',SACSCCmetrics.CCCenvs_legend)));
-                        Tfs{Fiber_Number}{spont_index} = SACSCCmetrics.CCCtfs;
+                        Tfs{Fiber_Number}(spont_index) = SACSCCmetrics.CCCtfs;
                     end %if
 
-                    if Fiber_Number==1 && spont_index==1
+%                     if Fiber_Number==1 && spont_index==1
                         neurogramA1 = zeros(len_SynOutA,numCFs);%impaired
                         neurogramA2 = zeros(len_SynOutA,numCFs);%impaired
                         neurogramA3 = zeros(len_SynOutA,numCFs);%impaired
                         neurogramB1 = zeros(len_SynOutB,numCFs);%normal
                         neurogramB2 = zeros(len_SynOutB,numCFs);%normal
                         neurogramB3 = zeros(len_SynOutB,numCFs);%normal
-                    end
+%                     end
                     if ~isempty(SynOutA{Fiber_Number}{spont_index})
                         neurogramA1(:,Fiber_Number) = neurogramA1(:,Fiber_Number) + ...
                             w_spont(spont_index)*SynOutA{Fiber_Number}{spont_index}';
@@ -434,6 +440,7 @@ for OALevel_dBSPL=levels
                 neurogramB2(:,Fiber_Number) = filter(W_win_long,1,neurogramB1(:,Fiber_Number)); % apply long window
                 neurogramA1(:,Fiber_Number) = filter(W_win_short,1,neurogramA1(:,Fiber_Number));
                 neurogramB1(:,Fiber_Number) = filter(W_win_short,1,neurogramB1(:,Fiber_Number)); % apply short window
+                
             end % end Fiber_Number
 %             Mydiff1(level_index,gain_index) = mean(mean(abs(neurogramB1-neurogramA1)));
 %             Mydiff2(level_index,gain_index) = mean(mean(abs(neurogramB2-neurogramA2)));
