@@ -225,29 +225,51 @@ for OALevel_dBSPL=levels
         
         Mydiff1 = zeros(length(levels),length(gains));
         Mydiff2 = zeros(length(levels),length(gains));
+        
+        if (ANALYZE_SPIKES)
+            % specify params to be used
+            clear paramsIN
+            paramsIN.durA_msec=dur_sec*1000;
+            paramsIN.durB_msec=dur_sec*1000;
+            paramsIN.CF_A_Hz=CF_kHz(Fiber_Number)*1000;
+            paramsIN.CF_B_Hz=CF_kHz(Fiber_Number)*1000;
+            paramsIN.MAXspikes=3000;
+            paramsIN.PSD_LHfreqs_Hz=[0 64; 0 50];  %additional freq ranges to compute CCCenv for
+        end
 
         gain_index=1;
         for Gain_Adjust=gains
             disp(sprintf('Adjusting prescribed gain by %ddB',Gain_Adjust));
 
             % initialization
-            SynOutA = cell(numCFs,length(sponts));
-            SynOutB = cell(numCFs,length(sponts));
+            SynOutA = cell(numCFs);
+            for z=1:numCFs, SynOutA{z} = cell(length(sponts)); end
+            SynOutB = cell(numCFs);
+            for z=1:numCFs, SynOutB{z} = cell(length(sponts)); end
             if (GEN_SPIKES)
-                SpikesA_plus = cell(numCFs,length(sponts));
-                SpikesA_minus = cell(numCFs,length(sponts));
-                SpikesB_plus = cell(numCFs,length(sponts));
-                SpikesB_minus = cell(numCFs,length(sponts));
+                SpikesA_plus = cell(numCFs);
+                for z=1:numCFs, SpikesA_plus{z} = cell(length(sponts)); end
+                SpikesA_minus = cell(numCFs);
+                for z=1:numCFs, SpikesA_minus{z} = cell(length(sponts)); end
+                SpikesB_plus = cell(numCFs);
+                for z=1:numCFs, SpikesB_plus{z} = cell(length(sponts)); end
+                SpikesB_minus = cell(numCFs);
+                for z=1:numCFs, SpikesB_minus{z} = cell(length(sponts)); end
             end
             if (ANALYZE_SPIKES)
-                Rate   = NaN*ones(numCFs,length(sponts));
-                Difcor = NaN*ones(numCFs,length(sponts));
-                Sumcor = NaN*ones(numCFs,length(sponts));
-                Env = NaN*ones(numCFs,length(sponts));
-                Tfs = NaN*ones(numCFs,length(sponts));
+                Rate   = cell(numCFs);
+                for z=1:numCFs, Rate{z} = NaN*ones(length(sponts)); end
+                Difcor = cell(numCFs);
+                for z=1:numCFs, Difcor{z} = NaN*ones(length(sponts)); end
+                Sumcor = cell(numCFs);
+                for z=1:numCFs, Sumcor{z} = NaN*ones(length(sponts)); end
+                Env = cell(numCFs);
+                for z=1:numCFs, Env{z} = NaN*ones(length(sponts)); end
+                Tfs = cell(numCFs);
+                for z=1:numCFs, Tfs{z} = NaN*ones(length(sponts)); end
             end
 
-            for Fiber_Number=1:numCFs
+            parfor Fiber_Number=1:numCFs
                 fprintf('.'); if (mod(Fiber_Number,5)==0), fprintf(' '); end
                 if (Fiber_Number==numCFs), fprintf('\n'); end
                 %disp(sprintf('Processing fiber #%d of %d',Fiber_Number,numCFs));
@@ -268,7 +290,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            if (Nreps2>2000 && Nreps2>=1), sptimes=0; break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -279,12 +301,13 @@ for OALevel_dBSPL=levels
                         if length(SpikeTrainsA_plus)<Nreps2
                             SpikeTrainsA_plus = [SpikeTrainsA_plus cell(1,Nreps2-length(SpikeTrainsA_plus))];
                         end
-                        SpikesA_plus{Fiber_Number,spont_index} = SpikeTrainsA_plus;
+                        SpikesA_plus{Fiber_Number}{spont_index} = SpikeTrainsA_plus;
                     end
                     sout=sout(StartIndex_mdl:EndIndex_mdl);
-                    SynOutA{Fiber_Number,spont_index} = sout;
+                    SynOutA{Fiber_Number}{spont_index} = sout;
+                    len_SynOutA = length(sout);
                     if (ANALYZE_SPIKES)
-                        Rate(Fiber_Number,spont_index) = mean(sout); % SAVE RATE INFO
+                        Rate{Fiber_Number}(spont_index) = mean(sout); % SAVE RATE INFO
                     end
 
                     % Run fiber (A-)
@@ -299,7 +322,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            if (Nreps2>2000 && Nreps2>=1), sptimes=0; break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -310,7 +333,7 @@ for OALevel_dBSPL=levels
                         if length(SpikeTrainsA_minus)<Nreps2
                             SpikeTrainsA_minus = [SpikeTrainsA_minus cell(1,Nreps2-length(SpikeTrainsA_minus))];
                         end
-                        SpikesA_minus{Fiber_Number,spont_index} = SpikeTrainsA_minus;
+                        SpikesA_minus{Fiber_Number}{spont_index} = SpikeTrainsA_minus;
                     end
 
                     % Run fiber (B+) - always normal
@@ -325,7 +348,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            if (Nreps2>2000 && Nreps2>=1), sptimes=0; break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -336,10 +359,11 @@ for OALevel_dBSPL=levels
                         if length(SpikeTrainsB_plus)<Nreps2
                             SpikeTrainsB_plus = [SpikeTrainsB_plus cell(1,Nreps2-length(SpikeTrainsB_plus))];
                         end
-                        SpikesB_plus{Fiber_Number,spont_index} = SpikeTrainsB_plus;
+                        SpikesB_plus{Fiber_Number}{spont_index} = SpikeTrainsB_plus;
                     end
                     sout=sout(StartIndex_mdl:EndIndex_mdl);
-                    SynOutB{Fiber_Number,spont_index} = sout;
+                    SynOutB{Fiber_Number}{spont_index} = sout;
+                    len_SynOutB = length(sout);
                     
                     % Run fiber (B-) - always normal
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
@@ -353,7 +377,7 @@ for OALevel_dBSPL=levels
                         Nreps2=Nreps; 
                         while nspikes<2000, 
                             Nreps2=Nreps2*2; 
-                            if (Nreps2>2000 & Nreps2>=1), break; end; 
+                            if (Nreps2>2000 && Nreps2>=1), sptimes=0; break; end; 
                             [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps2],sout); 
                             sptimes=sptimes(sptimes>=StartIndex_mdl/ANmodel_Fs_Hz & sptimes<=EndIndex_mdl/ANmodel_Fs_Hz);
                             nspikes=length(sptimes);
@@ -364,52 +388,43 @@ for OALevel_dBSPL=levels
                         if length(SpikeTrainsB_minus)<Nreps2
                             SpikeTrainsB_minus = [SpikeTrainsB_minus cell(1,Nreps2-length(SpikeTrainsB_minus))];
                         end
-                        SpikesB_minus{Fiber_Number,spont_index} = SpikeTrainsB_minus;
+                        SpikesB_minus{Fiber_Number}{spont_index} = SpikeTrainsB_minus;
                     end
                     if (ANALYZE_SPIKES)
                         % Calculate env & tfs coding
                         % Spike Analysis
                         % Organize variables for CCCanal
-                        SpikeTrains=cell(2); % {condition (1,2), polarity (plus,minus)}
                         SpikeTrains={SpikeTrainsA_plus,SpikeTrainsA_minus;SpikeTrainsB_plus,SpikeTrainsB_minus};
-
-                        % specify params to be used
-                        clear paramsIN
-                        paramsIN.durA_msec=dur_sec*1000;
-                        paramsIN.durB_msec=dur_sec*1000;
-                        paramsIN.CF_A_Hz=CF_kHz(Fiber_Number)*1000;
-                        paramsIN.CF_B_Hz=CF_kHz(Fiber_Number)*1000;
-                        paramsIN.MAXspikes=3000;
-                        paramsIN.PSD_LHfreqs_Hz=[0 64; 0 50];  %additional freq ranges to compute CCCenv for
 
                         try
                             %	[SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal(SpikeTrains,paramsIN,0);
                             [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_4(SpikeTrains,paramsIN,0);
-                        catch
+                        catch exception
                             dbstop;
+                            rethrow(exception);
                         end
 
-                        Difcor(Fiber_Number,spont_index) = SACSCCmetrics.DCpeak_A;
-                        Sumcor(Fiber_Number,spont_index) = ...
+                        Difcor{Fiber_Number}{spont_index} = SACSCCmetrics.DCpeak_A;
+                        Sumcor{Fiber_Number}{spont_index} = ...
                             SACSCCmetrics.SCpeaks_A(find(strcmp('IFFTraw',SACSCCmetrics.SCpeaks_legend)));
-                        Env(Fiber_Number,spont_index) = ...
+                        Env{Fiber_Number}{spont_index} = ...
                             SACSCCmetrics.CCCenvs(find(strcmp('0-300, subBIAS',SACSCCmetrics.CCCenvs_legend)));
-                        Tfs(Fiber_Number,spont_index) = SACSCCmetrics.CCCtfs;
+                        Tfs{Fiber_Number}{spont_index} = SACSCCmetrics.CCCtfs;
                     end %if
 
                     if Fiber_Number==1 && spont_index==1
-                        neurogramA1 = zeros(length(SynOutA{1,1}),numCFs);%impaired
-                        neurogramA2 = zeros(length(SynOutA{1,1}),numCFs);%impaired
-                        neurogramA3 = zeros(length(SynOutA{1,1}),numCFs);%impaired
-                        neurogramB1 = zeros(length(SynOutB{1,1}),numCFs);%normal
-                        neurogramB2 = zeros(length(SynOutB{1,1}),numCFs);%normal
-                        neurogramB3 = zeros(length(SynOutB{1,1}),numCFs);%normal
+                        neurogramA1 = zeros(len_SynOutA,numCFs);%impaired
+                        neurogramA2 = zeros(len_SynOutA,numCFs);%impaired
+                        neurogramA3 = zeros(len_SynOutA,numCFs);%impaired
+                        neurogramB1 = zeros(len_SynOutB,numCFs);%normal
+                        neurogramB2 = zeros(len_SynOutB,numCFs);%normal
+                        neurogramB3 = zeros(len_SynOutB,numCFs);%normal
                     end
-                    if ~isempty(SynOutA{Fiber_Number,spont_index})
+                    if ~isempty(SynOutA{Fiber_Number}{spont_index})
                         neurogramA1(:,Fiber_Number) = neurogramA1(:,Fiber_Number) + ...
-                            w_spont(spont_index)*SynOutA{Fiber_Number,spont_index}';
+                            w_spont(spont_index)*SynOutA{Fiber_Number}{spont_index}';
                         neurogramB1(:,Fiber_Number) = neurogramB1(:,Fiber_Number) + ...
-                            w_spont(spont_index)*SynOutB{Fiber_Number,spont_index}';
+                            w_spont(spont_index)*SynOutB{Fiber_Number}{spont_index}';
                     end
                     spont_index=spont_index+1;
                 end % end fibertype (or SR_sps with the old model)
@@ -420,14 +435,14 @@ for OALevel_dBSPL=levels
                 neurogramA1(:,Fiber_Number) = filter(W_win_short,1,neurogramA1(:,Fiber_Number));
                 neurogramB1(:,Fiber_Number) = filter(W_win_short,1,neurogramB1(:,Fiber_Number)); % apply short window
             end % end Fiber_Number
-            Mydiff1(level_index,gain_index) = mean(mean(abs(neurogramB1-neurogramA1)));
-            Mydiff2(level_index,gain_index) = mean(mean(abs(neurogramB2-neurogramA2)));
+%             Mydiff1(level_index,gain_index) = mean(mean(abs(neurogramB1-neurogramA1)));
+%             Mydiff2(level_index,gain_index) = mean(mean(abs(neurogramB2-neurogramA2)));
 
             % Save file
-            MatFileName = sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s\\%1.0fdBgain_%s',...
-                phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment,Gain_Adjust,note);
-            if ~exist(sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s',phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment),'dir')
-                mkdir(sprintf('archive\\phone%d\\%s\\%1.0fdBSPL\\%s',phone,strategy_list{STRATEGY},OALevel_dBSPL,impairment));
+            MatFileName = sprintf('archive\\%1.0fdBSPL\\%s\\%s\\phone%d\\%1.0fdBgain_%s',...
+                OALevel_dBSPL,impairment,strategy_list{STRATEGY},phone,Gain_Adjust,note);
+            if ~exist(sprintf('archive\\%1.0fdBSPL\\%s\\%s\\phone%d',OALevel_dBSPL,impairment,strategy_list{STRATEGY},phone),'dir')
+                mkdir(sprintf('archive\\%1.0fdBSPL\\%s\\%s\\phone%d',OALevel_dBSPL,impairment,strategy_list{STRATEGY},phone));
             end
 
             save(MatFileName,'PathName','FileName','neurogramA1','neurogramA2','neurogramA3');
@@ -456,8 +471,8 @@ for OALevel_dBSPL=levels
             gain_index=gain_index+1;
         end % end Gain_Adjust
 
-        [short,avg,rate,env,tfs] = OptimalGain2(levels,gains,sprintf('archive\\phone%d\\%s\\',phone,strategy_list{STRATEGY}),impairment,note);
-        OptimumGain(phone_index,:) = short;
+        [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone,gains,note);
+        eval(sprintf('OptimumGain(phone_index,:)=%s',strategy_list{STRATEGY}));
     
         phone_index = phone_index+1;
     end % end phone

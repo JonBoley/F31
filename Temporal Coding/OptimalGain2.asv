@@ -1,12 +1,14 @@
-function [gain1,gain2,gain3,gain4,gain5] = OptimalGain2(levels,gains,directory,impairment,note)
-% [gain1,gain2,gain3,gain4,gain5] = OptimalGain(levels,gains,directory,impairment,note)
+function [gain1,gain2,err1,err2] = OptimalGain2(levels,gains,directory,impairment,note)
+% [gain1,gain2,err1,err2] = OptimalGain(levels,gains,directory,impairment,note)
+function [gain1,gain2,gain3,gain4,gain5] = OptimalGain2(directory,levels,gains,impairment,strategy,phone,note)
+% [gain1,gain2,gain3,gain4,gain5] = OptimalGain2(levels,gains,directory,note)
 % gain1 optimizes short-term rate
 % gain2 optimizes average rate
 % gain3 optimizes rate (no windowing)
 % gain4 optimizes envelope coding
 % gain5 optimizes tfs coding
 % example:
-% OptimalGain(30:10:100,-40:10:40,'archive\phone12\','mixed','Nov_24_08')
+% OptimalGain(30:10:100,-40:10:40,'archive\65dBSPL\mixed\avg\phone12','Nov_24_08')
 
 w_spont = [.6 .2 .2]; %spont weights
 existing_levels=[];
@@ -75,15 +77,20 @@ for level=levels
     [r,c]=find(err3(level_index,:)<min(err3(level_index,:))+0.2*(max(err3(level_index,:))-min(err3(level_index,:))));
     gain3_range(level_index,:) = [min(gains(c)),max(gains(c))];
     [C,I] = max(env(level_index,:).*isfinite(env(level_index,:)));
+    gain4(level_index) = gains(I);
     if ~isnan(C), gain4(level_index) = gains(I); end
     temp_rhoE = env(level_index,:).*isfinite(env(level_index,:));
     [r,c]=find(env(level_index,:)>min(temp_rhoE)+0.8*(max(temp_rhoE)-min(temp_rhoE)));
+    gain4_range(level_index,:) = [min(gains(c)),max(gains(c))];
     if(c)
     	gain4_range(level_index,:) = [min(gains(c)),max(gains(c))];
     else
     	gain4_range(level_index,:) = [NaN,NaN];
     end
     [C,I] = max(tfs(level_index,:).*isfinite(tfs(level_index,:)));
+    gain5(level_index) = gains(I);
+    [r,c]=find(tfs(level_index,:)>0.8*C);
+    gain5_range(level_index,:) = [min(gains(c)),max(gains(c))];
     if ~isnan(C), gain5(level_index) = gains(I); end
     temp_rhoT = tfs(level_index,:).*isfinite(tfs(level_index,:));
     [r,c]=find(tfs(level_index,:)>min(temp_rhoT)+0.8*(max(temp_rhoT)-min(temp_rhoT)));

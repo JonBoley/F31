@@ -1,12 +1,12 @@
-function [gain1,gain2,gain3,gain4,gain5] = OptimalGain2(levels,gains,directory,impairment,note)
-% [gain1,gain2,gain3,gain4,gain5] = OptimalGain(levels,gains,directory,impairment,note)
+function [gain1,gain2,gain3,gain4,gain5] = OptimalGain2(directory,levels,impairment,strategy,phone,gains,note)
+% [gain1,gain2,gain3,gain4,gain5] = OptimalGain2(directory,levels,impairment,strategy,phone,gains,note)
 % gain1 optimizes short-term rate
 % gain2 optimizes average rate
 % gain3 optimizes rate (no windowing)
 % gain4 optimizes envelope coding
 % gain5 optimizes tfs coding
 % example:
-% OptimalGain(30:10:100,-40:10:40,'archive\phone12\','mixed','Nov_24_08')
+% OptimalGain(30:10:100,-40:10:40,'archive\65dBSPL\mixed\avg\phone12','Nov_24_08')
 
 w_spont = [.6 .2 .2]; %spont weights
 existing_levels=[];
@@ -25,13 +25,13 @@ gain5_range = zeros(length(levels),2);
 
 level_index=1;
 for level=levels
-    if exist([directory num2str(level) 'dBSPL\' impairment '\0dBgain_' note '.mat'])
+    if exist([directory num2str(level) 'dBSPL\' impairment '\' strategy '\' phone '\0dBgain_' note '.mat'])
         existing_levels = [existing_levels, level];
-        load([directory num2str(level) 'dBSPL\' impairment '\0dBgain_' note], '-regexp', '^neurogramB');
+        load([directory num2str(level) 'dBSPL\' impairment '\' strategy '\' phone '\0dBgain_' note], '-regexp', '^neurogramB');
         index=1;
         for gain = gains
-            if exist([directory num2str(level) 'dBSPL\' impairment '\' num2str(gain) 'dBgain_' note '.mat'])
-                load([directory num2str(level) 'dBSPL\' impairment '\' num2str(gain) 'dBgain_' note], '-regexp', '^neurogramA','^Env','^Tfs');
+            if exist([directory num2str(level) 'dBSPL\' impairment '\' strategy '\' phone '\' num2str(gain) 'dBgain_' note '.mat'])
+                load([directory num2str(level) 'dBSPL\' impairment '\' strategy '\' phone '\' num2str(gain) 'dBgain_' note], '-regexp', '^neurogramA','^Env','^Tfs');
                 err1(level_index,index) = mean(mean(abs(neurogramB1-neurogramA1))); % short window
                 err2(level_index,index) = mean(mean(abs(neurogramB2-neurogramA2))); % long window
                 err3(level_index,index) = mean(mean(abs(neurogramB3-neurogramA3))); % no window
