@@ -226,17 +226,6 @@ for OALevel_dBSPL=levels
         Mydiff1 = zeros(length(levels),length(gains));
         Mydiff2 = zeros(length(levels),length(gains));
         
-        if (ANALYZE_SPIKES)
-            % specify params to be used
-            clear paramsIN
-            paramsIN.durA_msec=dur_sec*1000;
-            paramsIN.durB_msec=dur_sec*1000;
-            paramsIN.CF_A_Hz=CF_kHz(Fiber_Number)*1000;
-            paramsIN.CF_B_Hz=CF_kHz(Fiber_Number)*1000;
-            paramsIN.MAXspikes=3000;
-            paramsIN.PSD_LHfreqs_Hz=[0 64; 0 50];  %additional freq ranges to compute CCCenv for
-        end
-
         gain_index=1;
         for Gain_Adjust=gains
             disp(sprintf('Adjusting prescribed gain by %ddB',Gain_Adjust));
@@ -269,6 +258,17 @@ for OALevel_dBSPL=levels
                 for z=1:numCFs, Tfs{z} = NaN*ones(length(sponts)); end
             end
 
+                    if (ANALYZE_SPIKES)
+            % specify params to be used
+            clear paramsIN
+            paramsIN.durA_msec=dur_sec*1000;
+            paramsIN.durB_msec=dur_sec*1000;
+            paramsIN.CF_A_Hz=CF_kHz(Fiber_Number)*1000;
+            paramsIN.CF_B_Hz=CF_kHz(Fiber_Number)*1000;
+            paramsIN.MAXspikes=3000;
+            paramsIN.PSD_LHfreqs_Hz=[0 64; 0 50];  %additional freq ranges to compute CCCenv for
+        end
+            
             parfor Fiber_Number=1:numCFs
                 fprintf('.'); if (mod(Fiber_Number,5)==0), fprintf(' '); end
                 if (Fiber_Number==numCFs), fprintf('\n'); end
