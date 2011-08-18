@@ -15,20 +15,32 @@
 
 GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
-matlabpool; % enable parallel computing
 
 strategy_list = {'short','avg','rate','env','tfs'};
-STRATEGY = 1;
+STRATEGY = 4;
+
+levels = 65;%[45 65 85];
+gains = -40:5:40;
+note = 'Aug_17_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
+
+NumLabs = 0; %use zero for max number of parallel processors
+if NumLabs
+    if NumLabs>1
+        eval(sprintf('matlabpool open %d;',NumLabs));
+    end
+else
+    matlabpool; % enable parallel computing with max cores
+end
 
 %% Initialization Routine
 % Get Input Audio File Name
-PathName = 'C:\Research\MATLAB\Temporal Coding\TIMIT\test\dr1\faks0\';
+PathName = 'TIMIT\test\dr1\faks0\';
 FileName = 'sa1.wav';
 if (true) % change to false if you want to ask the user for an input file
     phonemeindx = textread([PathName FileName(1:end-3) 'phn'],'%*d %d %*s');
 else
     [FileName,PathName,FilterIndex] = uigetfile('*.wav',...
-        'Select Input Audio File','C:\Research\MATLAB\Temporal Coding\TIMIT\test\dr1\faks0\sa1.wav');
+        'Select Input Audio File',[PathName 'sa1.wav']);
     % Get TIMIT phoneme structure if needed
     reply = menu('Load TIMIT phoneme structure?','YES','NO');
     if (reply==1), % load index for end of each phoneme
@@ -129,9 +141,6 @@ NAL_filter_gains = 10.^(interp1(0.5:6.5,NAL_IG,0:7,'linear','extrap')/20);
 b = firpm(16,NAL_filter_freqs,NAL_filter_gains);
 
 phones = 1:length(phonemeindx);
-levels = 65;%[45 65 85];
-gains = -40:5:40;
-note = 'Aug_17_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
 
 sponts = [50, 5, 0.25];
 N_win_short = round(.000256*ANmodel_Fs_Hz); % 256us
@@ -264,7 +273,14 @@ for OALevel_dBSPL=levels
                 paramsIN = cell(numCFs,1);
             end
             
-            warning('off','MATLAB:mir_warning_maybe_uninitialized_temporary');
+            len_Neurogram = EndIndex_mdl-StartIndex_mdl+1;
+            neurogramA1 = zeros(len_Neurogram,numCFs);%impaired
+            neurogramA2 = zeros(len_Neurogram,numCFs);%impaired
+            neurogramA3 = zeros(len_Neurogram,numCFs);%impaired
+            neurogramB1 = zeros(len_Neurogram,numCFs);%normal
+            neurogramB2 = zeros(len_Neurogram,numCFs);%normal
+            neurogramB3 = zeros(len_Neurogram,numCFs);%normal
+            
             parfor Fiber_Number=1:numCFs
                 fprintf('.'); if (mod(Fiber_Number,5)==0), fprintf(' '); end
                 if (Fiber_Number==numCFs), fprintf('\n'); end
@@ -418,14 +434,6 @@ for OALevel_dBSPL=levels
                         Tfs{Fiber_Number}(spont_index) = SACSCCmetrics.CCCtfs;
                     end %if
 
-%                     if Fiber_Number==1 && spont_index==1
-                        neurogramA1 = zeros(len_SynOutA,numCFs);%impaired
-                        neurogramA2 = zeros(len_SynOutA,numCFs);%impaired
-                        neurogramA3 = zeros(len_SynOutA,numCFs);%impaired
-                        neurogramB1 = zeros(len_SynOutB,numCFs);%normal
-                        neurogramB2 = zeros(len_SynOutB,numCFs);%normal
-                        neurogramB3 = zeros(len_SynOutB,numCFs);%normal
-%                     end
                     if ~isempty(SynOutA{Fiber_Number}{spont_index})
                         neurogramA1(:,Fiber_Number) = neurogramA1(:,Fiber_Number) + ...
                             w_spont(spont_index)*SynOutA{Fiber_Number}{spont_index}';
