@@ -30,7 +30,7 @@ if NumLabs
         eval(sprintf('matlabpool open %d;',NumLabs));
     end
 else
-    if NumLabs~=matlabpool('size')
+    if matlabpool('size')<8 %if we're not already maxed out
         if matlabpool('size'), matlabpool close; end %close open labs
         matlabpool; % enable parallel computing with max cores
     end
