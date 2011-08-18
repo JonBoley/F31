@@ -25,11 +25,15 @@ note = 'Aug_17_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
 
 NumLabs = 0; %use zero for max number of parallel processors
 if NumLabs
-    if NumLabs>1
+    if (NumLabs>1 && NumLabs~=matlabpool('size'))
+        if matlabpool('size'), matlabpool close; end %close open labs
         eval(sprintf('matlabpool open %d;',NumLabs));
     end
 else
-    matlabpool; % enable parallel computing with max cores
+    if NumLabs~=matlabpool('size')
+        if matlabpool('size'), matlabpool close; end %close open labs
+        matlabpool; % enable parallel computing with max cores
+    end
 end
 
 %% Initialization Routine
