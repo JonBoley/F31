@@ -17,13 +17,13 @@ GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
 
 strategy_list = {'short','avg','rate','env','tfs'};
-STRATEGY = 4;
+STRATEGY = 2;
 
 levels = 65;%[45 65 85];
 gains = -40:5:40;
 note = 'Aug_17_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
 
-NumLabs = 0; %use zero for max number of parallel processors
+NumLabs = 1; %use zero for max number of parallel processors
 if NumLabs
     if (NumLabs>1 && NumLabs~=matlabpool('size'))
         if matlabpool('size'), matlabpool close; end %close open labs
@@ -245,31 +245,31 @@ for OALevel_dBSPL=levels
             disp(sprintf('Adjusting prescribed gain by %ddB',Gain_Adjust));
 
             % initialization
-            SynOutA = cell(numCFs);
-            for z=1:numCFs, SynOutA{z} = cell(length(sponts)); end
-            SynOutB = cell(numCFs);
-            for z=1:numCFs, SynOutB{z} = cell(length(sponts)); end
+            SynOutA = cell(numCFs,1);
+            for z=1:numCFs, SynOutA{z} = cell(length(sponts),1); end
+            SynOutB = cell(numCFs,1);
+            for z=1:numCFs, SynOutB{z} = cell(length(sponts),1); end
             if (GEN_SPIKES)
-                SpikesA_plus = cell(numCFs);
-                for z=1:numCFs, SpikesA_plus{z} = cell(length(sponts)); end
-                SpikesA_minus = cell(numCFs);
-                for z=1:numCFs, SpikesA_minus{z} = cell(length(sponts)); end
-                SpikesB_plus = cell(numCFs);
-                for z=1:numCFs, SpikesB_plus{z} = cell(length(sponts)); end
-                SpikesB_minus = cell(numCFs);
-                for z=1:numCFs, SpikesB_minus{z} = cell(length(sponts)); end
+                SpikesA_plus = cell(numCFs,1);
+                for z=1:numCFs, SpikesA_plus{z} = cell(length(sponts),1); end
+                SpikesA_minus = cell(numCFs,1);
+                for z=1:numCFs, SpikesA_minus{z} = cell(length(sponts),1); end
+                SpikesB_plus = cell(numCFs,1);
+                for z=1:numCFs, SpikesB_plus{z} = cell(length(sponts),1); end
+                SpikesB_minus = cell(numCFs,1);
+                for z=1:numCFs, SpikesB_minus{z} = cell(length(sponts),1); end
             end
             if (ANALYZE_SPIKES)
-                Rate   = cell(numCFs);
-                for z=1:numCFs, Rate{z} = NaN*ones(length(sponts)); end
-                Difcor = cell(numCFs);
-                for z=1:numCFs, Difcor{z} = NaN*ones(length(sponts)); end
-                Sumcor = cell(numCFs);
-                for z=1:numCFs, Sumcor{z} = NaN*ones(length(sponts)); end
-                Env = cell(numCFs);
-                for z=1:numCFs, Env{z} = NaN*ones(length(sponts)); end
-                Tfs = cell(numCFs);
-                for z=1:numCFs, Tfs{z} = NaN*ones(length(sponts)); end
+                Rate   = cell(numCFs,1);
+                for z=1:numCFs, Rate{z} = NaN*ones(length(sponts),1); end
+                Difcor = cell(numCFs,1);
+                for z=1:numCFs, Difcor{z} = NaN*ones(length(sponts),1); end
+                Sumcor = cell(numCFs,1);
+                for z=1:numCFs, Sumcor{z} = NaN*ones(length(sponts),1); end
+                Env = cell(numCFs,1);
+                for z=1:numCFs, Env{z} = NaN*ones(length(sponts),1); end
+                Tfs = cell(numCFs,1);
+                for z=1:numCFs, Tfs{z} = NaN*ones(length(sponts),1); end
             end
 
             %default PARAMS
@@ -277,18 +277,20 @@ for OALevel_dBSPL=levels
                 paramsIN = cell(numCFs,1);
             end
             
-            len_Neurogram = EndIndex_mdl-StartIndex_mdl+1;
-            neurogramA1 = zeros(len_Neurogram,numCFs);%impaired
-            neurogramA2 = zeros(len_Neurogram,numCFs);%impaired
-            neurogramA3 = zeros(len_Neurogram,numCFs);%impaired
-            neurogramB1 = zeros(len_Neurogram,numCFs);%normal
-            neurogramB2 = zeros(len_Neurogram,numCFs);%normal
-            neurogramB3 = zeros(len_Neurogram,numCFs);%normal
-            
-            parfor Fiber_Number=1:numCFs
+            for Fiber_Number=1:numCFs
                 fprintf('.'); if (mod(Fiber_Number,5)==0), fprintf(' '); end
                 if (Fiber_Number==numCFs), fprintf('\n'); end
                 %disp(sprintf('Processing fiber #%d of %d',Fiber_Number,numCFs));
+                
+                if Fiber_Number==1
+                    len_Neurogram = EndIndex_mdl-StartIndex_mdl+1;
+                    neurogramA1 = zeros(len_Neurogram,numCFs);%impaired
+                    neurogramA2 = zeros(len_Neurogram,numCFs);%impaired
+                    neurogramA3 = zeros(len_Neurogram,numCFs);%impaired
+                    neurogramB1 = zeros(len_Neurogram,numCFs);%normal
+                    neurogramB2 = zeros(len_Neurogram,numCFs);%normal
+                    neurogramB3 = zeros(len_Neurogram,numCFs);%normal
+                end
                 
                 if (ANALYZE_SPIKES)
                     % specify params to be used
