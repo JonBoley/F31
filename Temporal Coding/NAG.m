@@ -17,7 +17,7 @@ GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
 
 strategy_list = {'short','avg','rate','env','tfs'};
-STRATEGY = 2;
+STRATEGY = 4;
 
 levels = 65;%[45 65 85];
 gains = -40:5:40;
@@ -189,8 +189,8 @@ for OALevel_dBSPL=levels
             
             % Determine OptimumGain based on last phoneme
             [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone-1,gains,note);
-            eval(sprintf('OptimumGain(phone_index-1,:)=%s',strategy_list{STRATEGY}));
-            fprintf('Using optimal gain (%s) of %ddB\n',strategy_list{STRATEGY},OptimumGain(phone_index-1,:));
+            eval(sprintf('OptimumGain(phone_index-1,:)=%s;',strategy_list{STRATEGY}));
+            fprintf('Using optimal gain (%s) of %ddB on previous phone\n',strategy_list{STRATEGY},OptimumGain(phone_index-1,:));
             
             % Apply OptimumGain to previous phones. (NOTE: We could add attack/release here)
             StartIndex = 1; % start of phone
