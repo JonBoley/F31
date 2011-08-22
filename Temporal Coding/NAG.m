@@ -320,7 +320,7 @@ for OALevel_dBSPL=levels
                     % Run fiber (A+)
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
                     %                         = zbcatmodel(input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc_impaired,Cihc_impaired,SR_sps);
-                    vihc = catmodel_IHC(input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
+                    vihc = catmodel_IHC(input_model_NAL2.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
@@ -352,7 +352,7 @@ for OALevel_dBSPL=levels
                     % Run fiber (A-)
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
                     %                         = zbcatmodel(-input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc_impaired,Cihc_impaired,SR_sps);
-                    vihc = catmodel_IHC(-input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
+                    vihc = catmodel_IHC(-input_model_NAL2.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
@@ -378,7 +378,7 @@ for OALevel_dBSPL=levels
                     % Run fiber (B+) - always normal
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
                     %                         = zbcatmodel(input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc,Cihc,SR_sps);
-                    vihc = catmodel_IHC(input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
+                    vihc = catmodel_IHC(input_model_normal2.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
@@ -407,7 +407,7 @@ for OALevel_dBSPL=levels
                     % Run fiber (B-) - always normal
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
                     %                         = zbcatmodel(-input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc,Cihc,SR_sps);
-                    vihc = catmodel_IHC(-input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
+                    vihc = catmodel_IHC(-input_model_normal2.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
