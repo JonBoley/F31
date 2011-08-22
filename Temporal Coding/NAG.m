@@ -144,7 +144,7 @@ NAL_filter_freqs = 2.^interp1(0.5:6.5,log2(FREQUENCIES),0:7,'linear','extrap')/(
 NAL_filter_gains = 10.^(interp1(0.5:6.5,NAL_IG,0:7,'linear','extrap')/20);
 b = firpm(16,NAL_filter_freqs,NAL_filter_gains);
 
-phones = 1:length(phonemeindx);
+phones = 2:length(phonemeindx);
 
 sponts = [50, 5, 0.25];
 N_win_short = round(.000256*ANmodel_Fs_Hz); % 256us
@@ -169,7 +169,7 @@ for OALevel_dBSPL=levels
     % (NOTE: it would be interesting to play with the group delay here)
     input_orig_NAL = [input_orig_NAL(ceil(length(b)/2):end); zeros(floor(length(b)/2),1)];
     
-    phone_index=1;
+    phone_index=min(phones);
     for phone=phones
         disp(sprintf('Processing phoneme #%d',phone));
 
@@ -190,6 +190,7 @@ for OALevel_dBSPL=levels
             % Determine OptimumGain based on last phoneme
             [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone-1,gains,note);
             eval(sprintf('OptimumGain(phone_index-1,:)=%s',strategy_list{STRATEGY}));
+            fprintf('Using optimal gain (%s) of %ddB\n',strategy_list{STRATEGY},OptimumGain(phone_index-1,:));
             
             % Apply OptimumGain to previous phones. (NOTE: We could add attack/release here)
             StartIndex = 1; % start of phone
