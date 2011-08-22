@@ -25,13 +25,13 @@ gain5_range = zeros(length(levels),2);
 
 level_index=1;
 for level=levels
-    if exist([directory num2str(level) 'dBSPL\' impairment '\' strategy '\' phone '\0dBgain_' note '.mat'])
+    if exist([directory num2str(level) 'dBSPL\' impairment '\' strategy '\phone' num2str(phone) '\0dBgain_' note '.mat'])
         existing_levels = [existing_levels, level];
-        load([directory num2str(level) 'dBSPL\' impairment '\' strategy '\' phone '\0dBgain_' note], '-regexp', '^neurogramB');
+        load([directory num2str(level) 'dBSPL\' impairment '\' strategy '\phone' num2str(phone) '\0dBgain_' note], '-regexp', '^neurogramB');
         index=1;
         for gain = gains
-            if exist([directory num2str(level) 'dBSPL\' impairment '\' strategy '\' phone '\' num2str(gain) 'dBgain_' note '.mat'])
-                load([directory num2str(level) 'dBSPL\' impairment '\' strategy '\' phone '\' num2str(gain) 'dBgain_' note], '-regexp', '^neurogramA','^Env','^Tfs');
+            if exist([directory num2str(level) 'dBSPL\' impairment '\' strategy '\phone' num2str(phone) '\' num2str(gain) 'dBgain_' note '.mat'])
+                load([directory num2str(level) 'dBSPL\' impairment '\' strategy '\phone' num2str(phone) '\' num2str(gain) 'dBgain_' note], '-regexp', '^neurogramA','^Env','^Tfs');
                 err1(level_index,index) = mean(mean(abs(neurogramB1-neurogramA1))); % short window
                 err2(level_index,index) = mean(mean(abs(neurogramB2-neurogramA2))); % long window
                 err3(level_index,index) = mean(mean(abs(neurogramB3-neurogramA3))); % no window
@@ -40,13 +40,15 @@ for level=levels
                 err2(level_index,index) = err2(level_index,index)/mean(mean((neurogramB2+neurogramA2)/2));
                 err3(level_index,index) = err3(level_index,index)/mean(mean((neurogramB3+neurogramA3)/2));
                 
-                env(level_index,index) = mean(Env*w_spont'); % take avg across CF (weighted SR's)
-                BigEnv(index,:) = Env*w_spont';
+                Env_temp = NaN*ones(size(Env,1),3); for i=1:size(Env,1), Env_temp(i,:)=Env{i,1}(:,1); end
+                env(level_index,index) = mean(Env_temp*w_spont'); % take avg across CF (weighted SR's)
+                BigEnv(index,:) = Env_temp*w_spont';
 %                 figure(98), %subplot(9,2,index), plot(Env); 
 %                 hold on; plot(Env*w_spont'); hold off; %axis off;
 %                 title(['Env, ' num2str(gain) 'dB gain']);
-                tfs(level_index,index) = mean(Tfs*w_spont');
-                BigTfs(index,:) = Tfs*w_spont';
+                Tfs_temp = NaN*ones(size(Tfs,1),3); for i=1:size(Tfs,1), Tfs_temp(i,:)=Tfs{i,1}(:,1); end
+                tfs(level_index,index) = mean(Tfs_temp*w_spont');
+                BigTfs(index,:) = Tfs_temp*w_spont';
 %                 figure(99), %subplot(9,2,index), plot(Tfs); 
 %                 title(['Tfs, ' num2str(gain) 'dB gain']);
 %                 hold on; plot(Tfs*w_spont'); hold off; %axis off;
