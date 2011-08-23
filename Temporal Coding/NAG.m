@@ -13,11 +13,13 @@
 %   'tfs'  (optimal gain restores tfs to normal)
 % if nargin < 1, analysis='shortrate'; end;
 
+EMAIL_NOTIFICATION = 1; %turn on/off email notification
+
 GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
 
 strategy_list = {'short','avg','rate','env','tfs'};
-STRATEGY = 4;
+STRATEGY = 2;
 
 levels = 65;%[45 65 85];
 gains = -40:5:40;
@@ -34,6 +36,11 @@ else
         if matlabpool('size'), matlabpool close; end %close open labs
         matlabpool; % enable parallel computing with max cores
     end
+end
+
+%% Get username/password for email notification
+if(EMAIL_NOTIFICATION)
+    [login password] = logindlg('Title','GMail Login');
 end
 
 %% Initialization Routine
@@ -247,7 +254,7 @@ for OALevel_dBSPL=levels
         
         gain_index=1;
         for Gain_Adjust=gains
-            disp(sprintf('Adjusting prescribed gain by %ddB',Gain_Adjust));
+            disp(sprintf('Adjusting prescribed gain by %ddB (%s)',Gain_Adjust,datestr(now)));
             
             temp_start=floor(sfreqNEW/sfreq*StartIndex_mdl);
             temp_end=floor(sfreqNEW/sfreq*EndIndex_mdl);
@@ -288,20 +295,18 @@ for OALevel_dBSPL=levels
                 paramsIN = cell(numCFs,1);
             end
             
+            len_Neurogram = EndIndex_mdl-StartIndex_mdl+1;
+            neurogramA1 = zeros(len_Neurogram,numCFs);%impaired
+            neurogramA2 = zeros(len_Neurogram,numCFs);%impaired
+            neurogramA3 = zeros(len_Neurogram,numCFs);%impaired
+            neurogramB1 = zeros(len_Neurogram,numCFs);%normal
+            neurogramB2 = zeros(len_Neurogram,numCFs);%normal
+            neurogramB3 = zeros(len_Neurogram,numCFs);%normal
+            
             for Fiber_Number=1:numCFs
                 fprintf('.'); if (mod(Fiber_Number,5)==0), fprintf(' '); end
                 if (Fiber_Number==numCFs), fprintf('\n'); end
                 %disp(sprintf('Processing fiber #%d of %d',Fiber_Number,numCFs));
-                
-                if Fiber_Number==1
-                    len_Neurogram = EndIndex_mdl-StartIndex_mdl+1;
-                    neurogramA1 = zeros(len_Neurogram,numCFs);%impaired
-                    neurogramA2 = zeros(len_Neurogram,numCFs);%impaired
-                    neurogramA3 = zeros(len_Neurogram,numCFs);%impaired
-                    neurogramB1 = zeros(len_Neurogram,numCFs);%normal
-                    neurogramB2 = zeros(len_Neurogram,numCFs);%normal
-                    neurogramB3 = zeros(len_Neurogram,numCFs);%normal
-                end
                 
                 if (ANALYZE_SPIKES)
                     % specify params to be used
@@ -503,6 +508,18 @@ for OALevel_dBSPL=levels
             gain_index=gain_index+1;
         end % end Gain_Adjust
     
+        if(EMAIL_NOTIFICATION)
+            try
+                email_text = ...
+                    sprintf('Calculation completed:\nLevel: %d\nPhone: %d\nGain: %d\n\nSent %s\n',...
+                    OALevel_dBSPL,phone,Gain_Adjust,datestr(now));
+                EmailNotification(login,password,'jdboley@purdue.edu','Matlab Update',email_text);
+                fprintf('Notification Email Sent\n');
+            catch
+                fprintf('[Error Sending Notification Email]\n');
+            end
+        end
+        
         phone_index = phone_index+1;
     end % end phone
 
