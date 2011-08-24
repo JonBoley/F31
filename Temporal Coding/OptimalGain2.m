@@ -13,6 +13,13 @@ w_spont = [.6 .2 .2]; %spont weights
 existing_levels=[];
 WarnMe = 0;
 
+% Check to see if we've already run this
+MatFileName = [directory num2str(level) 'dBSPL\' impairment '\' strategy '\OptimalGains_' note '.mat'];
+if exist(MatFileName)
+    load MatFileName;
+    return
+end
+
 gain1 = zeros(length(levels),1);
 gain2 = zeros(length(levels),1);
 gain3 = zeros(length(levels),1);
@@ -140,4 +147,23 @@ if(doplots)
 end
 
 if WarnMe, warndlg('Some gain values did not exist!'); end
+
+MatFileName = [directory num2str(level) 'dBSPL\' impairment '\' strategy '\OptimalGains_' note '.mat'];
+if exist(MatFileName)
+    load MatFileName;
+    short(phone)= gain1;
+    avg(phone)  = gain2;
+    rate(phone) = gain3;
+    env(phone)  = gain4;
+    tfs(phone)  = gain5;
+    save(MatFileName,'short','avg','rate','env','tfs','-append');
+else
+    short(phone)= gain1;
+    avg(phone)  = gain2;
+    rate(phone) = gain3;
+    env(phone)  = gain4;
+    tfs(phone)  = gain5;
+    save(MatFileName,'short','avg','rate','env','tfs');
+end
+
 
