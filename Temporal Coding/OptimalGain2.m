@@ -13,13 +13,6 @@ w_spont = [.6 .2 .2]; %spont weights
 existing_levels=[];
 WarnMe = 0;
 
-% Check to see if we've already run this
-MatFileName = [directory num2str(level) 'dBSPL\' impairment '\' strategy '\OptimalGains_' note '.mat'];
-if exist(MatFileName)
-    load MatFileName;
-    return
-end
-
 gain1 = zeros(length(levels),1);
 gain2 = zeros(length(levels),1);
 gain3 = zeros(length(levels),1);
@@ -33,6 +26,18 @@ gain5_range = zeros(length(levels),2);
 
 level_index=1;
 for level=levels
+    % Check to see if we've already run this
+    MatFileName = [directory num2str(level) 'dBSPL\' impairment '\' strategy '\OptimalGains_' strategy '_' note '.mat'];
+    if exist(MatFileName)
+        load(MatFileName);
+        gain1 = short(phone);
+        gain2 = avg(phone);
+        gain3 = rate(phone);
+        gain4 = env(phone);
+        gain5 = tfs(phone);
+        return
+    end
+    
     if exist([directory num2str(level) 'dBSPL\' impairment '\' strategy '\phone' num2str(phone) '\0dBgain_' note '.mat'])
         existing_levels = [existing_levels, level];
         load([directory num2str(level) 'dBSPL\' impairment '\' strategy '\phone' num2str(phone) '\0dBgain_' note], '-regexp', '^neurogramB');
@@ -148,7 +153,7 @@ end
 
 if WarnMe, warndlg('Some gain values did not exist!'); end
 
-MatFileName = [directory num2str(level) 'dBSPL\' impairment '\' strategy '\OptimalGains_' note '.mat'];
+MatFileName = [directory num2str(level) 'dBSPL\' impairment '\' strategy '\OptimalGains_' strategy '_' note '.mat'];
 if exist(MatFileName)
     load MatFileName;
     short(phone)= gain1;
