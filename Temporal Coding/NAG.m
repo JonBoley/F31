@@ -19,7 +19,7 @@ GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
 
 strategy_list = {'short','avg','rate','env','tfs'};
-STRATEGY = 2;
+STRATEGY = 4;
 
 START_PHONE = 2;
 
@@ -27,7 +27,7 @@ levels = 65;%[45 65 85];
 gains = -40:5:40;
 note = 'Aug_22_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
 
-NumLabs = 1; %use zero for max number of parallel processors
+NumLabs = 4; %use zero for max number of parallel processors
 if NumLabs
     if (NumLabs>1 && NumLabs~=matlabpool('size'))
         if matlabpool('size'), matlabpool close; end %close open labs
@@ -510,8 +510,8 @@ for OALevel_dBSPL=levels
             if(EMAIL_NOTIFICATION)
                 try
                     email_text = ...
-                        sprintf('Calculation completed:\nLevel: %d\nPhone: %d\nGain: %d\n\nSent %s\n',...
-                        OALevel_dBSPL,phone,Gain_Adjust,datestr(now));
+                        sprintf('Calculation completed (%s):\nLevel: %d\nPhone: %d\nGain: %d\n\nSent %s\n',...
+                        strategy_list{STRATEGY},OALevel_dBSPL,phone,Gain_Adjust,datestr(now));
                     EmailNotification(login,password,'jdboley@purdue.edu','Matlab Update',email_text);
                     fprintf('Notification Email Sent\n');
                 catch
