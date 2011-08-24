@@ -21,6 +21,8 @@ ANALYZE_SPIKES = 1;
 strategy_list = {'short','avg','rate','env','tfs'};
 STRATEGY = 2;
 
+START_PHONE = 2;
+
 levels = 65;%[45 65 85];
 gains = -40:5:40;
 note = 'Aug_22_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
@@ -151,7 +153,7 @@ NAL_filter_freqs = 2.^interp1(0.5:6.5,log2(FREQUENCIES),0:7,'linear','extrap')/(
 NAL_filter_gains = 10.^(interp1(0.5:6.5,NAL_IG,0:7,'linear','extrap')/20);
 b = firpm(16,NAL_filter_freqs,NAL_filter_gains);
 
-phones = 1:length(phonemeindx);
+phones = START_PHONE:length(phonemeindx);
 
 sponts = [50, 5, 0.25];
 N_win_short = round(.000256*ANmodel_Fs_Hz); % 256us
@@ -505,20 +507,20 @@ for OALevel_dBSPL=levels
                 clear Rate Difcor Sumcor Env Tfs
             end
 
+            if(EMAIL_NOTIFICATION)
+                try
+                    email_text = ...
+                        sprintf('Calculation completed:\nLevel: %d\nPhone: %d\nGain: %d\n\nSent %s\n',...
+                        OALevel_dBSPL,phone,Gain_Adjust,datestr(now));
+                    EmailNotification(login,password,'jdboley@purdue.edu','Matlab Update',email_text);
+                    fprintf('Notification Email Sent\n');
+                catch
+                    fprintf('[Error Sending Notification Email]\n');
+                end
+            end
+            
             gain_index=gain_index+1;
         end % end Gain_Adjust
-    
-        if(EMAIL_NOTIFICATION)
-            try
-                email_text = ...
-                    sprintf('Calculation completed:\nLevel: %d\nPhone: %d\nGain: %d\n\nSent %s\n',...
-                    OALevel_dBSPL,phone,Gain_Adjust,datestr(now));
-                EmailNotification(login,password,'jdboley@purdue.edu','Matlab Update',email_text);
-                fprintf('Notification Email Sent\n');
-            catch
-                fprintf('[Error Sending Notification Email]\n');
-            end
-        end
         
         phone_index = phone_index+1;
     end % end phone
