@@ -196,10 +196,12 @@ for OALevel_dBSPL=levels
             PhonemeLevel(phone_index,level_index) = ...
                 20*log10(sqrt(mean(input(phonemeindx(phone-1):min(phonemeindx(phone),length(input))).^2))/(20e-6));
             
-            % Determine OptimumGain based on last phoneme
-            [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone-1,gains,note);
-            eval(sprintf('OptimumGain(phone_index-1,:)=%s;',strategy_list{STRATEGY}));
-            fprintf('Using optimal gain (%s) of %ddB on previous phone\n',strategy_list{STRATEGY},OptimumGain(phone_index-1,:));
+            for phone_index2=2:phone
+                % Determine OptimumGain for each phone
+                [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone_index2-1,gains,note);
+                eval(sprintf('OptimumGain(phone_index2-1,:)=%s;',strategy_list{STRATEGY}));
+                fprintf('Using optimal gain (%s) of %ddB on previous phone\n',strategy_list{STRATEGY},OptimumGain(phone_index2-1,:));
+            end
             
             % Apply OptimumGain to previous phones. (NOTE: We could add attack/release here)
             StartIndex = 1; % start of phone
