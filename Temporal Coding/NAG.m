@@ -200,7 +200,7 @@ for OALevel_dBSPL=levels
                 % Determine OptimumGain for each phone
                 [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone_index2-1,gains,note);
                 eval(sprintf('OptimumGain(phone_index2-1,:)=%s;',strategy_list{STRATEGY}));
-                fprintf('Using optimal gain (%s) of %ddB on previous phone\n',strategy_list{STRATEGY},OptimumGain(phone_index2-1,:));
+                fprintf('Using optimal gain (%s) of %ddB on phone %d\n',strategy_list{STRATEGY},OptimumGain(phone_index2-1,:),phone_index2-1);
             end
             
             % Apply OptimumGain to previous phones. (NOTE: We could add attack/release here)
