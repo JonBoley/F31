@@ -30,12 +30,14 @@ for level=levels
     MatFileName = [directory num2str(level) 'dBSPL\' impairment '\' strategy '\OptimalGains_' strategy '_' note '.mat'];
     if exist(MatFileName)
         load(MatFileName);
-        gain1 = short(phone);
-        gain2 = avg(phone);
-        gain3 = rate(phone);
-        gain4 = env(phone);
-        gain5 = tfs(phone);
-        return
+        if length(short)>=phone
+            gain1 = short(phone);
+            gain2 = avg(phone);
+            gain3 = rate(phone);
+            gain4 = env(phone);
+            gain5 = tfs(phone);
+            return
+        end
     end
     
     if exist([directory num2str(level) 'dBSPL\' impairment '\' strategy '\phone' num2str(phone) '\0dBgain_' note '.mat'])
@@ -155,7 +157,7 @@ if WarnMe, warndlg('Some gain values did not exist!'); end
 
 MatFileName = [directory num2str(level) 'dBSPL\' impairment '\' strategy '\OptimalGains_' strategy '_' note '.mat'];
 if exist(MatFileName)
-    load MatFileName;
+    load(MatFileName);
     short(phone)= gain1;
     avg(phone)  = gain2;
     rate(phone) = gain3;
