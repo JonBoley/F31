@@ -1,0 +1,205 @@
+% File: testSTMP_ANmodel_repDATA.m
+% M. Heinz Jun 14, 2007
+%
+% Goes through STMP and regular POP predictions to compare
+%   1) STMP analysis: one CF, multiple frequency-shifted stimuli
+%   2) standard POP: multiple CFs responding to a fixed stimulus, and
+%
+% Replicates an existing data unit - same BF, octaveshifts, Features,
+% levels, etc ... for STMP "EH" based data
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%% TO DO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% 6/20/07
+% *1) Finish up stim prep - functions
+% *2) Run Anmodel
+% *3) Store spikes
+% *4) Save DATA
+% *5) Do conversion, etc
+% *6) Save Nchans1stim, etc
+%% 5/14/08
+% 7) VERIFY same result
+%    - run AN model with diff CFs, same stim - by loading STMP file for
+%    params
+% 8) setup - by hand AN model
+% 9) move to BBN, SAC/SCC/CCC vs Delta CF
+
+
+
+
+
+
+global STMP_dir STMP_ExpList
+% global FeaturesText FormsAtHarmonicsText InvertPolarityText
+
+clear ANmodelPARAMS unitINFO
+
+% ReplicateUNIT=1;  % 1: get BF, octashifts, levels, etc ... from existing data from a recorded unit
+% % 0: type in all by hand
+STIMtypes_allowed={'EHrBFi','EHvNrBFi'};
+
+% close previous plots
+OPENfigs=get(0,'Children');
+close(intersect([14 1 2 3 4 100 101 102 11 12 13 14 ],OPENfigs))
+
+%% Get info for ANdata unit to REPLICATE
+TESTunitNUM=1;  % 1: ARO (111804, 1.28), 2: ISH (041805, 2.04), 3: Purdue1 (111606, 2.09); 4: Purdue2 (041306, 1.03),
+if TESTunitNUM==1
+% 	ExpDate='111804'; UnitName='1.28'; STIMtype='EHrBFi'; DATAtype='Nchans1stim';  % ARO2005: EHrBFI, with EHrlv
+    ExpDate='041805'; UnitName='2.04'; STIMtype='EHvNrBFi'; DATAtype='Nchans1stim'; % ISH2006: EHvnrBFI, with EHrlv and EHINrlv
+end
+
+%%%% Find the full Experiment Name
+ExpDateText=strcat('20',ExpDate(end-1:end),'_',ExpDate(1:2),'_',ExpDate(3:4));
+for i=1:length(STMP_ExpList)
+	if ~isempty(strfind(STMP_ExpList{i},ExpDateText))
+		ExpName=STMP_ExpList{i};
+		break;
+	end
+end
+if ~exist('ExpName','var')
+	disp(sprintf('***ERROR***:  Experiment: %s not found\n   Experiment List:',ExpDate)); disp(strvcat(STMP_ExpList)); beep; error('STOPPED');
+end
+
+%%%% Parse out the Track and Unit Number
+TrackNum=str2num(UnitName(1:strfind(UnitName,'.')-1));
+UnitNum=str2num(UnitName(strfind(UnitName,'.')+1:end));
+disp(sprintf('\n... STMP (AN model): REPLICATING params for "%s" Stimuli \n     ... for:  Experiment: ''%s''; Unit: %d.%02d',STIMtype,ExpName,TrackNum,UnitNum))
+
+%%%% Setup related directories
+RAWdata_dir=fullfile(STMP_dir,'ExpData',ExpName);
+eval(['cd ''' RAWdata_dir ''''])
+UNITinfo_dir=fullfile(STMP_dir,'ExpData',ExpName,'UNITinfo');   % For general unit info (BF, SR, bad lines, ...)
+STMPanal_dir=fullfile(STMP_dir,'ExpData',ExpName,'STMPanalyses');   % For STMP analyses (Spike Trains, PSTs, PerHist, DFTs, SAC/SCCs, ...)
+if ~exist('UNITinfo','dir')|~exist('STMPanalyses','dir')
+	disp(sprintf('***ERROR***:  UNITinfo or STMPanalyses Directory for Experiment: %s not found',ExpDate)); beep; error('STOPPED');
+end
+
+%%%% Load unitINFO
+unitINFO_filename=sprintf('unitINFO.%d.%02d.mat',TrackNum,UnitNum);
+eval(['ddd=dir(''' fullfile(UNITinfo_dir,unitINFO_filename) ''');'])
+if isempty(ddd)
+	disp(sprintf('***ERROR***:  UNITinfo DOES NOT EXIST for unit.%d.%d for Experiment: %s not found',TrackNum,UnitNum,ExpDate)); beep; error('STOPPED');
+end
+eval(['load ''' fullfile(UNITinfo_dir,unitINFO_filename) ''''])
+
+%%%% Load STs
+STs_filename=sprintf('STs_%s.%d.%02d.%s.mat','1unitNstim',TrackNum,UnitNum,STIMtype);
+STs_dataname=sprintf('STs_%s','1unitNstim');
+eval(['load ''' fullfile(STMPanal_dir,STs_filename) ''''])
+eval(['ANdata_STs_info = ' STs_dataname ';']);
+eval(['clear ' STs_dataname]);
+
+%% Set up ANmodel unit based on ANdata unit info 
+% ANmodel params
+ANmodelPARAMS.unit.Info.BF_kHz=ANdata_STs_info.Info.BF_kHz;
+ANmodelPARAMS.unit.Info.SR_sps=ANdata_STs_info.Info.SR_sps;
+ANmodelPARAMS.unit.Info.cohc=1; % OHC function
+ANmodelPARAMS.unit.Info.cihc=1; % OHC function
+ANmodelPARAMS.unit.Info.nrep=12;
+
+% store all data/stim info for later use
+ANdata_STs_info=rmfield(ANdata_STs_info,'SpikeTrains');
+ANmodelPARAMS.unit.Info.ANdata_STs_info=ANdata_STs_info;
+
+
+%% Setup new Unit to save ANmodel data into
+% From here on, all variables refer to ANmodel units - ANdata info is all
+% saved already
+clear ExpName UnitName
+
+%%Setup ANmodel data directory and Track/Unit
+ExpDate='041805'; 
+UnitName='2.04';  % Unit for STMP data [ T+1.U used for VALIDATION DATA]
+%%% NOTE: Odd Tracks (eg 1) are STMP modeling (effective CFs), Even tracks
+%%% (eg 2) are straight AN modeling (actual CFs)
+UnitName2=num2str((str2num(UnitName)+1));
+
+%%%% Find the full Experiment Name
+ExpDateText=strcat('20',ExpDate(end-1:end),'_',ExpDate(1:2),'_',ExpDate(3:4));
+for i=1:length(STMP_ExpList)
+	if ~isempty(strfind(STMP_ExpList{i},ExpDateText))
+		ExpName=STMP_ExpList{i};
+		break;
+	end
+end
+if ~exist('ExpName','var')
+	disp(sprintf('***ERROR***:  Modeling Experiment: %s not found\n   Experiment List:',ExpDate))
+	disp(strvcat(STMP_ExpList))
+	beep
+	error('STOPPED');
+end
+RAWdata_dir=fullfile(STMP_dir,'ExpData',ExpName);
+eval(['cd ''' RAWdata_dir ''''])
+
+%%%% Parse out the Track and Unit Number
+% LATER ??? NEED TO LOOK UP NEXT UNIT NUMBER TO SAVE DATA
+TrackNum=str2num(UnitName(1:strfind(UnitName,'.')-1));
+UnitNum=str2num(UnitName(strfind(UnitName,'.')+1:end));
+
+%%% CHECK STIMtype is setup!
+if ~sum(strcmp(STIMtypes_allowed,STIMtype))
+	beep
+	error(sprintf('STIMtype: %s NOT SETUP YET!!',STIMtype))
+end
+
+%%%%%% SPIKE TRAIN DATA STORAGE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Setup unitINFO file - just to specifiy all params
+GENsave_UnitINFO(TrackNum,UnitNum,1,ANmodelPARAMS) % save for STMP unit (1 CF, Nstim converted into N CFs, 1 stim)
+GENsave_UnitINFO(TrackNum+1,UnitNum,1,ANmodelPARAMS)  % save for VALIDATION unit (real AN model CFs, 1 stim)
+
+%%  generate & save AN model raw spikes for STMP (1unitNstim) option
+STMPsave_STs_1unitNstim_ANmodel(ExpDate,UnitName,STIMtype,ANmodelPARAMS)  
+%%  convert & save spikes for STMP (Nchans1stim) predictions
+STMPconvert_STs_Nchans1stim(ExpDate,UnitName,STIMtype)
+
+%%  generate & save AN model raw spikes for Nchans1stim (VALIDATE with actual CFs)
+STMPsave_STs_Nchans1stim_ANmodel(ExpDate,UnitName2,STIMtype)
+
+
+%%%%%% ANALYSES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% STMP data [TrackNUM.UnitNUM]
+global BASE10_FigureNUMS
+BASE10_FigureNUMS=0;  %All FIGS are 1-10, but this is BASE10 value is specific for a given condition (0, 10, 20, ...)
+
+%% Rate-level functions (if available)
+STMPplot_RLFs(ExpDate,UnitName)
+
+%% Period Histograms
+STMPcompute_PERhists(ExpDate,UnitName,STIMtype,DATAtype)
+STMPplot_PERhists(ExpDate,UnitName,STIMtype,DATAtype)
+
+%% Synchronized Rates from Period Histograms
+STMPcompute_DFTs_RSPALSR(ExpDate,UnitName,STIMtype,DATAtype)
+STMPplot_DFTs(ExpDate,UnitName,STIMtype,DATAtype)
+
+%% Rate, Synch, Phase - summary (vs CF) plots
+STMPplot_RPSs(ExpDate,UnitName,STIMtype,DATAtype)
+
+
+%%%%%%%%%%%%%%%
+%% VALIDATION data [TrackNUM+1.UnitNUM]
+input('Press Enter to go to nextunit')
+BASE10_FigureNUMS=10;  %All FIGS are 1-10, but this is BASE10 value is specific for a given condition (0, 10, 20, ...)
+
+%% Rate-level functions (if available)
+STMPplot_RLFs(ExpDate,UnitName2)
+
+%% Period Histograms
+STMPcompute_PERhists(ExpDate,UnitName2,STIMtype,DATAtype)
+STMPplot_PERhists(ExpDate,UnitName2,STIMtype,DATAtype)
+
+%% Synchronized Rates from Period Histograms
+STMPcompute_DFTs_RSPALSR(ExpDate,UnitName2,STIMtype,DATAtype)
+STMPplot_DFTs(ExpDate,UnitName2,STIMtype,DATAtype)
+
+%% Rate, Synch, Phase - summary (vs CF) plots
+STMPplot_RPSs(ExpDate,UnitName2,STIMtype,DATAtype)
+
+
+
+
+

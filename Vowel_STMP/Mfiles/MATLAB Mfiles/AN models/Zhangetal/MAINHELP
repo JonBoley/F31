@@ -1,0 +1,281 @@
+/** \mainpage AN model 2 Documentation for CAT\n source file navigation
+ *
+ *\section download Download and uncompress the source files
+ *<p> Click here to download the source file <a href="http://auda.bu.edu/zxd/research/ancat.tar.gz">ancat.tar.gz</a>
+ *<p> Uncompress it using the command <I>tar -xzvf ancat.tar.gz</I>\n
+ * or <I>gunzip -dc ancat.tar.gz | tar -xv</I>.
+ *
+ *\section compile Compile the file
+ *
+ * <p>In the source file directory type\n <I>make anmodel</I>
+ * <p>If you don't have g++, try c++ instead( and change the CC value to c++ in <I>makefile</I>).
+ *
+ *\section run Run the model
+ *
+ * <p>The program <I>anmodel</I> is used if you want to pass a stimulus through the AN filter bank.\n
+ * The typical usage of the program is as follows:\n
+ * <I>./anmodel -wavefile click -reptim 0.020 -fibers 32 -cflo 200 -cfhi 20000</I>
+ * <p>Parameter values are set by specifying several options, each of which is preceded by a "-". In
+ * this example the <I>-wavefile</I> option is set to file name <I>click</I>, which holds an ascii
+ * stimulus file(single column of values.) The sampling rate of the stimulus should match that used in
+ * the simulation; the default values is 500kHz but this value can be changed with the option
+ * <I>-tdres</I>.\n
+ * <p>--The <I>-reptim</I> option determines how long(in seconds) the model should run, it will append
+ * zero if the file input is shorter than the value of reptim.\n
+ * The <I>-fibers</I> option determines how many filters(fibers) you want to include in the filter
+ * bank(the Maximum is 64).\n
+ * <p>--The CFs of the fiber in the filterbank can be set using the <I>-cflo</I> and <I>-cfhi</I> options
+ * (as shown), or by setting the cf of the fiber in the center of the bank(<I>-cf</I>) and setting
+ * the distance between fibers(<I>-delx</I>) in terms of mm along the BM(using Liberman's CF map). If
+ * <I>-cflo</I> and <I>-cfhi</I> are used, the fibers are evenly apaced along the BM using Liberman's
+ * map.
+ * <p>To see all of the option and the default values, type <I>anmodel -help</I>.
+ * <p>The output of the program is stored in file <I>filterout</I> and <I>synapseout</I>. Each column
+ * of the data file is the output of one fiber fiter. The <I>filterout</I> stores the output of the
+ * tuning filter(in Pascal) and <I>synapseout</I> stores the output of the synapse(in spikes/sec).
+ *
+ * \section filelist Description of the files
+ * \ref filelist_detail "go..."
+
+ * \section FAQ Questions about the code
+ * \ref faq_detail "go..."
+ * \anchor faq_detail
+ * <p>1.<I>How the ihc-ppi nonlinearity is determined?</I>\ref answer1 "answer"
+ * <p>2.<I>What is the relationship between vsat and kppi?</I>\ref answer2 "answer"
+ * <p>3.<I>How is the structure of the model defined in the code?</I>\ref model_structure "answer"
+ * <p>4.<I>How are the parameters of the model set up?</I>\ref model_parameters "answer"
+ * <p>5.<I>How the model processes the signal?</I>\ref model_run "answer"
+ * <p>6.<I>How to set the model to right spontaneous rate and saturating rate?</I>
+ *      \ref model_spont_faq "answer"
+ *
+ *\section model_structure Model Structure
+ *\ref model_structure_detail "go..."
+ * \anchor model_structure_detail
+ * class TAuditoryNerve defines the main structure of the AN model\n
+ * class TBasilarMembrane defines the main structure of the tuning filter with control path
+ *
+ *\section model_parameters How the parameters are set up
+ *
+ * The parameters of the model are determined in the initialization of the model fiber\n
+ * TAuditoryNerve::construct()\n
+ * TAuditoryNerve::init()
+ *
+ *\section model_run Run the model
+ *
+ * This section tries to help you understand how the signal passes through the model
+ * to get the final output.(Click on these function names to see the detail codes)\n
+ * TAuditoryNerve::run() shows the main function that calls all other functions.\n
+ * TBasilarMembrane::run() shows how the signal passes through the control path and time-varying
+ * filter, and also shows how the nonlinear filter is changed instantaneously.\n
+ * To see how the signal runs through a specific part of the model, click on these functions:\n
+ * TGammaTone::run, TAfterOHC::run,THairCell::run, TSynapse_WS::run, TSpikeGenerator::run
+ *
+ *\section other_answers Other answers
+ *
+ * \anchor answer1 Answer1
+ * <p>ihc-ppi nonlinearity is setup in TAuditoryNerve::init() :\n
+ *   calculate kppi(kslope) as the parameter of the IHC-PPI nonliear function\n
+ *   call TSynapse_WS::setppi_mgheinz(double) to set mgheinz's soft rectifier nonlinear function\n
+ *   call TSynapse_WS::init_WS()(which call TIHCPPI_mgheinz::init() to calculate the real parameters
+ * <p>Run\n
+ *   TSynapse_WS::run call TIHCPPI_mgheinz::run to get the output of the nonlinear function
+ *
+ *  The ihc-ppi nonlinear function used in the code
+ *  is soft rectifier nonlinear function used by Michael G. Heinz(ref: Heinz et al. 2000) before.
+ *  See TIHCPPI_mgheinz::run() for detail information about this nonlinear function
+ *
+ * The parameters in this nonlinear function are basically determined by threshold(kppi/kslope) of the
+ *  fiber, which is calculated in function TAuditoryNerve::init(), this function also calls
+ *  the function TSynapse_WS::setppi_mgheinz(double) to set the nonlinear function as mgheinz's
+ *
+ *  TIHCPPI_mgheinz::init() calculates the real parameters according to the kppi(kslope), which is called
+ *  when the synapse is initialized(TSynapse_WS::init_WS()) in TAuditoryNerve::init()
+ *
+ * \anchor answer2 Answer2
+ * <p> the vsat is not used if the kppi is set(>0), see TIHCPPI_mgheinz::init
+ *
+ * \anchor model_spont_faq Answer about spontanous rate
+ * <p> The user can use the -spont to set the spontaneous rate of the fiber output
+ * this value is estimated based on syanpse output(sout) without refractoriness, to set the spont
+ * rate to the right value for spikes, you should set a little bit higher than desired. Say if you
+ * set the spontaneous rate at 50 spikes/second in the model, the real spontaneous rate is around
+ * 42 spikes/second
+ * The saturation rate of the fiber is calculated based on the real spikes(around 250 spikes/sec), if
+ * you using sout to calculate the sustained rate, you may get the rate higher than this one.
+ *
+ * \anchor filelist_detail FileList\n
+--------------------------------------------------------------
+<p>
+complex.cpp : routines about the complex number operation\n
+
+<p>
+filters.cpp : defines all the filters, including\n
+	      1. gamma-tone filters including basilar membrane filtering & wideband filter in control path\n
+              2. low pass filter in the hair cell\n
+<p>
+synapse.hpp : define the structure of the synapse, including\n
+              1. ihc-ppi mapping\n
+              2. neural transmitter release model(Westerman and Smith)\n
+              3. spike generator including refractoriness\n
+<p>
+hc.cpp      : defines the haircell model(inner and outer), including\n
+              1. nonlinear(arctan, and Boltzman) function\n
+              2. haircell (consists of the nonlinearity and the low-pass filter)\n
+<p>
+cmpa.cpp    : defines the structure of the model, including\n
+              1. basilar membrane (gamma-tone filter with forward control path)\n
+              2. auditory nerve fiber model (basilar membrane, inner hair cell, synapse, spike generator)\n
+	      3. other functions that can be used\n
+<p>
+anmodel.cpp :\n
+             wrap up all the functions to do the appropriate test\n
+
+ */
+
+/**\anchor init_synapse ********************* Init Synapse ********************************
+  * for linear,mgheinz version, if we set vsat = 10*PImax(which is determined by kppi now),
+  * that means when ihc comes to the maximum value(1) the ppi = vsat
+  * while the  high spont fibers saturate at PImax, which is 20dB less than the
+  * vsat, for low spont rate, this seems not true, so the low spont fiber will not
+  * saturate at the same level as that of high spont fiber
+
+  * The threshold of fibers seems also change with the spont rate, with the same vsat
+  * the threshold of low spont fibers seems lower than that of the high spont fiber
+  * which means that we should derease the vsat for low spont such that it has higher threshold
+  * once we set the saturate level of IHC, we can adjust this value to
+  * make the AN fibers saturate/threshold at desired level
+  *
+  * for low spont, we set the vsat = PImax, such that the fibers will
+  * saturates until ihc saturates
+  * if so, why the threshold of low spont fiber will decrease?
+
+ * For How the synapse are initialized see \ref init_synapse "init_synapse"
+
+  change the order of wideband-filter, change the initial bandwidth of the filter,
+  change the normalized gain\n
+
+  Try get the wideband filter timevaring????
+
+  difference from mgheinz's human(sout) and cat(spikes)
+  cutoff = 400/800hz
+  ass = 130/250
+  kppi*2
+
+  try to using a smoothed tau: changes in the AfterOHC nonlinearity
+
+   Now trying to work on the IHC nonliearity to get rid of the peak in the sync-level funcion
+   Also trying to get the symetrical value by only including three time variable gammatone filter
+   now : adjust afterohc NL parameters  : dc = dc+0.1
+   kppi : ihc threshold is changed a little bit
+
+   1/12: 1. decrease the Ass, when Ass = 250, the sustained rate is 400 for 50ms, 300 for 200ms
+            This is too high compared with the data,(ref:Schalk,Sachs 1980)
+         2. compare the noise/tone rate level function at high CF
+            (ref:Schalk,Sachs 1980,
+
+   1/5 : 1. using 5ms rise/fall(changes made in model.hpp,stim.cpp)
+         2. using realspikes to caculate the rate
+         3. when caculate the spikes, simulate the synapse state as in
+            quite to include the refratoryness
+	 4. adaptation time constant is the same as Ian's (2ms, 60ms)
+
+   12/30 : more changes should be done:
+   1. the fit of Q10 using Ian's equations
+   2. using soft rectify between Vihc/kppi???
+   3. The time constant is adjusted so the reasonable durations can be used
+   4. better using spikes generator
+
+   12/22 : change some parameters as said in Ian's email
+   1+6*Asp/(6+Asp)
+   time constant : 2ms, 60ms
+   Ass decreased to 150
+   Linear between Vihc/kppi
+
+   8/8/99 Now we try to clear up the code
+
+  6/1/99 Now the wideband filter in control path is more flexible; the center frequency of the filter is shifted a little higher than cf,
+  the gain of the filter is normalized to 1 at the frequency of cf;
+  in structure T_Anpara: several parameters of wideband filter are added to satisfy such modification
+  they (wb_deltaphase,wb_gain) are initialized in Init_Wideband
+
+   add a high path tempory : an an.run()
+*/
+
+/** \file MAINHELP
+\brief Quick Reference
+
+---------------------------------------------------------
+<p>in cmpa.cpp
+
+TAuditoryNerve::construct(void)
+TAuditoryNerve::init(...)
+// initialize the auditory nerve fibers and set the parameters
+
+Object Description:
+---------------------------------------------------------
+<p>In C++, all the functions and corresponding structures are wraped up together as classes(objects), An object
+can have other objects and define the functions to manipulate them.
+The main objects(classes) defined in the codes are followings:
+
+
+class TAuditoryNerve  /*(cmpa.hpp,cmpa.cpp, same as T_Anpara)
+  the main structure of the AN2 model :
+
+   including four sub-structure(objects)
+     a nonlinear basilar membrane filters : TBasilarMembrane (in cmpa.hpp)
+     inner hair cell model                : THairCell        (in hc.hpp)
+     synapse models                       : TSynapse_WS      (in synapse.hpp)
+     spike generator                      : TSpikeGenerator  (in synapse.hpp)
+
+   including functions including
+     construct(void): create all the objects
+     init(species, cf, spont) : set up all the parameters of the model
+     double run(x) : run the stimuli step by step
+
+
+class TBasilarMembrane  //(cmpa.hpp,cmpa.cpp)
+  the main structure of the nonlinear basilar membrane :
+
+   including four sub-structure(objects)
+     a 4th-order gamma-tone filter          : TGammaTone       (in filters.hpp)
+     wideband-pass filter in control path : TGammaTone       (in filters.hpp)
+     outer hair cell model                : THairCell        (in hc.hpp)
+     nonlinear after ohc                  : TNL_AfterOHC     (in hc.hpp)
+
+   including functions including
+     double run(x) : run the stimuli step by step
+
+
+for other objects, please refer to the corresponding hpp file
+
+File Description:
+---------------------------------------------------------------
+complex.cpp : routines about the complex number operation
+
+filters.cpp : define all the filters, including
+	      1. gamma-tone filter as basilar membrane filtering
+              2. low pass filter in the hair cell
+
+synapse.cpp : define the structure of the synapse, including
+              1. ihc-ppi mapping
+              2. neural transmitter release model(westman)
+              3. spike generator including refractory
+
+hc.cpp      : define the haircell model(inner and outer), including
+              1. nonlinear(arctan, and boltzman) function
+              2. haircell (consists of the nonlinear and the low-pass filter)
+
+cmpa.cpp    : define the structure of the model, including
+              1. basilar membrane (gamma-tone filter with forward control path)
+              2. auditory nerve fiber model (basilar membrane, inner hair cell, synapse, spike generator)
+	      3. other functions that can be used
+
+anmodel.cpp :
+             wrap up all the functions to do the appropriate test
+
+*/
+
+
+
+
+

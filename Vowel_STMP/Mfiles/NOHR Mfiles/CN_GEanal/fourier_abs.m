@@ -1,0 +1,1 @@
+function [FT,freq]=fourier_abs(sig,fs)% Usage:  [FT,freq]=fourier_abs(sig,fs)FTtemp=abs(fft(sig));FT=FTtemp(1:floor(length(sig)/2));freq=[0:floor(length(sig)/2)-1]*fs/length(sig);return

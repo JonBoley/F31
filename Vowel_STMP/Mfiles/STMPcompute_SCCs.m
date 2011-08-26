@@ -1,0 +1,361 @@
+function STMPcompute_SCCs(ExpDate,UnitName,STIMtype,DATAtype)
+% 
+%
+% J Boley May 28, 2009 - converted back to STMPcompute_SCCs
+% FROM STMPBBNcompute_SCCs(ExpDate,UnitName,STIMtype,DATAtype,STIMname,Atten_dB)
+% M Heinz Jan 12, 2009 - converted to STMPBBNcompute_SCCs for B2 ISH2009
+% FROM STMPcompute_SCCs(ExpDate,UnitName,STIMtype,DATAtype)
+% M Heinz Sept 30, 2008
+% FROM: STMPcompute_PERhists(ExpDate,UnitName,STIMtype,DATAtype)
+% M. Heinz May 20, 2008
+% FROM: STMPconvert_STs_Nchans1stim(ExpDate,UnitName,STIMtype)
+% M. Heinz Jun 09, 2007
+%
+% stored as: SCCs.SACSCCfunctions{FeatIND,HarmIND}{ParamIND}{CF1ind CF2ind}
+%
+% Computes ALL Shuffled Correlograms and Metrics for the POPULATION of
+% responses.  Assumes STMP format for data storage, but this can be either:
+% DATAtype=
+%     - 1unitNstim (SCCs.Info.STMPshift=0)
+%     - Nchans1stim (SCCs.Info.STMPshift=1)
+%
+% Setup to be general for STMP data.
+%
+% Calls basic functions: ???
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+close all
+
+global STMP_dir ExpList InvertPolarityText
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Verify parameters and experiment, unit are valid
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+TESTunitNUM=4;  % 1: ARO (111804, 1.28), 2: ISH (041805, 2.04), 3: Purdue1 (111606, 2.09); 4: Purdue2 (041306, 1.03),
+if ~exist('ExpDate','var')
+   if TESTunitNUM==1
+      ExpDate='111804'; UnitName='1.28'; STIMtype='EHrBFi'; DATAtype='Nchans1stim';
+   elseif TESTunitNUM==2
+      ExpDate='041805'; UnitName='2.04'; STIMtype='EHvNrBFi'; DATAtype='Nchans1stim';
+   elseif TESTunitNUM==3
+      ExpDate='111606'; UnitName='2.09'; STIMtype='EHvNrBFi'; DATAtype='Nchans1stim';
+   elseif TESTunitNUM==4
+      ExpDate='041307'; UnitName='2.03'; STIMtype='EHvNrBFi'; DATAtype='Nchans1stim';
+   elseif TESTunitNUM==5
+      ExpDate='041805'; UnitName='2.04'; STIMtype='TrBFi'; DATAtype='Nchans1stim';  % TONE re BFI, with Tone RLV
+   end
+end
+
+%%%% Find the full Experiment Name
+ExpDateText=strcat('20',ExpDate(end-1:end),'_',ExpDate(1:2),'_',ExpDate(3:4));
+for i=1:length(ExpList)
+	if ~isempty(strfind(ExpList{i},ExpDateText))
+		ExpName=ExpList{i};
+		break;
+	end
+end
+if ~exist('ExpName','var')
+	disp(sprintf('***ERROR***:  Experiment: %s not found\n   Experiment List:',ExpDate))
+	disp(strvcat(ExpList))
+	beep
+	error('STOPPED');
+end
+
+%%%% Parse out the Track and Unit Number
+TrackNum=str2num(UnitName(1:strfind(UnitName,'.')-1));
+UnitNum=str2num(UnitName(strfind(UnitName,'.')+1:end));
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%% Setup related directories
+RAWdata_dir=fullfile(STMP_dir,'ExpData',ExpName);
+eval(['cd ''' RAWdata_dir ''''])
+UNITinfo_dir=fullfile(STMP_dir,'ExpData',ExpName,'UNITinfo');   % For general unit info (BF, SR, bad lines, ...)
+STMPanal_dir=fullfile(STMP_dir,'ExpData',ExpName,'STMPanalyses');   % For STMP analyses (Spike Trains, PSTs, PerHist, DFTs, SAC/SCCs, ...)
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Verify unitINFO and STs exists
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+unitINFO_filename=sprintf('unitINFO.%d.%02d.mat',TrackNum,UnitNum);
+eval(['load ''' fullfile(UNITinfo_dir,unitINFO_filename) ''''])
+STs_filename=sprintf('STs_%s.%d.%02d.%s.mat',DATAtype,TrackNum,UnitNum,STIMtype);
+STs_dataname=sprintf('STs_%s',DATAtype);
+eval(['load ''' fullfile(STMPanal_dir,STs_filename) ''''])
+eval(['STs = ' STs_dataname ';']);
+eval(['clear ' STs_dataname]);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Setup PERhists data structure
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+SCCs=STs;
+SCCs=rmfield(SCCs,'SpikeTrains');
+
+%              Info: [1x1 struct]             % UNCHANGED
+%          STIMtype: 'EHrBFi'                 % UNCHANGED
+%       ChannelInfo: [1x1 struct]             % UNCHANGED
+%     ParameterInfo: [1x1 struct]             % UNCHANGED
+%     ConditionInfo: [1x1 struct]             % UNCHANGED
+%          StimInfo: [1x1 struct]             % UNCHANGED
+%       SpikeTrains: {2x1 cell}               % USED AND DISCARDED
+%          SCCs: {2x1 cell}                   % COMPUTED
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Get general parameters for this unit, e.g., all BFs, levels, ...
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+NumCH=size(STs.SpikeTrains{1,1,1},1);
+NumP=size(STs.SpikeTrains{1,1,1},2);
+NumFEATURES=size(STs.SpikeTrains,1);  % Stimuli
+NumPOL=size(STs.SpikeTrains,2);
+if NumPOL~=2
+	error('NEED BOTH POLARITIES');
+end
+NumHARMS=size(STs.SpikeTrains,3);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Pick which condition to run (Stim, Atten_dB)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if exist('STIMname','var')
+	FeatIND=find(strcmp(STIMname,SCCs.ConditionInfo.features));
+	if isempty(FeatIND)
+		FeatIND=1;
+		STIMname=SCCs.ConditionInfo.features{1};
+		beep
+		disp('STIMULUS NOT FOUND - using 1st stimulus in list');
+	end
+elseif length(SCCs.ConditionInfo.features)==1;
+	FeatIND=1;
+	STIMname=SCCs.ConditionInfo.features{1};
+else
+	FeatIND=1;
+	STIMname=SCCs.ConditionInfo.features{1};
+	beep
+	disp('MORE THAN 1 STIMULUS in list, using 1st stimulus in list');
+end
+
+if exist('Atten_dB','var')
+	ParamIND=find(SCCs.ParameterInfo.param_values==Atten_dB);
+	if isempty(ParamIND)
+		ParamIND=1;
+		Atten_dB=SCCs.ParameterInfo.param_values(1);
+		beep
+		disp('ATTEN_dB NOT FOUND - using 1st Atten in list');
+	end
+elseif length(SCCs.ParameterInfo.param_values)==1;
+	ParamIND=1;
+	Atten_dB=SCCs.ParameterInfo.param_values(1);
+else
+	ParamIND=1;
+	Atten_dB=SCCs.ParameterInfo.param_values(1);
+	beep
+	disp('MORE THAN 1 ATTEN in list, using 1st atten in list ');
+end
+
+
+% setup DIARY
+TEXT_filename=sprintf('text.%d.%02d.STMP_%s_%.fdB.txt',TrackNum,UnitNum,STIMname,Atten_dB);
+eval(['diary ''' fullfile(STMPanal_dir,TEXT_filename) ''''])
+disp(sprintf('... STMP: Computing ''%s'' SACs/SCCs \n      for:  Experiment: ''%s''; Unit: %d.%02d [%s @%.f dB]',DATAtype,ExpName,TrackNum,UnitNum,STIMname,Atten_dB))
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% See if SCCs_filename exists already
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+SCCs_filename=sprintf('SCCsSTMP_%s.%d.%02d.%s_%.fdB.mat',DATAtype,TrackNum,UnitNum,STIMname,Atten_dB);
+SCCs_dataname=sprintf('SCCsSTMP_%s',DATAtype);
+SUMM_filename=sprintf('SUMM_SCCsSTMP_%s.%d.%02d.%s_%.fdB.mat',DATAtype,TrackNum,UnitNum,STIMname,Atten_dB);
+eval(['ddd=dir(''' fullfile(STMPanal_dir,SCCs_filename) ''');'])
+if ~isempty(ddd)
+	beep
+	TEMP = input(sprintf('File: ''%s'' already exists!!\n  ***** Do you want to re-compute SCCs, or leave as is?  [0]: LEAVE AS IS; RERUN: 1;  ',SCCs_filename));
+	if isempty(TEMP)
+		TEMP=0;
+	end
+	if TEMP~=1
+		beep
+		disp(sprintf(' FILE NOT ALTERED\n'));
+		return;
+	else
+		disp(' ... Re-Running SCCs - SAVING NEW FILE!');
+	end
+end
+
+%%%%%%%
+%% Set aside data to save
+% -- took out POLARITY dimension, added PARAM (level)
+% SAC/SCC functions
+% SCCs.SCCs.DELAYbinwidth_sec=NaN;
+% SCCs.SCCs.SCC_onsetIGNORE_sec=0.05;
+% SCCs.SCCs.SCC_NumDrivenSpikes=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCs.SACSCCf=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCs.SACSCC_minus=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCs.SACSCC_avg=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCs.XpACXpCC_plus=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCs.XpACXpCC_minus=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCs.XpACXpCC_avg=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCs.SUMCOR_avg=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCs.DIFCOR_avg=cell(NumFEATURES,NumHARMS,NumP);
+% % SAC/SCC summary metrics
+% SCCs.SCCmetrics.CCCenv_1=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCmetrics.CCCtfs=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCmetrics.CDenv=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCmetrics.CDtfs=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCmetrics.CDsac=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCmetrics.DCpeak=cell(NumFEATURES,NumHARMS,NumP);
+% SCCs.SCCmetrics.SCpeak_1=cell(NumFEATURES,NumHARMS,NumP);
+SCCs.SACSCCfunctions=cell(NumFEATURES,NumHARMS);
+SCCs.SACSCCmetrics=cell(NumFEATURES,NumHARMS);
+SCCs.paramsOUT=cell(NumFEATURES,NumHARMS);
+SUMMARYmetrics=cell(NumFEATURES,NumHARMS);
+
+%% 5/26/08
+% 1) NEED TO FIX/CONSISTENT SCCs cell arrays
+% CCs.paramsOUT{FeatIND,HarmIND}{ParamIN}{CF1,CF2};
+% to avoid confusion!!!!
+% HERE and in plotSCCfunctions
+% A) run for 500 spikes to get book keeping down
+% LATER B) run all for 5000 spikes - LATER - when time
+% 2) verify SCC both ways with 1.01
+% 3) PLAN EXP data to collect
+
+
+
+
+
+
+% for FeatIND=1:NumFEATURES
+disp(sprintf('      ... Processing Feature: %s',SCCs.ConditionInfo.features{FeatIND}))
+%    for PolIND=1:NumPOL
+for HarmIND=1:NumHARMS
+	SCCs.SACSCCfunctions{FeatIND,HarmIND}=cell(NumP);
+	SCCs.SACSCCmetrics{FeatIND,HarmIND}=cell(NumP);
+	SCCs.paramsOUT{FeatIND,HarmIND}=cell(NumP);
+	
+	SUMMARYmetrics{FeatIND,HarmIND}=cell(NumP);
+	
+	% 	for ParamIND=1:NumP
+	disp(sprintf('      ... ... Processing Sound Level: %.1f dB ',SCCs.ParameterInfo.param_values(ParamIND)))
+	SCCs.SACSCCfunctions{FeatIND,HarmIND}{ParamIND}=cell(NumCH);
+	SCCs.SACSCCmetrics{FeatIND,HarmIND}{ParamIND}=cell(NumCH);
+	SCCs.paramsOUT{FeatIND,HarmIND}{ParamIND}=cell(NumCH);
+	
+	SUMMind=1;  % for SUMMARYmetrics
+	
+	for Chan1IND=1:NumCH
+		for Chan2IND=(Chan1IND+1):NumCH
+			% 	for Chan1IND=1
+			% 		for Chan2IND=2
+			% Polarity index: 1=PLUS; 2=MINUS
+			CF1_kHz=STs.ChannelInfo.channel_values{FeatIND,1,HarmIND}(Chan1IND);
+			CF2_kHz=STs.ChannelInfo.channel_values{FeatIND,1,HarmIND}(Chan2IND);
+			disp(sprintf('CF1[%d] = %.2f kHz; CF2[%d] = %.2f kHz; OCT diff = %.2f octaves',Chan1IND,CF1_kHz,Chan2IND,CF2_kHz,log2(CF1_kHz/CF2_kHz)))
+			
+			%% CONVERT SpikeTrains in NEL column format: [rep #,
+			%% spiketime_sec] to CCC-spiketrain format
+			%% [cell_array{Nreps}]
+			SpikeTrainsA_plus=nelSTs2cell(STs.SpikeTrains{FeatIND,1,HarmIND}{Chan1IND,ParamIND});
+			SpikeTrainsA_minus=nelSTs2cell(STs.SpikeTrains{FeatIND,2,HarmIND}{Chan1IND,ParamIND});
+			% 				if Chan1IND~=Chan2IND
+			SpikeTrainsB_plus=nelSTs2cell(STs.SpikeTrains{FeatIND,1,HarmIND}{Chan2IND,ParamIND});
+			SpikeTrainsB_minus=nelSTs2cell(STs.SpikeTrains{FeatIND,2,HarmIND}{Chan2IND,ParamIND});
+			% 				else
+			% 					SpikeTrainsB_plus={};
+			% 					SpikeTrainsB_minus={};
+			% 				end
+			SpikeTrains=cell(2); % {condition (1,2), polarity (plus,minus)}
+			SpikeTrains={SpikeTrainsA_plus,SpikeTrainsA_minus;SpikeTrainsB_plus,SpikeTrainsB_minus};
+			
+			% specify params to be used
+			clear paramsIN
+			paramsIN.CF_A_Hz=CF1_kHz*1000;
+			paramsIN.CF_B_Hz=CF2_kHz*1000;
+			% 					if SCCs.Info.STMPshift
+			paramsIN.durA_msec=STs.ChannelInfo.StimDur_msec{FeatIND,1,HarmIND}(Chan1IND);
+			paramsIN.durB_msec=STs.ChannelInfo.StimDur_msec{FeatIND,1,HarmIND}(Chan2IND);
+			% 					else
+			% 						paramsIN.durA_msec=STs.ChannelInfo.StimDur_msec;
+			% 						paramsIN.durB_msec=STs.ChannelInfo.StimDur_msec;
+			% 					end
+			
+			paramsIN.CONDITIONS={'AA'};
+			paramsIN.MAXspikes=3500;
+			
+			paramsIN.SACpeak_TOUSE='SACpeak_CD';
+			paramsIN.DCpeak_TOUSE='DCpeak_CD';
+			paramsIN.SCpeak_TOUSE='IFFTraw_CD';
+			paramsIN.CCCenv_TOUSE='IFFTrawSC_CD';
+			paramsIN.CCCtfs_TOUSE='DCpeak_CD';
+			
+			[SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_6(SpikeTrains,paramsIN,0);
+			%% CALL GENERAL SCC_CCC code (with option to do only 1 or 3 columns)
+			% LATER: TODO - setup to only COMPUTE COL 1
+			% EG for SCC[CFi,CFi] - just do 1st column
+			clear SpikeTrains SpikeTrainsA_plus SpikeTrainsA_minus SpikeTrainsB_plus SpikeTrainsB_minus
+			
+			% SAVE all info!!
+			SCCs.SACSCCfunctions{FeatIND,HarmIND}{ParamIND}{Chan1IND,Chan2IND}=SACSCCfunctions;
+			SCCs.SACSCCmetrics{FeatIND,HarmIND}{ParamIND}{Chan1IND,Chan2IND}=SACSCCmetrics;
+			SCCs.paramsOUT{FeatIND,HarmIND}{ParamIND}{Chan1IND,Chan2IND}=paramsOUT;
+			
+			
+			SUMMARYmetrics{FeatIND,HarmIND}{ParamIND}(SUMMind,1)=CF1_kHz;
+			SUMMARYmetrics{FeatIND,HarmIND}{ParamIND}(SUMMind,2)=CF2_kHz;
+			SUMMARYmetrics{FeatIND,HarmIND}{ParamIND}(SUMMind,3)=log2(CF1_kHz/CF2_kHz);
+			SUMMARYmetrics{FeatIND,HarmIND}{ParamIND}(SUMMind,4)=SACSCCmetrics{end}.CDscc_usec;
+			SUMMARYmetrics{FeatIND,HarmIND}{ParamIND}(SUMMind,5)=SACSCCmetrics{end}.CDtfs_usec;
+			SUMMARYmetrics{FeatIND,HarmIND}{ParamIND}(SUMMind,6)=SACSCCmetrics{end}.CDenv_usec;
+			SUMMARYmetrics{FeatIND,HarmIND}{ParamIND}(SUMMind,7)=SACSCCmetrics{end}.CCCtfs(find(strcmp('DCpeak_CD',SACSCCmetrics{end}.CCCtfs_legend)));
+			SUMMARYmetrics{FeatIND,HarmIND}{ParamIND}(SUMMind,8)=SACSCCmetrics{end}.CCCenvs(find(strcmp('IFFTrawSC_CD',SACSCCmetrics{end}.CCCenvs_legend)));
+			SUMMind=SUMMind+1;
+			
+			%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			%% OUTPUT various metrics of interest for AVGed value
+			%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			disp(sprintf(' '))
+			CCCtfsLIST={'DCpeak_max ','DCpeak_0   ','DCpeak_CD  '};
+			for i=1:length(CCCtfsLIST)
+				disp(sprintf('CCCtfs("%s") = %.2f',CCCtfsLIST{i}, ...
+					SACSCCmetrics{end}.CCCtfs(find(strcmp(deblank(CCCtfsLIST{i}),SACSCCmetrics{end}.CCCtfs_legend)))))
+			end
+			disp(sprintf(' '))
+			CCCenvLIST={'IFFTrawSC','IFFTrawSC_0','IFFTrawSC_CD'};
+			for i=1:length(CCCenvLIST)
+				disp(sprintf('CCCenv("%s") = %.2f',CCCenvLIST{i}, ...
+					SACSCCmetrics{end}.CCCenvs(find(strcmp(CCCenvLIST{i},SACSCCmetrics{end}.CCCenvs_legend)))))
+			end
+			disp(sprintf(' '))
+			disp(sprintf('CD_SCC = %.2f usec',SACSCCmetrics{end}.CDscc_usec))
+			disp(sprintf('CD_TFS = %.2f usec',SACSCCmetrics{end}.CDtfs_usec))
+			disp(sprintf('CD_ENV = %.2f usec',SACSCCmetrics{end}.CDenv_usec))
+			disp(sprintf(' '))
+			
+			plot_CCCanal_6(SACSCCfunctions,SACSCCmetrics,paramsOUT)	
+
+			FIG_filename=sprintf('fig_XBF.%d.%02d.%s_%.fdB.CF_%dx%d.pdf',TrackNum,UnitNum,STIMname,Atten_dB,Chan1IND,Chan2IND);
+			%% SAVE FIG file
+			eval(['saveas(gcf,''' fullfile(STMPanal_dir,FIG_filename) ''',''pdf'')'])
+			
+			% 				input('Enter for next comparison')
+			
+			
+		end  % end Freq
+	end  % end Freq
+	% 	end  % end Param
+end % End FormsatHarms
+%    end % End Invert Polarity
+% end % End: FeatIND
+
+%% SAVE SCCs
+eval([SCCs_dataname ' =SCCs;'])
+clear SCCs
+
+disp(['   *** Saving new file: "' SCCs_filename '" ...'])
+eval(['save ''' fullfile(STMPanal_dir,SCCs_filename) '''' ' ' SCCs_dataname])
+
+disp(['   *** Saving new file: "' SUMM_filename '" ...'])
+eval(['save ''' fullfile(STMPanal_dir,SUMM_filename) ''' SUMMARYmetrics'])
+
+diary off
+
+
+return;

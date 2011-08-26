@@ -1,0 +1,48 @@
+Readme file for Auditory Nerve model code from:
+Zhang, Heinz, Bruce, and Carney - JASA February (2001) 109:
+"A phenomenological model for the responses of auditory-nerve 
+fibers: I. Nonlinear tuning with compression and suppression."
+
+1.Compile
+-----------------------------------------------------------------------------
+You can run the following commands to compile the model:
+--------------
+rm *.o
+make anmodel
+--------------
+If you don't have c++, try g++ instead(change the CC value in makefile)
+
+
+
+2.Run the model
+------------------------------------------------------------------------------
+anmodel is used if you want to pass the signal through filter bank, 
+the typical usage of the program is as following
+--------------
+./anmodel -wavefile click -reptim 0.020 -banks 32 -cflo 200 -cfhi 20000
+--------------
+the default sampling rate is 500kHz, you should make the data in input 
+file with same sampling rate, 
+The reptim option determines how long(in seconds) the model should run,
+it will append zero if the file input is short.
+The banks option determines how many filters you want to run at a time
+(the Maximum is 64)
+
+The output is stored in file filterout and synapseout, 
+The first column is the time and rest are the output of the model with
+different CF. filterout is the output of the tuning filter,
+synapseout is the output of synapse as the average rate of the synapse.
+The spike generator is not included here(no refractoriness).
+
+3.For more information
+----------------------------------------------------------------------------
+If you want to know more about the code and how the files are organized, 
+please see html/index.html 
+
+or visit http://people.bu.edu/zxd/research/an2doc/index.html 
+
+
+
+
+
+
