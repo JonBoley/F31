@@ -1,0 +1,225 @@
+function thresh_calc2
+
+global abr_FIG abr_Stimuli ABRmag abr_root_dir abr_data_dir
+
+[pic] = ParseInputPicString_V2(abr_Stimuli.abr_pic);
+num=length(pic);
+
+num_templates=abr_Stimuli.scale; %number of ABRs for template
+t1=abr_Stimuli.start_resp; %start time of template in ms
+t2=abr_Stimuli.end_resp; %end time of template in ms
+out1=abr_Stimuli.start_back; %for addition of reject data points
+out2=abr_Stimuli.end_back;
+
+tbin1=1+round(t1/0.08192);
+tbin2=1+round(t2/0.08192);
+tbins=tbin2-tbin1+1;
+
+
+
+ExpDir=fullfile(abr_data_dir,abr_Stimuli.dir);
+cd(ExpDir);
+
+
+%Read in the ABR waveforms, remove DC offset, sort by intensity
+abr=zeros(380,num);
+for i=1:num
+    fname=dir(sprintf('a%04d*',pic(i)));
+    filename=fname.name(1:end-2);
+    eval(['x=' filename ';'])
+    
+    command=sprintf('abr(1,%d)=x.Stimuli.freq_hz;',i);
+    eval([command ';'])
+
+    command=sprintf('abr(2,%d)=x.Stimuli.atten_dB;',i);
+    eval([command ';'])
+
+    command=sprintf('abr(3:380,%d)=x.AD_Data.AD_Avg_V(1:end-1);',i);
+    eval([command ';'])
+    
+    abr(3:380,i)=abr(3:380,i)-mean(abr(3:380,i));
+end;
+[toss,i]=sort(abr(2,:));
+abr2=abr(:,i);
+
+
+abr=abr2(3:380,:)/20000*1000000; %in uV
+freq=abr2(1,1);
+freq_mean=mean(abr2(1,:));
+attn=-abr2(2,:);
+
+
+%Read in the calibration file
+CalibFile  = sprintf('p%04d_calib', str2num(abr_Stimuli.cal_pic));
+command_line = sprintf('%s%s%c','[xcal]=',CalibFile,';');
+eval(command_line);
+freq_loc = find(xcal.CalibData(:,1)>=(freq/1000));
+freq_level = xcal.CalibData(freq_loc(1),2);
+spl=freq_level+attn;
+
+
+%Make an ABR template using a few time-aligned waveforms
+t_xx=zeros(755,num_templates);
+I=zeros(1,num_templates);
+delay=zeros(1,num_templates);
+template=zeros(tbins,num_templates);
+for i = 1:num_templates
+    t_xx(:,i) = xcorr(abr(:,1),abr(:,i));
+    [toss2, I(i)]=max(t_xx(:,i));
+    delay(i)=378-I(i);
+    template(:,i)=abr(tbin1+delay(i):tbin2+delay(i),i);
+end;
+template2=mean(template,2);
+
+
+%Cross-correlate template with noise
+nnn=load('C:\NEL\Users\MH\Matlab_ABR\ABR_analysis\EEGnoise-2010_5_13-2010_5_20\noise.MAT'); 
+null_xx=xcorr(nnn.abr3/20000*1000000,template2); %both waves in uV
+null_xx2=null_xx(9827:19655-tbins, 1);
+peaks=findpeaks(null_xx2,'minpeakheight',0);
+mean_peak=mean(peaks);
+stdev_peak=std(peaks);
+
+
+%Cross-correlate ABRs with template waveform
+abr_xx=zeros(755,num);
+for i = 1:num
+        [abr_xx(:,i), lags] = xcorr(abr(:,i),template2);
+end;
+abr_xx2=(abr_xx(378:755-tbins,:)-mean_peak)/stdev_peak; %Z score
+
+
+%Measure the Z score and latency of each ABR
+z_score=zeros(num,1);
+latency=zeros(num,1);
+latency2=zeros(num,1);
+[toss3,null_delay]=max(abr_xx2(:,1));
+for i = 1:num
+    add_atten=attn(1,1)-attn(1,i);
+    bound=null_delay+10+round(0.2*add_atten);
+    [z_score(i,1),latency(i,1)]=max(abr_xx2(null_delay:bound,i));
+    latency2(i)=(null_delay+latency(i,1)-2)*0.08192;
+end;
+
+%Set weights for regression analysis. Z scores below zero have no weight.
+%Weighting decreases with increasing Z score from 1 @ Z=2 to 0.1 @ max Z.
+w=zeros(num,1);
+ns_score=-ones(num,1);
+for i=1:num
+    w(i,1)=1-0.9*((z_score(i,1)-3)/(max(z_score(:,1))-3));
+    if z_score(i,1)<3
+        w(i,1)=0;
+		ns_score(i,1)=z_score(i,1);
+    end;
+end;
+if out1>0
+	w(out1,1)=1;
+	ns_score(out1,1)=-1;
+end;
+if out2>0
+	w(out2,1)=1;
+	ns_score(out2,1)=-1;
+end;
+
+
+%Weighted regression and threshold calculation
+X=ones(num,2);
+X(:,2)=spl';
+b=lscov(X,z_score,w);
+threshold_spl=(3-b(1,1))/b(2,1);
+threshold_attn=-freq_level+threshold_spl;
+
+
+%Clear figure areas
+axes('Position',[0 0.475 0.5 0.525])
+axis('off')
+rectangle('Position',[0,0,1,1],'FaceColor','w','EdgeColor','w')
+axes('Position',[0.5 0 0.5 1])
+axis('off')
+rectangle('Position',[0,0,1,1],'FaceColor','w','EdgeColor','w')
+
+
+%Some new arrays for plotting purposes
+maxamp=max(abr(:,1))*1.2;
+abr_time=[0:0.08192:377*0.08192]';
+template_time=((tbin1-1)*0.08192:0.08192:(tbin2-1)*0.08192)';
+maxcc=max(abr_xx2(:,1))*1.2;
+lags2=lags(:,378:755-tbins);
+lag_time=lags2*0.08192;
+
+
+%plot the ABR waveforms
+height=0.875/num;
+for i = 1:num
+    ypos=0.945-i*height;
+    axes ('Position',[0.565 ypos 0.175 height-.02])
+	plot(abr_time,abr(:,i),'-k','LineWidth',1.25)
+	hold on
+	if i<2
+		plot(template_time,template2,'-b','LineWidth',1.25)
+		plot([t1 t1],[0.95*maxamp -0.95*maxamp],':r','LineWidth',1.25)
+		plot([t2 t2],[0.95*maxamp -0.95*maxamp],':r','LineWidth',1.25)
+		plot([t1 t2],[0.95*maxamp 0.95*maxamp],':r','LineWidth',1.25)
+		plot([t1 t2],[-0.95*maxamp -0.95*maxamp],':r','LineWidth',1.25)
+
+	end;
+    axis ([0 max(abr_time) -maxamp maxamp])
+end;
+
+
+%plot cross-correlation functions
+for i = 1:num
+    ypos=0.945-i*height;
+    axes ('Position',[0.77 ypos 0.2 height-0.02])
+    plot (lag_time,abr_xx2(:,i),'-b','LineWidth',1.25)
+	hold on
+	plot ([0 max(lag_time)],[3 3],':r','LineWidth',1.25)
+	%plot ([0 max(lag_time)],[2 2],':k','LineWidth',1.25)
+	plot ([latency2(i) latency2(i)],[0 maxcc],':r','LineWidth',1.25)
+    axis ([0 max(lag_time) 0 maxcc])
+end;
+
+
+%plot the Z score by intensity function
+axes('Position',[0.05 0.525 0.425 0.40])
+plot(spl,z_score,'r*')
+hold on
+plot(spl,ns_score,'k*')
+%plot([0 100],[2 2],':k','LineWidth',1.25)
+plot([0 100],[3 3],':r','LineWidth',1.25)
+plot([threshold_spl threshold_spl],[0 0.75*maxcc],':r','LineWidth',1.25)
+plot([0 100],[b(1,1) b(1,1)+100*b(2,1)],'-r','LineWidth',1.25)
+axis([(min(spl)-10) (max(spl)+10) 0 maxcc])
+xlabel('dB SPL','fontsize',14)
+ylabel('Z score','fontsize',14)
+
+
+%Labels for figure panels
+axes ('Position',[0 0 1 1])
+text(0.6525,0.96,'ABR waveform','fontsize',14,'horizontalalignment','center')
+text(0.755,0.025,'Time(ms)','fontsize',14,'horizontalalignment','center')
+text(0.87,0.96,'X-CORR function','fontsize',14,'horizontalalignment','center')
+
+text(0.55,0.934,'\muV','fontsize',10,'horizontalalignment','left')
+text(0.755,0.934,'\itZ score','fontsize',10,'horizontalalignment','left')
+
+text(0.52,0.96,'ATTN(dB)','fontsize',14,'horizontalalignment','center')
+text(0.52,0.94,'[dB SPL]','fontsize',10,'horizontalalignment','center','color','r')
+
+for i=1:num
+	ypos=0.88-(i-1)*height;
+	text(0.52,ypos,num2str(-attn(i),'%10.1f'),'fontsize',12,'horizontalalignment','center')
+	text(0.52,ypos-0.02,strcat('[',num2str(spl(i),'%10.1f'),']'),'fontsize',10,'horizontalalignment','center','color','r')
+	
+end;
+
+text(0.06,0.9,horzcat('Frequency:   ',num2str(freq,'%10.0f'),'   Hz'),'fontsize',14,'horizontalalignment','left')
+text(0.06,0.87,horzcat('Threshold:   ',num2str(threshold_attn,'%10.1f'),'   dB ATTN'),'fontsize',14,'horizontalalignment','left')
+text(0.06,0.84,horzcat('Threshold:   ',num2str(threshold_spl,'%10.1f'), '   dB SPL'),'fontsize',14,'horizontalalignment','left')
+
+axis('off')
+
+if freq ~= freq_mean
+	msgbox('Multiple stimulus frequencies selected!')
+end;
+
