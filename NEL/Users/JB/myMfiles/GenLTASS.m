@@ -1,0 +1,56 @@
+function GenLTASS()
+% Generate Long-Term Average Speech Spectrum
+%
+% Byrne, et al. (1994), "An international comparison of long-term average
+% speech spectra," J. Acoust. Soc. Am. 96, 2108-2120.
+
+% Specified in dBSPL for speech (70dBSPL overall) passed through 1/3-octave
+% bands
+TABLE2 = [
+    63    38.6 37.0 38.6;
+    80    43.5 36.0 43.5;
+    100   54.4 37.5 54.4;
+    125   57.7 40.1 57.7;
+    160   56.8 53.4 56.8;
+    200   58.2 62.2 60.2;
+    250   59.7 60.9 60.3;
+    315   60.0 58.1 59.0;
+    400   62.4 61.7 62.1;
+    500   62.6 61.7 62.1;
+    630   60.6 60.4 60.5;
+    800   55.7 58.0 56.8;
+    1000  53.1 54.3 53.7;
+    1250  53.7 52.3 53.0;
+    1600  52.3 51.7 52.0;
+    2000  48.7 48.8 48.7;
+    2500  48.9 47.3 48.1;
+    3150  47.0 46.7 46.8;
+    4000  46.0 45.3 45.6;
+    5000  44.4 44.6 44.5;
+    6300  43.3 45.2 44.3;
+    8000  42.4 44.9 43.7;
+    10000 41.9 45.0 43.4;
+    12500 39.8 42.8 41.3;
+    16000 40.4 41.1 40.7];
+    
+freqs    = TABLE2(:,1);
+male     = TABLE2(:,2);
+female   = TABLE2(:,3);
+combined = TABLE2(:,4);
+ 
+freqs_long = 1:max(freqs);
+third_oct_bw = freqs_long*2^(1/6)-freqs_long*2^(-1/6);
+combined_long = interp1(freqs,combined,freqs_long);
+
+% spectrum level (per Hz)
+spec_level = (10.^(combined_long/10))./third_oct_bw;
+semilogx(10*log10(spec_level/max(spec_level)));
+
+% WhiteNoise = randn(60*96e3,1); % max length of 1min at 96kHz
+
+spec_level(isnan(spec_level))=0;
+LTASS = real(ifft([spec_level fliplr(spec_level)]))...
+  .* exp(1i*2*pi*rand(1,2*length(spec_level)));
+semilogx(20*log10(abs(fft(LTASS))))
+
+
