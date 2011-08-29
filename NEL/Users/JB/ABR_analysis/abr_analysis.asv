@@ -1,0 +1,132 @@
+function abr_analysis(command_str,parm_num)
+
+%This function computes an ABR threshold based on series of AVERAGER files.
+
+global FIG Stimuli root_dir data_dir
+
+if nargin < 1
+    
+    %CREATING STRUCTURES HERE
+    PROG = struct('name','ABR.m','date',date,'version','rp2 v2.0');
+    
+    push = cell2struct(cell(1,4),{'process','print','close','edit'},2);
+    ax1  = cell2struct(cell(1,7),{'axes','line1','line2','line3','xlab','ylab','title'},2);
+    ax2  = cell2struct(cell(1,3),{'axes','xlab','ylab'},2);
+    abrs  = cell2struct(cell(1,10),{'abr1','abr2','abr3','abr4','abr5','abr6','abr7','abr8','abr9','abr10'},2);
+    FIG = struct('handle',[],'push',push,'ax1',ax1,'ax2',ax2,'abrs',abrs,'parm_text',[],'dir_text',[]);
+    
+    eval('get_analysis_ins','instruct_error'); %script creates struct Stimuli
+    
+    FIG.handle = figure('NumberTitle','off','Name','ABR Analysis','Units','normalized','Visible','off','position',[0 0 1 .95],'CloseRequestFcn','abr_analysis(''close'');');
+    colordef none;
+    whitebg('w');
+    
+    FIG.push.process = uicontrol(FIG.handle,'callback','abr_analysis(''process'');','style','pushbutton','Units','normalized','position',[.05 .85 .1 .05],'string','Process');
+    FIG.push.print   = uicontrol(FIG.handle,'callback','abr_analysis(''print'');','style','pushbutton','Units','normalized','position',[.2125 .85 .1 .05],'string','Print');
+    FIG.push.file   = uicontrol(FIG.handle,'callback','abr_analysis(''file'');','style','pushbutton','Units','normalized','position',[.375 .85 .1 .05],'string','Save as File');
+    FIG.push.edit    = uicontrol(FIG.handle,'style','edit','Units','normalized','position',[.32 .08 .1 .04],'string',[],'FontSize',12);								
+    
+    FIG.ax1.axes = axes('Position',[.1 .45 .35 .3]);
+    FIG.ax1.line1 = plot(0,0,'b-','LineWidth',2,'Visible','off');
+    hold on;
+    FIG.ax1.line2 = plot(0,0,'ro','Visible','off');
+    FIG.ax1.line3 = plot(0,0,'r--','LineWidth',2,'Visible','off');
+    FIG.ax1.xlab = xlabel('Stimulus level (dB SPL)','FontSize',14);
+    FIG.ax1.ylab = ylabel('ABR (\muVolts)','FontSize',14,'Interpreter','tex');
+    FIG.ax1.title = title('ABR Analysis','FontSize',14);
+    
+    axes('Position',[.1 .1 .35 .4]);
+    axis('off');
+    text(.2,.65,'Directory:','fontsize',10,'color','k','horizontalalignment','left','VerticalAlignment','middle');
+    text(.2,.55,'Calibration File:','fontsize',10,'color','k','horizontalalignment','left','VerticalAlignment','middle');
+    text(.2,.45,'ABR Files:','fontsize',10,'color','k','horizontalalignment','left','VerticalAlignment','middle');
+    text(.2,.37,'ABR Min:','fontsize',10,'color','k','horizontalalignment','left','VerticalAlignment','middle');
+    text(.2,.32,'ABR Max','fontsize',10,'color','k','horizontalalignment','left','VerticalAlignment','middle');
+    text(.2,.24,'Background Min:','fontsize',10,'color','k','horizontalalignment','left','VerticalAlignment','middle');
+    text(.2,.19,'Background Max:','fontsize',10,'color','k','horizontalalignment','left','VerticalAlignment','middle');
+    text(.2,.09,'YScale:','fontsize',10,'color','k','horizontalalignment','left','VerticalAlignment','middle');
+    
+    FIG.parm_txt(1)  = text(.8,.55,num2str(Stimuli.cal_pic),   'fontsize',10,'color','b','horizontalalignment','right','buttondownfcn','abr_analysis(''stimulus'',1);');
+    FIG.parm_txt(2)  = text(.8,.45,num2str(Stimuli.abr_pic),   'fontsize',10,'color','b','horizontalalignment','right','buttondownfcn','abr_analysis(''stimulus'',2);');
+    FIG.parm_txt(3)  = text(.8,.37,num2str(Stimuli.start_resp),'fontsize',10,'color','b','horizontalalignment','right','buttondownfcn','abr_analysis(''stimulus'',3);');
+    FIG.parm_txt(4)  = text(.8,.32,num2str(Stimuli.end_resp),  'fontsize',10,'color','b','horizontalalignment','right','buttondownfcn','abr_analysis(''stimulus'',4);');
+    FIG.parm_txt(5)  = text(.8,.24,num2str(Stimuli.start_back),'fontsize',10,'color','b','horizontalalignment','right','buttondownfcn','abr_analysis(''stimulus'',5);');
+    FIG.parm_txt(6)  = text(.8,.19,num2str(Stimuli.end_back),  'fontsize',10,'color','b','horizontalalignment','right','buttondownfcn','abr_analysis(''stimulus'',6);');
+    FIG.parm_txt(7)  = text(.8,.09,num2str(Stimuli.scale),     'fontsize',10,'color','b','horizontalalignment','right','buttondownfcn','abr_analysis(''stimulus'',7);');
+    
+    FIG.dir_txt = text(.8,.65,Stimuli.dir,'fontsize',10,'color','r','horizontalalignment','right','buttondownfcn','abr_analysis(''directory'');','Interpreter','none');
+    
+    FIG.ax2.axes = axes('Position',[.55 .2 .35 .7]);
+    FIG.abrs.abr1 = plot(0,0,'b-','LineWidth',2,'Visible','off');
+    hold on;
+    for i = 2:10
+        eval(['FIG.abrs.abr' num2str(i) ' = plot(0,0,''b-'',''LineWidth'',2,''Visible'',''off'');']);
+    end
+    FIG.ax2.xlab = xlabel('Time (msec)','FontSize',14);
+    FIG.ax2.ylab = ylabel('Stimulus level (dB SPL)','FontSize',14,'Interpreter','tex');
+    
+    set(FIG.handle,'Userdata',struct('handles',FIG));
+    set(FIG.handle,'Visible','on');
+    drawnow;
+    
+elseif strcmp(command_str,'stimulus')
+        if parm_num == 1
+            warndlg('Do not change calibration picture!','Analysis Error');
+            set(FIG.push.edit,'string',[]);
+        elseif length(get(FIG.push.edit,'string'))
+            new_value = get(FIG.push.edit,'string');
+            set(FIG.push.edit,'string',[]);
+            set(FIG.parm_txt(parm_num),'string',upper(new_value));
+            switch parm_num
+                case 2,
+                    Stimuli.abr_pic = new_value;
+                case 3,
+                    Stimuli.start_resp = str2num(new_value);
+                case 4,
+                    Stimuli.end_resp = str2num(new_value);
+                case 5,
+                    Stimuli.start_back = str2num(new_value);
+                case 6,
+                    Stimuli.end_back = str2num(new_value);
+                case 7,
+                    Stimuli.scale = str2num(new_value);
+            end
+        else
+            set(FIG.push.edit,'string','ERROR');
+        end
+    end
+    
+elseif strcmp(command_str,'directory')
+    Stimuli.dir = get_directory;
+    set(FIG.dir_txt,'string',Stimuli.dir);
+    
+elseif strcmp(command_str,'process')
+    [error] = thresh_calc;
+    
+elseif strcmp(command_str,'print')
+    set(gcf,'PaperOrientation','Landscape','PaperPosition',[0 0 11 8.5]);
+    if ispc
+        print('-dwinc','-r200','-noui');
+    else
+        print('-PNeptune','-dpsc','-r200','-noui');
+    end
+    
+elseif strcmp(command_str,'file')
+    pic_dir = fullfile(data_dir,'pictures');
+    if ~exist(pic_dir)
+        mkdir(data_dir,'pictures');
+    end 
+    
+    filename = inputdlg('Name the file:','File Manager',1);
+    if isempty(filename)
+        warndlg('File not saved.');
+    else
+        set(gcf,'PaperOrientation','Portrait','PaperPosition',[0 0 11 8.5]);
+        print('-depsc','-noui',fullfile(pic_dir,char(filename))); %crashes this computer!!!!
+        uiwait(msgbox('File has been saved.','File Manager','modal'));
+    end
+    
+elseif strcmp(command_str,'close')
+    update_params;
+    closereq;
+end
