@@ -1,0 +1,44 @@
+% plot optimal gains
+clear all; close all; home;
+
+%% Set up variables
+levels = 65;
+impairment = 'mixed';
+gains = -40:5:40;
+note = 'Aug_22_11';
+
+phones = 1:11;
+PhonemeLevel = NaN*ones(max(phones),1);
+
+strategy_list = {'short','avg','rate','env','tfs'};
+STRATEGY = 4;
+
+%% Read phones
+PathName = 'TIMIT\test\dr1\faks0\';
+FileName = 'sa1.wav';
+phonemeindx = textread([PathName FileName(1:end-3) 'phn'],'%*d %d %*s');
+[input,Fs] = readnist([PathName FileName]);
+input = input/max(input);
+
+OALevel_dBSPL = levels(1);
+dBSPL_before=20*log10(sqrt(mean(input.^2))/(20e-6));
+input = input*10^((OALevel_dBSPL-dBSPL_before)/20);
+
+%% Read optimal gains
+for phone=phones
+    % determine input level of this phone
+    if phone<=1
+        PhonemeLevel(phone) = ...
+            20*log10(sqrt(mean(input(1:min(phonemeindx(phone),length(input))).^2))/(20e-6));
+    else % if phone_index>1
+        PhonemeLevel(phone) = ...
+            20*log10(sqrt(mean(input(phonemeindx(phone-1):min(phonemeindx(phone),length(input))).^2))/(20e-6));
+    end
+    
+    % determine optimal gain
+    [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone,gains,note);
+    eval(sprintf('OptimumGain(phone,:)=%s;',strategy_list{STRATEGY}));
+
+end
+
+plot(PhonemeLevel,OptimumGain,'bx');
