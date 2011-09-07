@@ -25,9 +25,9 @@ START_PHONE = 1;
 
 levels = 65;%[45 65 85];
 gains = -40:5:40;
-note = 'Aug_22_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
+note = 'Sep_07_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
 
-NumLabs = 4; %use zero for max number of parallel processors
+NumLabs = 2; %use zero for max number of parallel processors
 if NumLabs
     if (NumLabs>1 && NumLabs~=matlabpool('size'))
         if matlabpool('size'), matlabpool close; end %close open labs
@@ -260,9 +260,7 @@ for OALevel_dBSPL=levels
         for Gain_Adjust=gains
             disp(sprintf('Adjusting prescribed gain by %ddB (%s)',Gain_Adjust,datestr(now)));
             
-            temp_start=floor(sfreqNEW/sfreq*StartIndex_mdl);
-            temp_end=floor(sfreqNEW/sfreq*EndIndex_mdl);
-            Gain_Adjust_array = [ones(temp_start-1,1); 10^(Gain_Adjust/20)*ones(temp_end-temp_start+1,1)];
+            Gain_Adjust_array = [ones(StartIndex_mdl-1,1); 10^(Gain_Adjust/20)*ones(EndIndex_mdl-StartIndex_mdl+1,1)];
             input_model_NAL2 = input_model_NAL .* Gain_Adjust_array;
             input_model_normal2 = input_model_normal .* Gain_Adjust_array;
 
