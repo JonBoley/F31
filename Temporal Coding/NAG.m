@@ -21,7 +21,7 @@ ANALYZE_SPIKES = 1;
 strategy_list = {'short','avg','rate','env','tfs'};
 STRATEGY = 4;
 
-START_PHONE = 2;
+START_PHONE = 1;
 
 levels = 65;%[45 65 85];
 gains = -40:5:40;
@@ -249,9 +249,9 @@ for OALevel_dBSPL=levels
         if phone_index<=1
             StartIndex_mdl = 1;
         else
-            StartIndex_mdl = phonemeindx(phone_index-1)+1;
+            StartIndex_mdl = phonemeindx(phone_index-1)/Fs*ANmodel_Fs_Hz+1;
         end
-        EndIndex_mdl = min(phonemeindx(phone_index),length(input_model_NAL));
+        EndIndex_mdl = min(phonemeindx(phone_index)/Fs*ANmodel_Fs_Hz,length(input_model_NAL));
         
         Mydiff1 = zeros(length(levels),length(gains));
         Mydiff2 = zeros(length(levels),length(gains));
