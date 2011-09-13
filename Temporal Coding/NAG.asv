@@ -13,23 +13,36 @@
 %   'tfs'  (optimal gain restores tfs to normal)
 % if nargin < 1, analysis='shortrate'; end;
 
+EMAIL_NOTIFICATION = 1; %turn on/off email notification
+
 GEN_SPIKES = 1;
 ANALYZE_SPIKES = 1;
 
 strategy_list = {'short','avg','rate','env','tfs'};
 STRATEGY = 4;
 
+START_PHONE = 4;
+
 levels = 65;%[45 65 85];
 gains = -40:5:40;
-note = 'Aug_17_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
+note = 'Sep_07_11';%datestr(now,'mmm_dd_yy'); %attach note to end of file name
 
-NumLabs = 0; %use zero for max number of parallel processors
+NumLabs = 2; %use zero for max number of parallel processors
 if NumLabs
     if (NumLabs>1 && NumLabs~=matlabpool('size'))
+        if matlabpool('size'), matlabpool close; end %close open labs
         eval(sprintf('matlabpool open %d;',NumLabs));
     end
 else
-    matlabpool; % enable parallel computing with max cores
+    if matlabpool('size')<8 %if we're not already maxed out
+        if matlabpool('size'), matlabpool close; end %close open labs
+        matlabpool; % enable parallel computing with max cores
+    end
+end
+
+%% Get username/password for email notification
+if(EMAIL_NOTIFICATION)
+    [login password] = logindlg('Title','GMail Login');
 end
 
 %% Initialization Routine
@@ -140,7 +153,7 @@ NAL_filter_freqs = 2.^interp1(0.5:6.5,log2(FREQUENCIES),0:7,'linear','extrap')/(
 NAL_filter_gains = 10.^(interp1(0.5:6.5,NAL_IG,0:7,'linear','extrap')/20);
 b = firpm(16,NAL_filter_freqs,NAL_filter_gains);
 
-phones = 1:length(phonemeindx);
+phones = START_PHONE:length(phonemeindx);
 
 sponts = [50, 5, 0.25];
 N_win_short = round(.000256*ANmodel_Fs_Hz); % 256us
@@ -165,7 +178,7 @@ for OALevel_dBSPL=levels
     % (NOTE: it would be interesting to play with the group delay here)
     input_orig_NAL = [input_orig_NAL(ceil(length(b)/2):end); zeros(floor(length(b)/2),1)];
     
-    phone_index=1;
+    phone_index=min(phones);
     for phone=phones
         disp(sprintf('Processing phoneme #%d',phone));
 
@@ -182,6 +195,13 @@ for OALevel_dBSPL=levels
         else % if phone_index>1
             PhonemeLevel(phone_index,level_index) = ...
                 20*log10(sqrt(mean(input(phonemeindx(phone-1):min(phonemeindx(phone),length(input))).^2))/(20e-6));
+            
+            for phone_index2=2:phone
+                % Determine OptimumGain for each phone
+                [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone_index2-1,gains,note);
+                eval(sprintf('OptimumGain(phone_index2-1,:)=%s;',strategy_list{STRATEGY}));
+                fprintf('Using optimal gain (%s) of %ddB on phone %d\n',strategy_list{STRATEGY},OptimumGain(phone_index2-1,:),phone_index2-1);
+            end
             
             % Apply OptimumGain to previous phones. (NOTE: We could add attack/release here)
             StartIndex = 1; % start of phone
@@ -229,43 +249,47 @@ for OALevel_dBSPL=levels
         if phone_index<=1
             StartIndex_mdl = 1;
         else
-            StartIndex_mdl = phonemeindx(phone_index-1)+1;
+            StartIndex_mdl = round(phonemeindx(phone_index-1)/Fs*ANmodel_Fs_Hz+1;
         end
-        EndIndex_mdl = min(phonemeindx(phone_index),length(input_model_NAL));
+        EndIndex_mdl = min(phonemeindx(phone_index)/Fs*ANmodel_Fs_Hz,length(input_model_NAL));
         
         Mydiff1 = zeros(length(levels),length(gains));
         Mydiff2 = zeros(length(levels),length(gains));
         
         gain_index=1;
         for Gain_Adjust=gains
-            disp(sprintf('Adjusting prescribed gain by %ddB',Gain_Adjust));
+            disp(sprintf('Adjusting prescribed gain by %ddB (%s)',Gain_Adjust,datestr(now)));
+            
+            Gain_Adjust_array = [ones(StartIndex_mdl-1,1); 10^(Gain_Adjust/20)*ones(EndIndex_mdl-StartIndex_mdl+1,1)];
+            input_model_NAL2 = input_model_NAL .* Gain_Adjust_array;
+            input_model_normal2 = input_model_normal .* Gain_Adjust_array;
 
             % initialization
-            SynOutA = cell(numCFs);
-            for z=1:numCFs, SynOutA{z} = cell(length(sponts)); end
-            SynOutB = cell(numCFs);
-            for z=1:numCFs, SynOutB{z} = cell(length(sponts)); end
+            SynOutA = cell(numCFs,1);
+            for z=1:numCFs, SynOutA{z} = cell(length(sponts),1); end
+            SynOutB = cell(numCFs,1);
+            for z=1:numCFs, SynOutB{z} = cell(length(sponts),1); end
             if (GEN_SPIKES)
-                SpikesA_plus = cell(numCFs);
-                for z=1:numCFs, SpikesA_plus{z} = cell(length(sponts)); end
-                SpikesA_minus = cell(numCFs);
-                for z=1:numCFs, SpikesA_minus{z} = cell(length(sponts)); end
-                SpikesB_plus = cell(numCFs);
-                for z=1:numCFs, SpikesB_plus{z} = cell(length(sponts)); end
-                SpikesB_minus = cell(numCFs);
-                for z=1:numCFs, SpikesB_minus{z} = cell(length(sponts)); end
+                SpikesA_plus = cell(numCFs,1);
+                for z=1:numCFs, SpikesA_plus{z} = cell(length(sponts),1); end
+                SpikesA_minus = cell(numCFs,1);
+                for z=1:numCFs, SpikesA_minus{z} = cell(length(sponts),1); end
+                SpikesB_plus = cell(numCFs,1);
+                for z=1:numCFs, SpikesB_plus{z} = cell(length(sponts),1); end
+                SpikesB_minus = cell(numCFs,1);
+                for z=1:numCFs, SpikesB_minus{z} = cell(length(sponts),1); end
             end
             if (ANALYZE_SPIKES)
-                Rate   = cell(numCFs);
-                for z=1:numCFs, Rate{z} = NaN*ones(length(sponts)); end
-                Difcor = cell(numCFs);
-                for z=1:numCFs, Difcor{z} = NaN*ones(length(sponts)); end
-                Sumcor = cell(numCFs);
-                for z=1:numCFs, Sumcor{z} = NaN*ones(length(sponts)); end
-                Env = cell(numCFs);
-                for z=1:numCFs, Env{z} = NaN*ones(length(sponts)); end
-                Tfs = cell(numCFs);
-                for z=1:numCFs, Tfs{z} = NaN*ones(length(sponts)); end
+                Rate   = cell(numCFs,1);
+                for z=1:numCFs, Rate{z} = NaN*ones(length(sponts),1); end
+                Difcor = cell(numCFs,1);
+                for z=1:numCFs, Difcor{z} = NaN*ones(length(sponts),1); end
+                Sumcor = cell(numCFs,1);
+                for z=1:numCFs, Sumcor{z} = NaN*ones(length(sponts),1); end
+                Env = cell(numCFs,1);
+                for z=1:numCFs, Env{z} = NaN*ones(length(sponts),1); end
+                Tfs = cell(numCFs,1);
+                for z=1:numCFs, Tfs{z} = NaN*ones(length(sponts),1); end
             end
 
             %default PARAMS
@@ -281,7 +305,7 @@ for OALevel_dBSPL=levels
             neurogramB2 = zeros(len_Neurogram,numCFs);%normal
             neurogramB3 = zeros(len_Neurogram,numCFs);%normal
             
-            parfor Fiber_Number=1:numCFs
+            for Fiber_Number=1:numCFs
                 fprintf('.'); if (mod(Fiber_Number,5)==0), fprintf(' '); end
                 if (Fiber_Number==numCFs), fprintf('\n'); end
                 %disp(sprintf('Processing fiber #%d of %d',Fiber_Number,numCFs));
@@ -303,7 +327,7 @@ for OALevel_dBSPL=levels
                     % Run fiber (A+)
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
                     %                         = zbcatmodel(input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc_impaired,Cihc_impaired,SR_sps);
-                    vihc = catmodel_IHC(input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
+                    vihc = catmodel_IHC(input_model_NAL2.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
@@ -335,7 +359,7 @@ for OALevel_dBSPL=levels
                     % Run fiber (A-)
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
                     %                         = zbcatmodel(-input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc_impaired,Cihc_impaired,SR_sps);
-                    vihc = catmodel_IHC(-input_model_NAL.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
+                    vihc = catmodel_IHC(-input_model_NAL2.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc_impaired,Cihc_impaired);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
@@ -361,7 +385,7 @@ for OALevel_dBSPL=levels
                     % Run fiber (B+) - always normal
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
                     %                         = zbcatmodel(input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc,Cihc,SR_sps);
-                    vihc = catmodel_IHC(input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
+                    vihc = catmodel_IHC(input_model_normal2.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
@@ -390,7 +414,7 @@ for OALevel_dBSPL=levels
                     % Run fiber (B-) - always normal
                     %                     [timeout,meout,c1filterout,c2filterout,c1vihc,c2vihc,vihc,sout,psth500k] ...
                     %                         = zbcatmodel(-input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+0.05,Cohc,Cihc,SR_sps);
-                    vihc = catmodel_IHC(-input_model_normal.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
+                    vihc = catmodel_IHC(-input_model_normal2.',CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
                     [sout,psth] = catmodel_Synapse(vihc,CF_kHz(Fiber_Number)*1000,1,1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                     if (GEN_SPIKES)
                         [sptimes nspikes]= SGfast([1/ANmodel_Fs_Hz, Nreps],sout);
@@ -483,12 +507,21 @@ for OALevel_dBSPL=levels
                 clear Rate Difcor Sumcor Env Tfs
             end
 
+            if(EMAIL_NOTIFICATION)
+                try
+                    email_text = ...
+                        sprintf('Calculation completed (%s):\nLevel: %d\nPhone: %d\nGain: %d\n\nSent %s\n',...
+                        strategy_list{STRATEGY},OALevel_dBSPL,phone,Gain_Adjust,datestr(now));
+                    EmailNotification(login,password,'jdboley@purdue.edu','Matlab Update',email_text);
+                    fprintf('Notification Email Sent\n');
+                catch
+                    fprintf('[Error Sending Notification Email]\n');
+                end
+            end
+            
             gain_index=gain_index+1;
         end % end Gain_Adjust
-
-        [short,avg,rate,env,tfs] = OptimalGain2('archive\',levels,impairment,strategy_list{STRATEGY},phone,gains,note);
-        eval(sprintf('OptimumGain(phone_index,:)=%s',strategy_list{STRATEGY}));
-    
+        
         phone_index = phone_index+1;
     end % end phone
 
