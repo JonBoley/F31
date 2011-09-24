@@ -4,6 +4,8 @@ function comp_plot
 
 global dd han_abrcomp colorr titlename numfiles
 
+calc_abr_shift; % added by Jon Boley (09/05/11)
+
 axes(han_abrcomp.text); cla;
 for i=1:numfiles
 	if i <=5
