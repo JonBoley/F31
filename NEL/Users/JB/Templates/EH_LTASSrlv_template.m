@@ -313,9 +313,9 @@ persistent prev_unit_bf
 %%%%%%%%%%%%%%%%%%%%
 IO_def.Inloop.BaseFrequency     =  {'current_unit_bf'   'kHz'      [0.04  50] 0 0};
 IO_def.Inloop.CalibPicNum  =  {[]   ''       [0 6000]};
-IO_def.Inloop.Feature           =  {'T0|{F1}|T1|F2|T2|F3|T3'};
+IO_def.Inloop.Feature           =  {'T0|F1|T1|{F2}|T2|F3|T3'};
 IO_def.Inloop.Signal_Level             =  {65 'dB SPL'       [-50    150]   0  0}; 
-IO_def.Inloop.FormsAtHarmonics  =  {'no|{yes}'};
+IO_def.Inloop.FormsAtHarmonics  =  {'{no}|yes'};
 IO_def.Inloop.InvertPolarity  =  {'{no}|yes'};
 
 IO_def.Inloop.Low_Attenuation_noise   = { 1             'dB'    [0    120]      };  % Here, these are for the noise

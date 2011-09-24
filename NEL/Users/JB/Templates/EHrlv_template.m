@@ -259,8 +259,8 @@ persistent prev_unit_bf
 IO_def.Inloop.BaseFrequency     =  {'current_unit_bf'   'kHz'      [0.04  50] 0 0};
 % IO_def.Inloop.FreqOffset        =  {'{0}|1/4|1/2|3/4|1' 'octaves'};
 % IO_def.Inloop.Offset_Direction  =  {'{below}|above' 're: BF'};
-IO_def.Inloop.Feature           =  {'T0|{F1}|T1|F2|T2|F3|T3'};
-IO_def.Inloop.FormsAtHarmonics  =  {'no|{yes}'};
+IO_def.Inloop.Feature           =  {'T0|F1|T1|{F2}|T2|F3|T3'};
+IO_def.Inloop.FormsAtHarmonics  =  {'{no}|yes'};
 IO_def.Inloop.InvertPolarity  =  {'{no}|yes'};
 
 IO_def.Inloop.Low_Attenuation   = { 1             'dB'    [0    120]      };
