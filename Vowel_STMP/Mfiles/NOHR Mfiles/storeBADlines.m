@@ -97,7 +97,8 @@ end
 
 for PICind=PIClist
 	if isempty(find(DataList.IgnorePicNums==PICind))  % don't bother with IgnorePICS
-		if ~sum(strcmp(getTAG(getfileName(PICind)),{'calib','tc'}))  % only process RASTER data files
+		if ~sum(strcmp(getTAG(getfileName(PICind)),...
+                {'calib','tc','500','1000','2000','4000','8000','dpoae'}))  % only process RASTER data files
 
 			x=loadPic(PICind);
 			disp(sprintf('Picture #: %d, filename: %s',PICind,getfileName(PICind)))

@@ -102,7 +102,7 @@ elseif strcmp(newPIC.TEMPLATE,'EHrBF')
 	%	OLD_SCALEDspikes = PIC.x.spikes{1}(:,2)*TimeFact;
 	newPIC.x.spikes{1}(:,2)=SCALEDspikes;
    
-elseif sum(strcmp(newPIC.TEMPLATE,{'EHrBFi','EHvNrBFi','TrBFi'}))
+elseif sum(strcmp(newPIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','TrBFi'}))
    
    FreqFact=PIC.BF_Hz/PIC.x.Stimuli.Used.FeatureTarget_Hz_List(PIC.CONDind);
    TimeFact=1/FreqFact;

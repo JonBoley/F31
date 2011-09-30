@@ -5,7 +5,7 @@ function [UnitCF,UnitThresh,UnitQ10,...
     Nscc_CD_neg_failpoint,Nscc_CD_neg_fail_limit,...
     Nscc0_pos_failpoint,Nscc0_pos_fail_limit,...
     Nscc0_neg_failpoint,Nscc0_neg_fail_limit...
-    ]=UnitLook_EHIN_CoincDet2_JB(UnitName)
+    ]=UnitLook_EHIN_CoincDet2_JB(ExpDate,UnitName)
 % File: UnitLook_EHIN_CoincDet2.m
 % updated: Jun 19, 2009 - from UnitLook_EHIN_CoincDet2_MH2.m (Reiri Sono)
 %
@@ -44,15 +44,38 @@ path(fullfile(ROOT_dir,'MFiles','NewMfiles'),path)
 % ExpDate='041805';  % HARDCODE
 % ExpDate='111804';  % HARDCODE
 % ExpDate='071305';  % HARDCODE
-ExpDate='011811';  % HARDCODE
+% ExpDate='041811';  % HARDCODE
 if strcmp(ExpDate,'041805')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'MH-2005_04_18-ANnorm') ''''])
 elseif strcmp(ExpDate,'111804')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'MH-2004_11_18-NOHRnorm') ''''])
 elseif strcmp(ExpDate,'071305')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'MH-2005_07_13-ANdeafcat') ''''])
+%%%%%%%%%%%%%%%%    
+% Normal: 011811, 041811, 051211, 062711, 072011
+% Impaired: 062311, 072111, 080111, 080911, 081511
 elseif strcmp(ExpDate,'011811')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_01_18-AN-norm-exposed') ''''])
+elseif strcmp(ExpDate,'041811')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_04_18-AN_Normal') ''''])
+elseif strcmp(ExpDate,'051211')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_05_12-AN_Normal_Chin1120') ''''])
+elseif strcmp(ExpDate,'062711')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_06_27-Chin1133_AN_Normal') ''''])
+elseif strcmp(ExpDate,'072011')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_07_20-Chin1132_AN_normal') ''''])
+elseif strcmp(ExpDate,'062311')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_06_23-Chin1119_AN_500OBN') ''''])
+elseif strcmp(ExpDate,'072111')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_07_21-Chin1124_AN_500OBN') ''''])
+elseif strcmp(ExpDate,'080111')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_08_01-Chin1125_AN_500OBN') ''''])
+elseif strcmp(ExpDate,'080911')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_08_09-Chin1135_AN_500OBN') ''''])
+elseif strcmp(ExpDate,'081511')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_08_15-Chin1136_AN_500OBN') ''''])
+%%%%%%%%%%%%%%%%    
+    
 else
     error('BAD dir')
 end
@@ -61,6 +84,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 data_dir=fullfile(ROOT_dir,'ExpData',ExpName);
 unitdata_dir=fullfile(data_dir,'UNITSdata');
+if ~exist(unitdata_dir,'dir'), mkdir(unitdata_dir); end
 data_dir_bak = data_dir;  % backup in case it is overwritten by mat file
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -117,10 +141,10 @@ if ~loadBOOL
             %%% Load DataList for 071305
             disp(' ... Loading DataList for 07_13-05');
             load DataList_2005_07_13
-        elseif strcmp(ExpDate,'011811')
-            %%% Load DataList for 011811
-            disp(' ... Loading DataList for 01_18_11');
-            load DataList_2011_01_18
+        else
+            DataFileName=sprintf('DataList_20%c%c_%c%c_%c%c',ExpDate(end-1),ExpDate(end),ExpDate(1),ExpDate(2),ExpDate(3),ExpDate(4));
+            fprintf(' ... Loading %s.mat\n',DataFileName);
+            load(DataFileName);
         end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -196,7 +220,7 @@ end
 EHrlf_piclist=findPics('EHrlv',[TrackNum UnitNum]);
 % quick_EHrlfs(EHrlf_piclist,CalibPic)
 plot_EHrlfs(EHrlf_piclist,CalibPic);
-set(gcf,'vis','off');
+% set(gcf,'vis','off');
 
 EHrlf_FIG=gcf;
 set(EHrlf_FIG,'Name',sprintf('EHrlfs for Unit: %s',UnitName))
@@ -216,8 +240,8 @@ if ~isempty(EHINrlf_piclist)
     text(VOWELlevel_dBSPL,0,'L_{EH}','HorizontalAlignment','center','VerticalAlignment','bottom')
     text(.95,.25,sprintf('Vowel Level = %.f dB SPL',VOWELlevel_dBSPL),'HorizontalAlignment','right','units','norm')
 end
+set(EHrlf_FIG,'units','norm','pos',[-0.0008    0.4043    0.2188    0.2588])
 set(EHrlf_FIG,'vis','off');
-set(EHrlf_FIG,'units','norm','pos',[-0.0008    0.4043    0.2188    0.2588],'Resize','off')
 clear x
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -226,7 +250,6 @@ clear x
 dBAtt_2_SNR = plot_EHINrlfs(EHINrlf_piclist,CalibPic);
 
 EHINrlf_FIG=gcf;
-set(EHINrlf_FIG,'vis','off');
 set(EHINrlf_FIG,'Name',sprintf('EHINrlfs for Unit: %s',UnitName))
 set(EHINrlf_FIG,'NumberTitle','off')
 YLIMITS_EHINrlf=ylim;
@@ -237,22 +260,30 @@ title(sprintf('     Exp%s, Unit %s: BF=%.2f kHz, Thr=%.f dB SPL, SR=%.1f sps, Q1
 
 % Label A_N - noise Atten for rest of data
 EHvNreBFi_piclist=findPics('EHvNrBFi',[TrackNum UnitNum]);
+EHvNreBFi_piclist=[EHvNreBFi_piclist findPics('EHvLTASSrBFi',[TrackNum UnitNum])];
 if ~isempty(EHvNreBFi_piclist)
     x=loadPic(EHvNreBFi_piclist(1));
+    
+    % get SNR for equal sensation level
+    SNR_dB=x.Stimuli.Condition.NoiseAttens_dB(2)+dBAtt_2_SNR;
+    plot(SNR_dB*ones(2,1),[0 1000],'k:')
+    text(SNR_dB,0,'SNR_{1}','HorizontalAlignment','center','VerticalAlignment','bottom')
+    text(.95,.25,sprintf('Signal-to-Noise Ratio = %.f dB',SNR_dB),'HorizontalAlignment','right','units','norm')
+    
+    % get SNR for equal SPL (should be 0dB SNR!)
     SNR_dB=x.Stimuli.Condition.NoiseAttens_dB(3)+dBAtt_2_SNR;
     plot(SNR_dB*ones(2,1),[0 1000],'k:')
-    plot(SNR_dB*ones(2,1)-10,[0 1000],'k:')
-    plot(SNR_dB*ones(2,1)+10,[0 1000],'k:')
-    text(SNR_dB,0,'SNR_{N}','HorizontalAlignment','center','VerticalAlignment','bottom')
-    text(.95,.25,sprintf('Signal-to-Noise Ratio = %.f dB',SNR_dB),'HorizontalAlignment','right','units','norm')
+    text(SNR_dB,0,'SNR_{2}','HorizontalAlignment','center','VerticalAlignment','bottom')
+    text(.95,.15,sprintf('Signal-to-Noise Ratio = %.f dB',SNR_dB),'HorizontalAlignment','right','units','norm')
 end
 
-set(EHINrlf_FIG,'units','norm','pos',[-0.0008    0.0684    0.2188    0.2588],'Resize','off')
+set(EHINrlf_FIG,'units','norm','pos',[-0.0008    0.0684    0.2188    0.2588])
 ymax=max([YLIMITS_EHrlf(2) YLIMITS_EHINrlf(2)]);
 set(0,'CurrentFigure',EHrlf_FIG)
 ylim([0 ymax])
 set(0,'CurrentFigure',EHINrlf_FIG)
 ylim([0 ymax])
+set(EHINrlf_FIG,'vis','off');
 
 if isempty(EHvNreBFi_piclist)
     return;
@@ -267,10 +298,10 @@ if ~loadBOOL
     
     %%%% Find number of features to plot (tone, F1, T1, ...)
     %%%% Find all levels and BFs to plot
-    NUMcols=4;
-    NUMrows=3;
+    NUMcols=4; % length(Nattens_dB) ?
+    NUMrows=4; % length(FeatINDs) ?
     Nattens_dB=[]; BFsTEMP_kHz=[];
-    if isfield(unit,'EHvN_reBF_simFF')
+    if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
         EHfeats=fieldnames(unit.EHvN_reBF);
         inds=find(~strcmp(EHfeats,'interleaved'))';
         for FeatIND=inds   % eliminate 'interleaved' field
@@ -294,7 +325,16 @@ if ~loadBOOL
         
         F0min=Inf;
         for FeatIND=FeatINDs
-            eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            try
+                if ~isempty(unit.EHvLTASS_reBF_simFF.F1{HarmonicsIND,PolarityIND})
+                    eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+                else
+                    PolarityIND=1;
+                    eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+                end
+            catch
+                eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            end
             if ~isempty(yTEMP)
                 
                 Nattens_dB=union(Nattens_dB,yTEMP.Nattens_dB);
@@ -383,10 +423,10 @@ if ~loadBOOL
         NSCC_BFs_kHz=cell(NUMrows,length(Nattens_dB));
         NSCC_avgrates=cell(NUMrows,length(Nattens_dB));
         NSCC_nsps=cell(NUMrows,length(Nattens_dB));
-        if ~exist('NSCC_CDs_usec')
+        if ~exist('NSCC_CDs_usec') || ~min(size(NSCC_CDs_usec))
             NSCC_CDs_usec=cell(NUMrows,length(Nattens_dB));
         end
-        if ~exist('NSCC_peaks')
+        if ~exist('NSCC_peaks') || ~min(size(NSCC_peaks))
             NSCC_peaks=cell(NUMrows,length(Nattens_dB));
         end
         NSCC_0delay=cell(NUMrows,length(Nattens_dB));
@@ -410,10 +450,14 @@ if ~loadBOOL
         ROWind=0;
         
         %%%%%%%%%%%%%%%%%%%% EH_reBF Calcs
-        if isfield(unit,'EHvN_reBF_simFF')
+        if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             for FeatIND=FeatINDs
                 ROWind=ROWind+1;
-                eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+                try
+                    eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+                catch
+                    eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+                end
                 if ~isempty(yTEMP)
                     %%%% EH_reBF plots
                     ATTind=find(yTEMP.Nattens_dB==ATTEN);
@@ -500,9 +544,13 @@ if ~loadBOOL
                             
                             Nsps{ROWind,ATTind}(BFind)=PIC.PERhist.NumDrivenSpikes;
                             Rates{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.SynchRate_PERhist(1);
-                            if PIC.SynchRate_PERhist.FeatureRaySig(FeatIND)
-                                Synchs{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeatureSynchs(FeatIND);
-                                Phases{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeaturePhases(FeatIND);
+%                             if PIC.SynchRate_PERhist.FeatureRaySig(FeatIND)
+%                                 Synchs{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeatureSynchs(FeatIND);
+%                                 Phases{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeaturePhases(FeatIND);
+                            F0ind=find(strcmp('F0',FeaturesText));
+                            if PIC.SynchRate_PERhist.FeatureRaySig(F0ind)
+                                Synchs{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeatureSynchs(F0ind);
+                                Phases{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeaturePhases(F0ind);
                             else
                                 Synchs{ROWind,ATTind}(BFind)=NaN;
                                 Phases{ROWind,ATTind}(BFind)=NaN;
@@ -588,10 +636,12 @@ if ~loadBOOL
                         NSCC_avgrates{ROWind,ATTind}=cell(size(NSCC_BFinds));
                         NSCC_nsps{ROWind,ATTind}=cell(size(NSCC_BFinds));
                         NSCC_BFs_kHz{ROWind,ATTind}=cell(size(NSCC_BFinds));
-                        if isempty(NSCC_CDs_usec{ROWind,ATTind})
+                        if sum([ROWind,ATTind]>size(NSCC_CDs_usec)) || ...
+                                isempty(NSCC_CDs_usec{ROWind,ATTind})
                             NSCC_CDs_usec{ROWind,ATTind}=cell(size(NSCC_BFinds));
                         end
-                        if isempty(NSCC_peaks{ROWind,ATTind})
+                        if sum([ROWind,ATTind]>size(NSCC_peaks)) || ...
+                                isempty(NSCC_peaks{ROWind,ATTind})
                             NSCC_peaks{ROWind,ATTind}=cell(size(NSCC_BFinds));
                         end
                         NSCC_0delay{ROWind,ATTind}=cell(size(NSCC_BFinds));
@@ -623,12 +673,21 @@ if ~loadBOOL
                                 % Keep stored as NSCCs_sps for bookkeeping
                                 % NEED to scale avgrates to compensate for rate
                                 % bias due to shifting
-                                NSCCs_sps{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}* ...
-                                    NSCCbinwidth_sec * ...
-                                    NSCC_avgrates{ROWind,ATTind}{SCCind}{1} * ...
-                                    cell2mat(unit.EHvN_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
-                                    NSCC_avgrates{ROWind,ATTind}{SCCind}{2} * ...
-                                    cell2mat(unit.EHvN_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
+                                try
+                                    NSCCs_sps{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}* ...
+                                        NSCCbinwidth_sec * ...
+                                        NSCC_avgrates{ROWind,ATTind}{SCCind}{1} * ...
+                                        cell2mat(unit.EHvLTASS_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
+                                        NSCC_avgrates{ROWind,ATTind}{SCCind}{2} * ...
+                                        cell2mat(unit.EHvLTASS_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
+                                catch
+                                    NSCCs_sps{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}* ...
+                                        NSCCbinwidth_sec * ...
+                                        NSCC_avgrates{ROWind,ATTind}{SCCind}{1} * ...
+                                        cell2mat(unit.EHvN_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
+                                        NSCC_avgrates{ROWind,ATTind}{SCCind}{2} * ...
+                                        cell2mat(unit.EHvN_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
+                                end
                                 
                                 % Determine Maximum of ALL plotted SCCs (i.e., post-Smoothing)
                                 if max(NSCCs{ROWind,ATTind}{SCCind})>SCCsMAX
@@ -785,14 +844,16 @@ if ~loadBOOL
                 
                 [SCCpos,SCCs_belowBF,SCCs_aboveBF,BFind,BFs(ROWind)]=getSCCindsWithBF(unit.Info.BF_kHz,NSAC_BFs_kHz{ROWind,ATTind},NSCC_BFs_kHz{ROWind,ATTind});
                 for SCCposind=1:size(SCCpos,1)
-                    if ~isnan(NSCC_Rho{ROWind,ATTind}{SCCpos(SCCposind,1)})
+%                     if ~isnan(NSCC_Rho{ROWind,ATTind}{SCCpos(SCCposind,1)})
                         MyNSCC_Rho(SCCposind) = NSCC_Rho{ROWind,ATTind}{SCCpos(SCCposind,1)};
                         Octaves(SCCposind) = log2(NSCC_BFs_kHz{ROWind,ATTind}{SCCpos(SCCposind,1)}(3-SCCpos(SCCposind,2))/BFs(ROWind));
                         MyCD(SCCposind) = NSCC_CDs_usec{ROWind,ATTind}{SCCpos(SCCposind,1)};
-                    end
+%                     end
                 end
                 if exist('Octaves')
-                    Octaves=unique(Octaves); MyNSCC_Rho=unique(MyNSCC_Rho); MyCD=unique(MyCD);
+                    [b,m,n]=unique(Octaves,'first'); 
+                    Octaves=Octaves(sort(m)); MyNSCC_Rho=MyNSCC_Rho(sort(m)); MyCD=MyCD(sort(m)); 
+                    
                     Octaves_interp = min(Octaves):0.01:max(Octaves);
                     MyNSCC_Rho_interp = interp1(Octaves,MyNSCC_Rho,Octaves_interp);
                     MyCD_interp = interp1(Octaves,MyCD,Octaves_interp);
@@ -802,7 +863,13 @@ if ~loadBOOL
                 
                 % find CD at 0.25 octaves away from feature
 %                 SMP_NSCC_CD_at_Oct{ROWind,ATTind} = max(abs(MyCD_interp(abs(Octaves_interp)<=0.25)));
-                SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = max(MyCD_interp(Octaves_interp>=0.25));
+                if exist('MyCD_interp')
+                    SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = max(MyCD_interp(Octaves_interp>=0.25));
+                else
+                    SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = [];
+                    Octaves_interp = NaN;
+                    MyCD_interp = NaN;
+                end
                 if isempty(SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind})
                     warning(sprintf('0.25 Octaves not found.  Using %1.3f octaves.',max(Octaves_interp)));
                     SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = abs(max(MyCD_interp(Octaves_interp==min(Octaves_interp))));
@@ -857,7 +924,7 @@ FIG.FontSize=8;
 FeatureColors={'r','g'};
 %%% Show multiple periods of tone PERhist
 NperiodsTONE=5;
-if isfield(unit,'EHvN_reBF_simFF')
+if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
     PERhist_XMAX=1/F0min*1000;  % take the PERhist_Xlims on vowels (in ms)
     XLIMITS_perhist=[0 PERhist_XMAX];
 else
@@ -911,10 +978,15 @@ for ATTEN=Nattens_dB
     ROWind=0;
     
     %%%%%%%%%%%%%%%%%%%% EH_reBF Plots
-    if isfield(unit,'EHvN_reBF_simFF')
+    if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
+        NUMrows=length(FeatINDs);
         for FeatIND=FeatINDs
             ROWind=ROWind+1;
-            eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            try
+                eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            catch
+                eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            end
             if ~isempty(yTEMP)
                 %%%% EH_reBF plots
                 ATTind=find(yTEMP.Nattens_dB==ATTEN);
@@ -1006,7 +1078,7 @@ for ATTEN=Nattens_dB
                 semilogy(Synchs{ROWind,ATTind},BFs_kHz{ROWind,ATTind},'*-')
                 hold on
                 semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
-                xlabel(sprintf('Synch Coef (to %s)',FeaturesText{FeatIND}))
+                xlabel(sprintf('Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
                 PLOThand=eval(['h' num2str(PLOTnum)]);
                 xlim(XLIMITS_synch)
                 set(PLOThand,'XDir','reverse')
@@ -1122,10 +1194,14 @@ ALLlevelsTriFilt=3;
 ATTEN=max(Nattens_dB);
 
 %%%%%%%%%%%%%%%%%%%% EH_reBF Plots
-if isfield(unit,'EHvN_reBF_simFF')
+if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
     for FeatIND=FeatINDs
         ROWind=ROWind+1;
-        eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+        try
+            eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+        catch
+            eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+        end
         if ~isempty(yTEMP)
             %%%% EH_reBF plots
             ATTind=find(yTEMP.Nattens_dB==ATTEN);
@@ -1245,7 +1321,7 @@ if isfield(unit,'EHvN_reBF_simFF')
                 semilogy(Synchs{ROWind,ATTind2},BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
             end
             semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
-            xlabel(sprintf('Synch Coef (to %s)',FeaturesText{FeatIND}))
+            xlabel(sprintf('Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
             PLOThand=eval(['h' num2str(PLOTnum)]);
             xlim(XLIMITS_synch)
             set(PLOThand,'XDir','reverse')
@@ -1338,7 +1414,7 @@ set(h4,'Position',[Xcorner+Xwidth1+Xshift1+2*(Xwidth2+Xshift2) Ycorner+(NUMrows-
 orient landscape
 
 
-if isfield(unit,'EHvN_reBF_simFF')
+if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%% DO ALL DFT PLOTS
@@ -1355,10 +1431,14 @@ if isfield(unit,'EHvN_reBF_simFF')
         ROWind=0;
         
         %%%%%%%%%%%%%%%%%%%% EH_reBF Plots
-        if isfield(unit,'EHvN_reBF_simFF')
+        if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             for FeatIND=FeatINDs
                 ROWind=ROWind+1;
-                eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+                try
+                    eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+                catch
+                    eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+                end
                 if ~isempty(yTEMP)
                     %%%% EH_reBF plots
                     ATTind=find(yTEMP.Nattens_dB==ATTEN);
@@ -1464,7 +1544,7 @@ if isfield(unit,'EHvN_reBF_simFF')
                     semilogy(Synchs{ROWind,ATTind},BFs_kHz{ROWind,ATTind},'*-')
                     hold on
                     semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
-                    xlabel(sprintf('Synch Coef (to %s)',FeaturesText{FeatIND}))
+                    xlabel(sprintf('Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
                     PLOThand=eval(['h' num2str(PLOTnum)]);
                     xlim(XLIMITS_synch)
                     set(PLOThand,'XDir','reverse')
@@ -1566,10 +1646,14 @@ if isfield(unit,'EHvN_reBF_simFF')
     ROWind=0;
     
     %%%%%%%%%%%%%%%%%%%% EH_reBF Plots
-    if isfield(unit,'EHvN_reBF_simFF')
+    if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
         for FeatIND=FeatINDs
             ROWind=ROWind+1;
-            eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            try
+                eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            catch
+                eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            end
             if ~isempty(yTEMP)
                 %%%% EH_reBF plots
                 ATTind=find(yTEMP.Nattens_dB==ATTEN);
@@ -1730,10 +1814,14 @@ if doSCC
     ROWind=0;
     %%%%%%%%%%%%%%%%%%%% EH_reBF Plots
     %	if 0==1 %bypass this resource-heavy graph for debugging purpose
-    if isfield(unit,'EHvN_reBF_simFF')
+    if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
         for FeatIND=FeatINDs
             ROWind=ROWind+1;
-            eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            try
+                eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            catch
+                eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            end
             if ~isempty(yTEMP)
                 [SCCpos,SCCs_belowBF,SCCs_aboveBF,BFind,centerBF_kHz]=getSCCindsWithBF(unit.Info.BF_kHz,NSAC_BFs_kHz{ROWind,ATTind},NSCC_BFs_kHz{ROWind,ATTind});
                 
@@ -1818,7 +1906,7 @@ if doSCC
     set(gcf,'units','norm','pos',[0.2234    0.0693    0.4297    0.2344])%,'Resize','off'
     numCOLS=0;
     SCCpositions=cell(size(FeatINDs));
-    if isfield(unit,'EHvN_reBF_simFF')
+    if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
         ROWind=0;
         for FeatIND=FeatINDs %get the biggest # of BF pairs and make it numROWS
             ROWind=ROWind+1;
@@ -1826,7 +1914,11 @@ if doSCC
         end
         ROWind=0;
         for FeatIND=FeatINDs
-            eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            try
+                eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            catch
+                eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            end
             ROWind=ROWind+1;
             [SCCpos,SCCs_belowBF,SCCs_aboveBF,BFind,centerBF_kHz]=getSCCindsWithBF(unit.Info.BF_kHz,NSAC_BFs_kHz{ROWind,1},NSCC_BFs_kHz{ROWind,1});
             SCCpos=[SCCpos(1:size(SCCs_belowBF),:);BFind,0;SCCpos(size(SCCs_belowBF)+1:size(SCCpos),:)];
@@ -2038,8 +2130,11 @@ if doSCC %% [[JDB TO DO]] fix x,y (both should be 1x2)
     if isempty(Nscc_CD_pos_failpoint) % if none of the slopes are lower, check higher
         Nscc_CD_pos_failpoint = max(...
             Nattens_dB(find(SensitivitySlopes_nsccCD_pos{1}(noiseINDs)>=...
-            0.5*SensitivitySlopes_nsccCD_pos{1}(NOnoiseIND),1,'last')),...
+            max(SensitivitySlopes_nsccCD_pos{1}(noiseINDs)),1,'last')),...
             min(Nattens_dB))+dBAtt_2_SNR;
+        if all(isnan(SensitivitySlopes_nsccCD_pos{1}(noiseINDs)))
+            Nscc_CD_pos_failpoint = min(Nattens_dB)+dBAtt_2_SNR;
+        end
     end
     if  (Nscc_CD_pos_failpoint==min(Nattens_dB(noiseINDs))+dBAtt_2_SNR)
         Nscc_CD_pos_fail_limit = -1; % this was the lowest SNR tested
@@ -2057,6 +2152,12 @@ if doSCC %% [[JDB TO DO]] fix x,y (both should be 1x2)
             Nattens_dB(find(SensitivitySlopes_nsccCD_neg{1}(noiseINDs)>=...
             0.5*SensitivitySlopes_nsccCD_neg{1}(NOnoiseIND),1,'last')),...
             min(Nattens_dB))+dBAtt_2_SNR;
+        if all(isnan(SensitivitySlopes_nsccCD_neg{1}(noiseINDs)))
+            Nscc_CD_neg_failpoint = min(Nattens_dB)+dBAtt_2_SNR;
+        end
+    end
+    if isempty(Nscc_CD_neg_failpoint)
+        Nscc_CD_neg_failpoint = min(Nattens_dB)+dBAtt_2_SNR;
     end
     if  (Nscc_CD_neg_failpoint==min(Nattens_dB(noiseINDs))+dBAtt_2_SNR)
         Nscc_CD_neg_fail_limit = -1; % this was the lowest SNR tested
@@ -2100,6 +2201,9 @@ if doSCC %% [[JDB TO DO]] fix x,y (both should be 1x2)
             Nattens_dB(find(SensitivitySlopes_nscc0_pos{1}(noiseINDs)>=...
             0.5*SensitivitySlopes_nscc0_pos{1}(NOnoiseIND),1,'last')),...
             min(Nattens_dB))+dBAtt_2_SNR;
+        if all(isnan(SensitivitySlopes_nscc0_pos{1}(noiseINDs)))
+            Nscc0_pos_failpoint = min(Nattens_dB)+dBAtt_2_SNR;
+        end
     end
     if  (Nscc0_pos_failpoint==min(Nattens_dB(noiseINDs))+dBAtt_2_SNR)
         Nscc0_pos_fail_limit = -1; % this was the lowest SNR tested
@@ -2120,6 +2224,9 @@ if doSCC %% [[JDB TO DO]] fix x,y (both should be 1x2)
             Nattens_dB(find(SensitivitySlopes_nscc0_neg{1}(noiseINDs)>=...
             0.5*SensitivitySlopes_nscc0_neg{1}(NOnoiseIND),1,'last')),...
             min(Nattens_dB))+dBAtt_2_SNR;
+        if all(isnan(SensitivitySlopes_nscc0_neg{1}(noiseINDs)))
+            Nscc0_neg_failpoint = min(Nattens_dB)+dBAtt_2_SNR;
+        end
     end
     if  (Nscc0_neg_failpoint==min(Nattens_dB(noiseINDs))+dBAtt_2_SNR)
         Nscc0_neg_fail_limit = -1; % this was the lowest SNR tested
@@ -2375,7 +2482,7 @@ if doSCC
                 ROWind=0;
                 
                 %%%%%%%%%%%%%%%%%%%% EH_reBF Calcs
-                if isfield(unit,'EHvN_reBF_simFF')
+                if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
                     ATTind=find(Nattens_dB==ATTEN);
                     for FeatIND=FeatINDs
                         ROWind=ROWind+1;
@@ -2460,7 +2567,11 @@ panel=0;
 ROWind=0;
 for FeatIND=FeatINDs
     ROWind=ROWind+1;
-    eval(['myFeatures=unit.EHvN_reBF_simFF.',FeaturesText{FeatIND},'{HarmonicsIND,PolarityIND}.FeatureFreqs_Hz{1,1};']);
+    try
+        eval(['myFeatures=unit.EHvLTASS_reBF_simFF.',FeaturesText{FeatIND},'{HarmonicsIND,PolarityIND}.FeatureFreqs_Hz{1,1};']);
+    catch
+        eval(['myFeatures=unit.EHvN_reBF_simFF.',FeaturesText{FeatIND},'{HarmonicsIND,PolarityIND}.FeatureFreqs_Hz{1,1};']);
+    end
     for ATTind=1:length(Nattens_dB)
         panel=panel+1;
         xymin=min(cell2mat(NSAC_BFs_kHz{ROWind,ATTind}));
@@ -2644,7 +2755,11 @@ end
 COLind=0;
 for FeatIND=FeatINDs
     COLind=COLind+1;
-    eval(['myFeatures_kHz=unit.EHvN_reBF_simFF.',FeaturesText{FeatIND},'{HarmonicsIND,PolarityIND}.FeatureFreqs_Hz{1,1}/1000;']);
+    try
+        eval(['myFeatures_kHz=unit.EHvLTASS_reBF_simFF.',FeaturesText{FeatIND},'{HarmonicsIND,PolarityIND}.FeatureFreqs_Hz{1,1}/1000;']);
+    catch
+        eval(['myFeatures_kHz=unit.EHvN_reBF_simFF.',FeaturesText{FeatIND},'{HarmonicsIND,PolarityIND}.FeatureFreqs_Hz{1,1}/1000;']);
+    end
     %horizontal lines @ periods, on CD panels
     myFs=[3 4 5];
     subplot(3,length(FeatINDs),COLind)
@@ -2658,17 +2773,17 @@ for FeatIND=FeatINDs
     %"alternative CDs" - calculated CD - {1 or 2} periods of {F1, T1, F2}.
     %{}=decided by observation, hard-coded.
     if COLind==1
-        altCD{COLind}=[data2plot{1,1}(1,1:2);...
-            data2plot{1,1}(2,1),data2plot{1,1}(2,2)-1/myFeatures_kHz(3);...
-            data2plot{1,1}(3:7,1:2);...
-            data2plot{1,4}(8,1:2);...
-            data2plot{1,1}(9,1),data2plot{1,1}(9,2)-1/myFeatures_kHz(3);...
-            data2plot{1,4}(10,1),data2plot{1,4}(10,2)-1/myFeatures_kHz(3)];
+        altCD{COLind}=[data2plot{1,1}(1,[1 end]);...
+            data2plot{1,1}(2,1),data2plot{1,1}(2,end)-1/myFeatures_kHz(3);...
+            data2plot{1,1}(3:7,[1 end]);...
+            data2plot{1,end}(8,[1 end]);...
+            data2plot{1,1}(9,1),data2plot{1,1}(9,end)-1/myFeatures_kHz(3);...
+            data2plot{1,end}(10,1),data2plot{1,end}(10,end)-1/myFeatures_kHz(3)];
     else
-        altCD{COLind}=[data2plot{2,4}(1:7,1:2);...
-            data2plot{2,4}(8,1),data2plot{2,4}(8,2)-1/myFeatures_kHz(5);...
-            data2plot{2,4}(9,1),data2plot{2,4}(9,2)-1/myFeatures_kHz(5);...
-            data2plot{2,4}(10,1:2)];
+        altCD{COLind}=[data2plot{COLind,end}(1:7,[1 end]);...
+            data2plot{COLind,end}(8,1),data2plot{COLind,end}(8,end)-1/myFeatures_kHz(5);...
+            data2plot{COLind,end}(9,1),data2plot{COLind,end}(9,end)-1/myFeatures_kHz(5);...
+            data2plot{COLind,end}(10,[1 end])];
     end
     plot(altCD{COLind}(:,1),altCD{COLind}(:,2),'--k')
     
@@ -2744,7 +2859,7 @@ plot([xmax Nattens_dB(LOWnoiseIND)+dBAtt_2_SNR],SensitivitySlopes_rate([NOnoiseI
 plot([xmin-2 xmax+2],[0 0],'k:')
 hold off
 % ylim([ymin ymax])
-ylim([yminFACT ymaxFACT]*SensitivitySlopes_rate(NOnoiseIND))
+ylim(sort([yminFACT ymaxFACT]*SensitivitySlopes_rate(NOnoiseIND)))
 text(xmax,yminFACT*SensitivitySlopes_rate(NOnoiseIND),'IQ','units','data','HorizontalAlignment','center','VerticalAlignment','bottom','color','red')
 title(sprintf('     Exp%s, Unit %s: BF=%.2f kHz, Thr=%.f dB SPL, SR=%.1f sps, Q10=%.1f\nRATE', ...
     ExpDate,UnitName,unit.Info.BF_kHz,unit.Info.Threshold_dBSPL,unit.Info.SR_sps,unit.Info.Q10), ...
@@ -2898,8 +3013,8 @@ figure(1051), set(gcf,'vis','off');
 
 % Figures for STMP paper %%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-NUMcols=5;
-NUMrows=3;
+NUMcols=5; % time, rate, synchrony, correlation, delay
+NUMrows=length(FeatINDs);
 figure(501); clf
 set(gcf,'Name','Comparison of Neural Coding Strategies');
 set(gcf,'units','norm','pos',[0.2234    0.7119    0.4297    0.2344]);%,'Resize','off')
@@ -2910,10 +3025,14 @@ ALLlevelsTriFilt=3;
 ATTEN=max(Nattens_dB);
 
 %%%%%%%%%%%%%%%%%%%% EH_reBF Plots
-if isfield(unit,'EHvN_reBF_simFF')
+if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
     for FeatIND=FeatINDs
         ROWind=ROWind+1;
-        eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+        try
+            eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+        catch
+            eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+        end
         if ~isempty(yTEMP)
             %%%% EH_reBF plots
             ATTind=find(yTEMP.Nattens_dB==ATTEN);
@@ -2936,7 +3055,7 @@ if isfield(unit,'EHvN_reBF_simFF')
                         'LineWidth',LINEwidth,'Color',ATTENcolors{ATTind})
                     hold on
                     if ismember(BFind,find(abs(log2(BFs_kHz{ROWind,ATTind}/unit.Info.BF_kHz))<BFoctCRIT))
-                        LEGtext{length(LEGtext)+1}=sprintf('%.f dB',Nattens_dB(ATTind)+dBAtt_2_SNR);
+                        LEGtext{length(LEGtext)+1}='In Quiet';%sprintf('%.f dB',Nattens_dB(ATTind)+dBAtt_2_SNR);
                     end
                     for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))
                         if ~isempty(PERhistXs_sec{ROWind,ATTind2}{BFind})
@@ -2944,7 +3063,12 @@ if isfield(unit,'EHvN_reBF_simFF')
                                 trifilt(PERhists_Smoothed{ROWind,ATTind2}{BFind},ALLlevelsTriFilt)*NormFact+BFs_kHz{ROWind,ATTind2}(BFind), ...
                                 'LineWidth',LINEwidth,'Color',ATTENcolors{ATTind2})
                             if ismember(BFind,find(abs(log2(BFs_kHz{ROWind,ATTind}/unit.Info.BF_kHz))<BFoctCRIT))
-                                LEGtext{length(LEGtext)+1}=sprintf('%.f dB',Nattens_dB(ATTind2)+dBAtt_2_SNR);
+                                %LEGtext{length(LEGtext)+1}=sprintf('%.f dB',Nattens_dB(ATTind2)+dBAtt_2_SNR);
+                                if ATTind2==1
+                                    LEGtext{length(LEGtext)+1}='Equal SPL';%sprintf('%.f dB',Nattens_dB(ATTind2)+dBAtt_2_SNR);
+                                else
+                                    LEGtext{length(LEGtext)+1}=sprintf('Equal SL (%.f dB SNR)',Nattens_dB(ATTind2)+dBAtt_2_SNR);
+                                end
                             end
                         end
                     end
@@ -3033,7 +3157,7 @@ if isfield(unit,'EHvN_reBF_simFF')
                 semilogy(Synchs{ROWind,ATTind2},BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
             end
             semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
-            xlabel(sprintf('Synch Coef (to %s)',FeaturesText{FeatIND}))
+            xlabel(sprintf('Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
             PLOThand=eval(['h' num2str(PLOTnum)]);
             xlim(XLIMITS_synch)
             set(PLOThand,'XDir','reverse')
@@ -3116,6 +3240,12 @@ Ywidth=(1-NUMrows*(Yshift+.01))/NUMrows;   %.26 for 3; .42 for 2
 
 TICKlength=0.02;
 
+set(h1,'Position',[Xcorner Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth1 Ywidth],'TickLength',[TICKlength 0.025])
+set(h2,'Position',[Xcorner+Xwidth1+Xshift1 Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+set(h3,'Position',[Xcorner+Xwidth1+Xshift1+Xwidth2+Xshift2 Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+set(h4,'Position',[Xcorner+Xwidth1+Xshift1+2*(Xwidth2+Xshift2) Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+set(h5,'Position',[Xcorner+Xwidth1+Xshift1+3*(Xwidth2+Xshift2) Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+
 if NUMrows>1
     set(h6,'Position',[Xcorner Ycorner+(NUMrows-2)*(Ywidth+Yshift) Xwidth1 Ywidth],'TickLength',[TICKlength 0.025])
     set(h7,'Position',[Xcorner+Xwidth1+Xshift1 Ycorner+(NUMrows-2)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
@@ -3123,15 +3253,78 @@ if NUMrows>1
     set(h9,'Position',[Xcorner+Xwidth1+Xshift1+2*(Xwidth2+Xshift2) Ycorner+(NUMrows-2)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
     set(h10,'Position',[Xcorner+Xwidth1+Xshift1+3*(Xwidth2+Xshift2) Ycorner+(NUMrows-2)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
 end
-
-set(h1,'Position',[Xcorner Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth1 Ywidth],'TickLength',[TICKlength 0.025])
-set(h2,'Position',[Xcorner+Xwidth1+Xshift1 Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
-set(h3,'Position',[Xcorner+Xwidth1+Xshift1+Xwidth2+Xshift2 Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
-set(h4,'Position',[Xcorner+Xwidth1+Xshift1+2*(Xwidth2+Xshift2) Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
-set(h5,'Position',[Xcorner+Xwidth1+Xshift1+3*(Xwidth2+Xshift2) Ycorner+(NUMrows-1)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+if NUMrows>2
+    set(h11,'Position',[Xcorner Ycorner+(NUMrows-3)*(Ywidth+Yshift) Xwidth1 Ywidth],'TickLength',[TICKlength 0.025])
+    set(h12,'Position',[Xcorner+Xwidth1+Xshift1 Ycorner+(NUMrows-3)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+    set(h13,'Position',[Xcorner+Xwidth1+Xshift1+Xwidth2+Xshift2 Ycorner+(NUMrows-3)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+    set(h14,'Position',[Xcorner+Xwidth1+Xshift1+2*(Xwidth2+Xshift2) Ycorner+(NUMrows-3)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+    set(h15,'Position',[Xcorner+Xwidth1+Xshift1+3*(Xwidth2+Xshift2) Ycorner+(NUMrows-3)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+end
+if NUMrows>3
+    set(h16,'Position',[Xcorner Ycorner+(NUMrows-4)*(Ywidth+Yshift) Xwidth1 Ywidth],'TickLength',[TICKlength 0.025])
+    set(h17,'Position',[Xcorner+Xwidth1+Xshift1 Ycorner+(NUMrows-4)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+    set(h18,'Position',[Xcorner+Xwidth1+Xshift1+Xwidth2+Xshift2 Ycorner+(NUMrows-4)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+    set(h19,'Position',[Xcorner+Xwidth1+Xshift1+2*(Xwidth2+Xshift2) Ycorner+(NUMrows-4)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+    set(h20,'Position',[Xcorner+Xwidth1+Xshift1+3*(Xwidth2+Xshift2) Ycorner+(NUMrows-4)*(Ywidth+Yshift) Xwidth2 Ywidth],'TickLength',[TICKlength 0.025])
+end
 
 orient landscape
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+figure(502);clf
+set(gcf,'Name','Synchronized Correlations');
+NUMcols=1;
+NUMrows=length(FeatINDs);
+ROWind=0;
+
+if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
+    for FeatIND=FeatINDs
+        ROWind=ROWind+1;
+        try
+            eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+        catch
+            eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+        end
+        if ~isempty(yTEMP)
+            %%%% EH_reBF plots
+            ATTind=find(yTEMP.Nattens_dB==ATTEN);
+            
+            %%%% Spatio-Temporal Plots
+            PLOTnum=(ROWind-1)*NUMcols+1;
+            eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
+            LEGtext='';
+            for BFind=1:length(BFs_kHz{ROWind,ATTind})
+                
+                %%%% Rho*Synch Plot
+                PLOTnum=ROWind;%(ROWind-1)*NUMcols+3;
+                eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
+                semilogy(data2plot{ROWind,ATTind}(:,4)'.*Synchs{ROWind,ATTind},BFs_kHz{ROWind,ATTind},'*-','Color',ATTENcolors{ATTind})
+                hold on
+                for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))
+                    semilogy(data2plot{ROWind,ATTind}(:,4).*Synchs{ROWind,ATTind2},BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
+                end
+                semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
+                xlabel(sprintf('Rho * Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
+                PLOThand=eval(['h' num2str(PLOTnum)]);
+                xlim(XLIMITS_synch)
+                set(PLOThand,'XDir','reverse')
+                set(PLOThand,'YTick',YTICKS,'YTickLabel',YTICKS)
+                set(gca,'XTick',[0 .25 .5 .75 1],'XTickLabel',{'0','.25','.5','.75','1'})
+                ylim(YLIMITS)  % Same Ylimits for all plots
+                %%%%%%%%%%%%%%%%%%%%%
+                % Plot lines at all features
+                for FeatINDPlot=find(~strcmp(FeaturesText,'TN'))
+                    if (yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000>=YLIMITS(1))&(yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000<=YLIMITS(2))
+                        semilogy(XLIMITS_synch,yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000*[1 1],':','Color',FeatureColors{-rem(FeatINDPlot,2)+2})
+                    end
+                end
+                hold off
+                
+            end
+        end
+    end
+end
+            
 
 % pause;
 UnitCF=unit.Info.BF_kHz;
