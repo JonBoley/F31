@@ -940,7 +940,7 @@ if ~isempty(picList)
       else
          Temp.levels_dBSPL{ind}=x.Stimuli.Condition.Level_dBSPL;
       end
-      Temp.Nattens_dB{ind}=x.Stimuli.Used.NoiseAttens_dB_List;
+      Temp.Nattens_dB{ind}=x.Stimuli.Rattens;%x.Stimuli.Used.NoiseAttens_dB_List;
       Temp.picNums(ind)=picList(ind);
       Temp.FormsAtHarmsIND(ind)=find(strcmp(deblank(x.Stimuli.Condition.FormsAtHarmonics),FormsAtHarmonicsText));
       Temp.InvertPolarityIND(ind)=find(strcmp(deblank(x.Stimuli.Condition.InvertPolarity),InvertPolarityText));
@@ -959,7 +959,14 @@ if ~isempty(picList)
    SORTocts=unique(Tempoctshifts);
    SORTfeatures=unique(TempFeatureINDs);
    SORTlevels=unique(Templevels_dBSPL);
-   SORTattens=unique(TempNattens_dB);
+   
+%    SORTattens=unique(TempNattens_dB);
+   [b,m,n]=unique(TempNattens_dB); 
+   SORTattens=TempNattens_dB(sort(m)); % keep original order for now [quiet SL SPL]
+   SNR_EqualSL = SORTattens(end-1)-SORTattens(end);
+   EqualSL_index = find(m==length(TempNattens_dB)-1); %second to last atten
+   SORTattens = sort(SORTattens);
+   
    NumF=length(SORTocts);
    NumL=length(SORTlevels);
    NumA=length(SORTattens);
@@ -985,6 +992,8 @@ if ~isempty(picList)
             TempINDs=find(TempFeatINDs&TempHarmINDs&TempPolINDs);  % 1 for pictures with current: Feature, Harm, Polarity
             
             if ~isempty(TempINDs)
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.EqualSL_index=EqualSL_index;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.SNR_EqualSL=SNR_EqualSL;
                yTEMP{FormsAtHarmsIND,InvertPolarityIND}.levels_dBSPL=SORTlevels;
                yTEMP{FormsAtHarmsIND,InvertPolarityIND}.octshifts=SORTocts;
                yTEMP{FormsAtHarmsIND,InvertPolarityIND}.freqs_kHz=[];

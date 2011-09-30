@@ -97,9 +97,9 @@ if ~isempty(dir(fullfile(unitdata_dir,UnitFileName)))
    
    % If EHvN_reBF analysis is not completed, run here
    try
-       UnitFeats=fieldnames(unit.EHvN_reBF);
-   catch
        UnitFeats=fieldnames(unit.EHvLTASS_reBF);
+   catch
+       UnitFeats=fieldnames(unit.EHvN_reBF);
    end
    UnitFeats=UnitFeats(~strcmp(UnitFeats,'interleaved'));  %% 010705: M Heinz; takes out newly added "interleaved" field
 	% CHECK ALL POSSIBLE Harm/Pol places to look
@@ -107,15 +107,15 @@ if ~isempty(dir(fullfile(unitdata_dir,UnitFileName)))
    for HarmonicsIND=1:2
       for PolarityIND=1:2
           try
-              eval(['emptyBOOL=~isempty(unit.EHvN_reBF.' UnitFeats{1} '{HarmonicsIND,PolarityIND});'])
-          catch
               eval(['emptyBOOL=~isempty(unit.EHvLTASS_reBF.' UnitFeats{1} '{HarmonicsIND,PolarityIND});'])
+          catch
+              eval(['emptyBOOL=~isempty(unit.EHvN_reBF.' UnitFeats{1} '{HarmonicsIND,PolarityIND});'])
           end
          if emptyBOOL
              try
-                 eval(['processedBOOL=isfield(unit.EHvN_reBF.' UnitFeats{1} '{HarmonicsIND,PolarityIND},''synch'');'])
-             catch
                  eval(['processedBOOL=isfield(unit.EHvLTASS_reBF.' UnitFeats{1} '{HarmonicsIND,PolarityIND},''synch'');'])
+             catch
+                 eval(['processedBOOL=isfield(unit.EHvN_reBF.' UnitFeats{1} '{HarmonicsIND,PolarityIND},''synch'');'])
              end
             if ~processedBOOL
                UnitAnal_EHvNrBF(ExpDate,UnitName,0);   
@@ -141,9 +141,9 @@ unit.IgnorePicNums=union(intersect(UnitPicList,DataList.IgnorePicNums),unit.Igno
 
 %%%%%%%%%%%%%%%%% NEED TO FIND ALL FEATURES!!!!!!!!!!!!!!
 try
-    UnitFeats=fieldnames(unit.EHvN_reBF);
-catch
     UnitFeats=fieldnames(unit.EHvLTASS_reBF);
+catch
+    UnitFeats=fieldnames(unit.EHvN_reBF);
 end
 UnitFeats=UnitFeats(~strcmp(UnitFeats,'interleaved'));  %% 010705: M Heinz; takes out newly added "interleaved" field
 clear FeatINDs
@@ -152,24 +152,26 @@ for FeatIND=1:length(UnitFeats)
 end
 for FeatIND=FeatINDs  % Step through each Feature we have data for
    try
+      eval(['unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '=cell(length(FormsAtHarmonicsText),length(InvertPolarityText));']) 
+   catch   
        eval(['unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '=cell(length(FormsAtHarmonicsText),length(InvertPolarityText));'])   
-   catch
-      eval(['unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '=cell(length(FormsAtHarmonicsText),length(InvertPolarityText));'])    
    end
    disp(sprintf('       ... processing Feature: %s (EHvN_reBF_simFF)',FeaturesText{FeatIND}))
 	
    for HarmonicsIND=1:2
       for PolarityIND=1:2
          try
+            eval(['yTEMP0=unit.EHvLTASS_reBF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+         catch 
              eval(['yTEMP0=unit.EHvN_reBF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
-         catch
-            eval(['yTEMP0=unit.EHvLTASS_reBF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};']) 
          end
          if ~isempty(yTEMP0)
             %%%%%%%%%%% Calculate rate, synch, and phase for all conditions
 
             yTEMP.BFs_kHz=NaN+zeros(size(yTEMP0.freqs_kHz));
             yTEMP.levels_dBSPL=yTEMP0.levels_dBSPL;
+            yTEMP.EqualSL_index=yTEMP0.EqualSL_index;
+            yTEMP.SNR_EqualSL=yTEMP0.SNR_EqualSL;
             yTEMP.Nattens_dB=yTEMP0.Nattens_dB;
             yTEMP.picNums=yTEMP0.picNums;
             yTEMP.excludeLines=yTEMP0.excludeLines;
@@ -223,9 +225,9 @@ for FeatIND=FeatINDs  % Step through each Feature we have data for
             end
             
             try
-                eval(['unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND}=yTEMP;'])
-            catch
                eval(['unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND}=yTEMP;']) 
+            catch
+                eval(['unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND}=yTEMP;'])
             end
             
          end
