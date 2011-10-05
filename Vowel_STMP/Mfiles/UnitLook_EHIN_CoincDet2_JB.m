@@ -547,17 +547,44 @@ if ~loadBOOL
 
                             Nsps{ROWind,ATTind}(BFind)=PIC.PERhist.NumDrivenSpikes;
                             Rates{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.SynchRate_PERhist(1);
-                            %                             if PIC.SynchRate_PERhist.FeatureRaySig(FeatIND)
-                            %                                 Synchs{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeatureSynchs(FeatIND);
-                            %                                 Phases{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeaturePhases(FeatIND);
-                            F0ind=find(strcmp('F0',FeaturesText));
-                            if PIC.SynchRate_PERhist.FeatureRaySig(F0ind)
-                                Synchs{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeatureSynchs(F0ind);
-                                Phases{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeaturePhases(F0ind);
-                            else
-                                Synchs{ROWind,ATTind}(BFind)=NaN;
-                                Phases{ROWind,ATTind}(BFind)=NaN;
+
+                            %                             F0ind=find(strcmp('F0',FeaturesText));
+                            %                             if PIC.SynchRate_PERhist.FeatureRaySig(F0ind)
+                            %                                 Synchs{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeatureSynchs(F0ind);
+                            %                                 Phases{ROWind,ATTind}(BFind)=PIC.SynchRate_PERhist.FeaturePhases(F0ind);
+                            %                             else
+                            %                                 Synchs{ROWind,ATTind}(BFind)=NaN;
+                            %                                 Phases{ROWind,ATTind}(BFind)=NaN;
+                            %                             end
+                            % get synch to each harmonic
+                            len_mismatch = length(PIC.SynchRate_PERhist.HarmonicSynchs)-size(Synchs{ROWind,ATTind},2);
+                            if len_mismatch>0
+                                % need to increase size of Synchs
+                                Synchs{ROWind,ATTind}=[Synchs{ROWind,ATTind}, NaN*ones(1,len_mismatch)];
+                                Phases{ROWind,ATTind}=[Phases{ROWind,ATTind}, NaN*ones(1,len_mismatch)];
+                                Synchs{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicSynchs;
+                                Synchs{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
+                                Phases{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicPhases;
+                                Phases{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
+                            elseif len_mismatch<0
+                                % need to pad HarmonicSynchs,HarmonicPhases,HarmonicRaySig
+                                PIC.SynchRate_PERhist.HarmonicSynchs=...
+                                    [PIC.SynchRate_PERhist.HarmonicSynchs, 0*ones(1,-len_mismatch)];
+                                PIC.SynchRate_PERhist.HarmonicPhases=...
+                                    [PIC.SynchRate_PERhist.HarmonicPhases, 0*ones(1,-len_mismatch)];
+                                PIC.SynchRate_PERhist.HarmonicRaySig=...
+                                    [PIC.SynchRate_PERhist.HarmonicRaySig, 0*ones(1,-len_mismatch)];
+                                Synchs{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicSynchs;
+                                Synchs{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
+                                Phases{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicPhases;
+                                Phases{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
+                            else % sizes match
+                                Synchs{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicSynchs;
+                                Synchs{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
+                                Phases{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicPhases;
+                                Phases{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
                             end
+
 
                             if doSCC
                                 %%%% Save SpikeTrains for this BF if it is used for SCCs
@@ -1078,7 +1105,7 @@ for ATTEN=Nattens_dB
                 %%%% Synch Plot
                 PLOTnum=(ROWind-1)*NUMcols+3;
                 eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
-                semilogy(Synchs{ROWind,ATTind},BFs_kHz{ROWind,ATTind},'*-')
+                semilogy(Synchs{ROWind,ATTind}(:,1),BFs_kHz{ROWind,ATTind},'*-')
                 hold on
                 semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
                 xlabel(sprintf('Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
@@ -1318,10 +1345,10 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             %%%% Synch Plot
             PLOTnum=(ROWind-1)*NUMcols+3;
             eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
-            semilogy(Synchs{ROWind,ATTind},BFs_kHz{ROWind,ATTind},'*-','Color',ATTENcolors{ATTind})
+            semilogy(Synchs{ROWind,ATTind}(:,1),BFs_kHz{ROWind,ATTind},'*-','Color',ATTENcolors{ATTind})
             hold on
             for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))
-                semilogy(Synchs{ROWind,ATTind2},BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
+                semilogy(Synchs{ROWind,ATTind2}(:,1),BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
             end
             semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
             xlabel(sprintf('Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
@@ -1544,7 +1571,7 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
                     %%%% Synch Plot
                     PLOTnum=(ROWind-1)*NUMcols+3;
                     eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
-                    semilogy(Synchs{ROWind,ATTind},BFs_kHz{ROWind,ATTind},'*-')
+                    semilogy(Synchs{ROWind,ATTind}(:,1),BFs_kHz{ROWind,ATTind},'*-')
                     hold on
                     semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
                     xlabel(sprintf('Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
@@ -3154,10 +3181,11 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             %%%% Synch Plot
             PLOTnum=(ROWind-1)*NUMcols+3;
             eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
-            semilogy(Synchs{ROWind,ATTind},BFs_kHz{ROWind,ATTind},'*-','Color',ATTENcolors{ATTind})
+
+            semilogy(Synchs{ROWind,ATTind}(:,1),BFs_kHz{ROWind,ATTind},'*-','Color',ATTENcolors{ATTind})
             hold on
             for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))
-                semilogy(Synchs{ROWind,ATTind2},BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
+                semilogy(Synchs{ROWind,ATTind2}(:,1),BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
             end
             semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
             xlabel(sprintf('Synch Coef (to F0)'));%%s)',FeaturesText{FeatIND}))
@@ -3338,6 +3366,66 @@ if 1 % if you want to plot Power Spectral Densities
     % title('Normal hearing, -6dB SNR, 1.2kHz CF re F2');
     xlim([100 10e3]);
     orient landscape
+end
+
+if 1
+    NUMcols=length(Nattens_dB);
+    NUMrows=length(FeatINDs);
+    figure(601); clf
+    set(gcf,'Name','Synchrony to Harmonics');
+    set(gcf,'units','norm','pos',[0.1,0.1,0.8,0.8]);
+    ROWind=0;
+    if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
+        for FeatIND=FeatINDs
+            ROWind=ROWind+1;
+            try
+                eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            catch
+                eval(['yTEMP=unit.EHvN_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
+            end
+            if ~isempty(yTEMP)
+                for ATTind=1:length(Nattens_dB)
+                    PLOTnum=(ROWind-1)*NUMcols+ATTind;
+                    eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
+                    PLOThand=eval(['h' num2str(PLOTnum)]);
+
+                    %%%%% plot synch re each harmonic
+                    scalefactor=100;
+                    [xdim,ydim]=size(Synchs{ROWind,ATTind});
+                    scatter(yTEMP.FeatureFreqs_Hz{ROWind}(1)/1e3*reshape(repmat(1:ydim,xdim,1),1,xdim*ydim),...
+                        BFs_kHz{ROWind,ATTind}(repmat(1:xdim,1,ydim)),...
+                        scalefactor*reshape(Synchs{ROWind,ATTind},1,xdim*ydim),'filled');
+
+                    XLIMITS_synchs = YLIMITS;%[1 20];
+                    xlim(XLIMITS_synchs)
+                    set(PLOThand,'XDir','reverse')
+                    set(PLOThand,'XTick',YTICKS(1:2:end),'XTickLabel',YTICKS(1:2:end))
+                    set(PLOThand,'YTick',YTICKS,'YTickLabel',YTICKS)
+                    ylim(YLIMITS)  % Same Ylimits for all plots
+                    
+                    if ROWind==1
+                        title(sprintf('Harmonic Synch (noise=-%1.0fdB)',Nattens_dB(ATTind)));
+                    elseif ROWind==length(FeatINDs)
+                        xlabel('Vowel Harmonics (kHz)');
+                    end
+
+                    % Plot lines at all features
+                    hold on
+                    for FeatINDPlot=find(~strcmp(FeaturesText,'TN'))
+                        if (yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000>=YLIMITS(1))&&(yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000<=YLIMITS(2))
+                            semilogy(XLIMITS_synchs,yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000*[1 1],':','Color',FeatureColors{-rem(FeatINDPlot,2)+2})
+                        end
+                        if (yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000>=XLIMITS_synchs(1))&&(yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000<=XLIMITS_synchs(2))
+                            semilogy(yTEMP.FeatureFreqs_Hz{ATTind}(FeatINDPlot)/1000*[1 1],YLIMITS,':','Color',FeatureColors{-rem(FeatINDPlot,2)+2})
+                        end
+                    end
+                    hold off
+
+                end
+            end
+        end
+    end
+
 end
 
 % pause;
