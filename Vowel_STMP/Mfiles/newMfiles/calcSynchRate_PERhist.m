@@ -42,6 +42,29 @@ for i=1:length(PIC.FeatureFreqs_Hz)
    end
 end
 
+% calculate synch to each harmonic
+PIC.HarmonicFreqs_Hz = PIC.FundamentalFreq_Hz*(1:floor(max(PIC.FeatureFreqs_Hz)/PIC.FundamentalFreq_Hz));
+HarmonicINDs=NaN+zeros(size(PIC.HarmonicFreqs_Hz));
+HarmonicSynchs=NaN+zeros(size(PIC.HarmonicFreqs_Hz));
+HarmonicPhases=NaN+zeros(size(PIC.HarmonicFreqs_Hz));
+HarmonicRaySig=zeros(size(PIC.HarmonicFreqs_Hz));
+
+for i=1:length(PIC.HarmonicFreqs_Hz)
+    %%%% Because the FFTfreqs are not exactly equal to the harmonics, we need to pick the closest one
+   [yyy,HARMind]=min(abs(FFTfreqs-PIC.HarmonicFreqs_Hz(i)));
+   if ~isempty(HARMind)
+      HarmonicINDs(i)=HARMind;
+      HarmonicSynchs(i)=abs(SynchRate_PERhist(HarmonicINDs(i)))/SynchRate_PERhist(1);
+      HarmonicPhases(i)=angle(SynchRate_PERhist(HarmonicINDs(i)));
+		% NOTE: for sim_FF conditions, the SCALED PERhist is used, but the
+		% original number of spikes is used for statistics!!
+		RayleighStat=2*PIC.PERhist.NumDrivenSpikes*HarmonicSynchs(i)^2;  % Rayleigh criterion for significance of Synch/Phase coefficients
+      if RayleighStat>RayleighCRIT
+         HarmonicRaySig(i)=1;
+      end
+   end
+end
+
 % Store calcs
 PIC.SynchRate_PERhist.SynchRate_PERhist=SynchRate_PERhist;
 PIC.SynchRate_PERhist.FFTfreqs=FFTfreqs;
@@ -50,6 +73,11 @@ PIC.SynchRate_PERhist.FeatureINDs=FeatureINDs;
 PIC.SynchRate_PERhist.FeatureSynchs=FeatureSynchs;
 PIC.SynchRate_PERhist.FeaturePhases=FeaturePhases;
 PIC.SynchRate_PERhist.FeatureRaySig=FeatureRaySig;
+
+PIC.SynchRate_PERhist.HarmonicINDs=HarmonicINDs;
+PIC.SynchRate_PERhist.HarmonicSynchs=HarmonicSynchs;
+PIC.SynchRate_PERhist.HarmonicPhases=HarmonicPhases;
+PIC.SynchRate_PERhist.HarmonicRaySig=HarmonicRaySig;
 
 % Store parameters used for calcs
 PIC.SynchRate_PERhist.params.Rayleigh_P=Rayleigh_P;
