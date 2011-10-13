@@ -37,6 +37,8 @@ for level=levels
             gain4 = env(phone);
             gain5 = tfs(phone);
             return
+        else
+            clear short avg rate env tfs;
         end
     end
     
