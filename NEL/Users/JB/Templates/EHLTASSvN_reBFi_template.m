@@ -175,11 +175,11 @@ if (exist('stimulus_vals','var') == 1)
    
    %  05Oct2011(J.Boley): new OctShift vector to span F1 through F2
    %  plan is to measure Ehrlv at F1, pick level just below saturation
-   base_freq = 500; %based on F1
+   base_freq = 1700; %based on F2
    desired_fregs = [500*2.^[-0.2 -0.05 0 0.05 0.2 0.65],...
        1200*2.^[-0.2 -0.05 0 0.05 0.2],...
        1700*2.^[-0.2 -0.05 0 0.05 0.2]];
-   OctShifts = log2(desired_fregs/base_freq);
+   OctShifts = -log2(desired_fregs/base_freq);
    
    %  Create NoiseAttens vector
    %  13Apr2005: M. Heinz: Mid_atten is a param, but Levels_list re max is HARD CODED HERE
