@@ -185,6 +185,7 @@ if (exist('stimulus_vals','var') == 1)
    %  13Apr2005: M. Heinz: Mid_atten is a param, but Levels_list re max is HARD CODED HERE
 %    Attens_dB=[120 stimulus_vals.Inloop.Noise_Atten_mid+[10 0 -10]];  % no noise and three noise levels 
    Attens_dB=[120 stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid]; %[quiet ___ 'equal SPL']
+%    Attens_dB=[stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid];
    %    Levels_dBSPL=stimulus_vals.Inloop.Max_Level+[-30 -15 0];  % THREE LEVELS
    
    %%%%%%%% Generate Lists here (fill in values for all REPS)
@@ -371,7 +372,8 @@ if (exist('stimulus_vals','var') == 1)
    else
       Inloop.params.attens                                   = max_dBSPL-Levels_dBSPL_List+dBreTONE_List;
       stimulus_vals.Inloop.Computed_Attenuations_dB          = Inloop.params.attens(1);
-      NoiseAttens_dB_List(3:3:end)=max_dBSPL(3:3:end)-Levels_dBSPL_List(3:3:end); %adjust noise atten #3 to equal SPL
+      NoiseAttens_dB_List(3:3:end)=max_dBSPL(1)-Levels_dBSPL_List(1)+dBreTONE_noise; %adjust noise atten #3 to equal SPL
+%       NoiseAttens_dB_List(1:end)=max_dBSPL(1)-Levels_dBSPL_List(1)+dBreTONE_noise;
       Inloop.params.Rattens                                  = NoiseAttens_dB_List;
    end
    Inloop.params.repetitions           = stimulus_vals.Inloop.Repetitions;
@@ -466,10 +468,10 @@ IO_def.Inloop.Signal_Level     =  {65 'dB SPL'       [-50    150]   0  0};
 IO_def.Inloop.Noise_Atten_mid  =  {30 'dB atten'       [0    120]   0  0};
 IO_def.Inloop.use_TONE         =  {'{no}|yes'};
 IO_def.Inloop.use_T0           =  {'{no}|yes' '' [] 1 0};
-IO_def.Inloop.use_F1           =  {'no|{yes}'};
-IO_def.Inloop.use_T1           =  {'no|{yes}'};
+IO_def.Inloop.use_F1           =  {'{no}|yes'};
+IO_def.Inloop.use_T1           =  {'{no}|yes'};
 IO_def.Inloop.use_F2           =  {'no|{yes}'};
-IO_def.Inloop.use_T2           =  {'no|{yes}'};
+IO_def.Inloop.use_T2           =  {'{no}|yes'};
 IO_def.Inloop.use_F3           =  {'{no}|yes'};
 IO_def.Inloop.use_T3           =  {'{no}|yes'};
 IO_def.Inloop.FormsAtHarmonics  =  {'{no}|yes'};
