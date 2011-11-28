@@ -181,11 +181,20 @@ if (exist('stimulus_vals','var') == 1)
        1700*2.^[-0.2 -0.05 0 0.05 0.2]];
    OctShifts = -log2(desired_fregs/base_freq);
    
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   %% FIX Duration to allow for proper STMP shifting of WAV files
+   BASELINE_Duration = 2500; % (can be based on specific WAV files used)
+   EXTENDED_Duration = BASELINE_Duration * 2^(-min(OctShifts));
+   OFFtime = stimulus_vals.Gating.Period - stimulus_vals.Gating.Duration;
+   stimulus_vals.Gating.Duration = EXTENDED_Duration;
+   stimulus_vals.Gating.Period = EXTENDED_Duration + OFFtime;
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   
    %  Create NoiseAttens vector
    %  13Apr2005: M. Heinz: Mid_atten is a param, but Levels_list re max is HARD CODED HERE
 %    Attens_dB=[120 stimulus_vals.Inloop.Noise_Atten_mid+[10 0 -10]];  % no noise and three noise levels 
-   Attens_dB=[120 stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid]; %[quiet ___ 'equal SPL']
-%    Attens_dB=[stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid];
+%    Attens_dB=[120 stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid]; %[quiet ___ 'equal SPL']
+   Attens_dB=[120 stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid stimulus_vals.Inloop.Noise_Atten_mid];%[quiet ___ '0dBSNR' '6dBSNR']
    %    Levels_dBSPL=stimulus_vals.Inloop.Max_Level+[-30 -15 0];  % THREE LEVELS
    
    %%%%%%%% Generate Lists here (fill in values for all REPS)
@@ -372,7 +381,8 @@ if (exist('stimulus_vals','var') == 1)
    else
       Inloop.params.attens                                   = max_dBSPL-Levels_dBSPL_List+dBreTONE_List;
       stimulus_vals.Inloop.Computed_Attenuations_dB          = Inloop.params.attens(1);
-      NoiseAttens_dB_List(3:3:end)=max_dBSPL(1)-Levels_dBSPL_List(1)+dBreTONE_noise; %adjust noise atten #3 to equal SPL
+      NoiseAttens_dB_List(3:4:end)=max_dBSPL(1)-Levels_dBSPL_List(1)+dBreTONE_noise; %adjust noise atten #3 to 0dB SNR
+      NoiseAttens_dB_List(4:4:end)=max_dBSPL(1)-Levels_dBSPL_List(1)+dBreTONE_noise+6; %adjust noise atten #4 to 6dB SNR
 %       NoiseAttens_dB_List(1:end)=max_dBSPL(1)-Levels_dBSPL_List(1)+dBreTONE_noise;
       Inloop.params.Rattens                                  = NoiseAttens_dB_List;
    end
@@ -488,8 +498,9 @@ end
 %%%%%%%%%%%%%%%%%%%%
 %% Gating Section 
 %%%%%%%%%%%%%%%%%%%%
-IO_def.Gating.Duration             = {400       'ms'    [20 2000]};
-IO_def.Gating.Period               = {'default_period(this.Duration)'    'ms'   [50 5000]};
+IO_def.Gating.Duration             = {2500    'ms'   [20 4000]};
+IO_def.Gating.Period               = {3000    'ms'   [50 5000]};
+% IO_def.Gating.Period               = {'default_period(this.Duration)'    'ms'   [50 5000]};
 IO_def.Gating.Rise_fall_time       = {'default_rise_time(this.Duration)' 'ms'   [0  1000]};
 
 %%%%%%%%%%%%%%%%%%%%
