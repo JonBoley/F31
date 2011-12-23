@@ -26,8 +26,8 @@ function [SACSCCfunctions,SACSCCmetrics,paramsOUT] = CCCanal_3(SpikeTrains,param
 % paramsIN(OUT): defaults used if not included
 %         .SACbinwidth_msec
 %         .ignoreONSET_msec
-%         .dur1_msec
-%         .dur2_msec
+%         .durA_msec
+%         .durB_msec
 % PLOT_15panel: 1=yes, plot fill 15-panel figure; 0=don't plot
 %
 % SACSCCfunctions: structure with all functions returned

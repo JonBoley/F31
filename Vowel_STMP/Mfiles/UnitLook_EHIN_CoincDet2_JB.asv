@@ -74,6 +74,17 @@ elseif strcmp(ExpDate,'080911')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_08_09-Chin1135_AN_500OBN') ''''])
 elseif strcmp(ExpDate,'081511')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_08_15-Chin1136_AN_500OBN') ''''])
+elseif strcmp(ExpDate,'100611')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_10_06-Chin1144_AN_normal') ''''])
+elseif strcmp(ExpDate,'101111')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_10_11-Chin1139_AN_normal') ''''])
+elseif strcmp(ExpDate,'101711')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_10_17-Chin1151_AN_normal') ''''])
+elseif strcmp(ExpDate,'112911')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_11_29-Chin1146_AN_normal') ''''])
+elseif strcmp(ExpDate,'120511')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_12_05-Chin1148_AN_normal') ''''])
+    
     %%%%%%%%%%%%%%%%
 
 else
@@ -295,6 +306,10 @@ if ~loadBOOL
     %%% Hardcode for NOW
     HarmonicsIND=2;
     PolarityIND=2;
+    if strcmp(ExpDate,'041805')
+        HarmonicsIND=1;
+        PolarityIND=1;
+    end
 
     %%%% Find number of features to plot (tone, F1, T1, ...)
     %%%% Find all levels and BFs to plot
@@ -326,7 +341,7 @@ if ~loadBOOL
         F0min=Inf;
         for FeatIND=FeatINDs
             try
-                if ~isempty(unit.EHvLTASS_reBF_simFF.F1{HarmonicsIND,PolarityIND})
+                if ~isempty(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND})
                     eval(['yTEMP=unit.EHvLTASS_reBF_simFF.' FeaturesText{FeatIND} '{HarmonicsIND,PolarityIND};'])
                 else
                     PolarityIND=1;
@@ -415,6 +430,7 @@ if ~loadBOOL
         clear paramsIN
         paramsIN.SCC.StartTime_sec=.02;  % Take 20-400(scaled to higher BF TimeFact) ms as stimulus window
         paramsIN.SCC.EndTime_sec=.400; % scaled for each BF_Hz later
+        paramsIN.SCC.EndTime_sec=2.500; % for extra-long stimuli
         %	disp(sprintf('   * SCC window: %.3f - %.3f sec',paramsIN.SCC.StartTime_sec,paramsIN.SCC.EndTime_sec))
 
         paramsIN.SCC.DELAYbinwidth_sec=50e-6;  % 50e-6 is what Joris used
@@ -506,6 +522,7 @@ if ~loadBOOL
                         numSCCs=max([numSCCs,length(NSCC_BFinds)]);
 
                         SCC_allSpikeTrains=cell(size(yTEMP.BFs_kHz));  % Store Spike Trains (driven spikes), but only those we need for computing SCCs later
+                        NumSpikes=0*ones(size(yTEMP.BFs_kHz));
                         NSACs{ROWind,ATTind}=cell(size(yTEMP.BFs_kHz));
                         NSACs_sps{ROWind,ATTind}=cell(size(yTEMP.BFs_kHz));
                         NSAC_delays_usec{ROWind,ATTind}=cell(size(yTEMP.BFs_kHz));
@@ -595,13 +612,30 @@ if ~loadBOOL
                                     myDuration_sec = myEndTime_sec-paramsIN.SCC.StartTime_sec;
                                     %    fprintf('   * SAC window: %.3f - %.3f sec for freqfact: %.3f\n',paramsIN.SCC.StartTime_sec,myEndTime_sec,FreqFact)
                                     SCC_allSpikeTrains{BFind}=getDrivenSpikeTrains(PIC.x.spikes{1},[],[paramsIN.SCC.StartTime_sec myEndTime_sec]);
+                                    NumSpikes(BFind) = length(PIC.x.spikes{1});
                                     %%%%%%%%%%%%%%%%%%%%%%%%%
                                     % calculate SAC, CD, Peak
                                     %%%%%%%%%%%%%%%%%%%%%%%%%
                                     disp(sprintf('Feature: %s; SNR: %.f dB  --  Computing SAC at BF %d ........', ...
                                         FeaturesText{FeatIND},Nattens_dB(ATTind)+dBAtt_2_SNR,BFind))
-                                    [NSACs{ROWind,ATTind}{BFind},NSAC_delays_usec{ROWind,ATTind}{BFind},NSAC_avgrates{ROWind,ATTind}{BFind},NSAC_nsps{ROWind,ATTind}{BFind}] ...
-                                        = ShufAutoCorr(SCC_allSpikeTrains{BFind},paramsIN.SCC.DELAYbinwidth_sec,myDuration_sec);
+                                                                        
+                                    %%%
+                                    %[NSACs{ROWind,ATTind}{BFind},NSAC_delays_usec{ROWind,ATTind}{BFind},NSAC_avgrates{ROWind,ATTind}{BFind},NSAC_nsps{ROWind,ATTind}{BFind}] ...
+                                    %    = ShufAutoCorr(SCC_allSpikeTrains{BFind},paramsIN.SCC.DELAYbinwidth_sec,myDuration_sec);
+                                    CCCparamsIN.SCC_onsetIGNORE_sec = 0.000; % we already trimmed the onset
+                                    CCCparamsIN.durA_msec = paramsIN.SCC.EndTime_sec*1e3/FreqFact;
+                                    CCCparamsIN.durB_msec = paramsIN.SCC.EndTime_sec*1e3/FreqFact;
+                                    CCCparamsIN.CF_A_Hz = yTEMP.BFs_kHz(BFind);
+                                    CCCparamsIN.CF_B_Hz = yTEMP.BFs_kHz(BFind);
+
+                                    [SACSCCfunctions,SACSCCmetrics,CCCparamsOUT] =  CCCanal_6({SCC_allSpikeTrains{BFind},{};{},{}},CCCparamsIN,0);
+
+                                    NSACs{ROWind,ATTind}{BFind} = SACSCCfunctions{end}.SAC_A_avg;
+                                    NSAC_delays_usec{ROWind,ATTind}{BFind} = SACSCCfunctions{end}.delays_usec;
+                                    NSAC_avgrates{ROWind,ATTind}{BFind} = SACSCCmetrics{end}.AvgRate_sps(1,1);
+                                    NSAC_nsps{ROWind,ATTind}{BFind} = SACSCCmetrics{end}.NumDrivenSpikes(1,1);
+                                    %%%
+                                    
                                     NSACs_sps{ROWind,ATTind}{BFind}=NSACs{ROWind,ATTind}{BFind}*...
                                         paramsIN.SCC.DELAYbinwidth_sec*...
                                         NSAC_avgrates{ROWind,ATTind}{BFind}^2/...
@@ -692,9 +726,28 @@ if ~loadBOOL
                                     FeaturesText{FeatIND},Nattens_dB(ATTind)+dBAtt_2_SNR,SCCind,NSCC_BFinds{SCCind}))
                                 FreqFact =yTEMP.BFs_kHz(NSCC_BFinds{SCCind}(2))/unit.Info.BF_kHz;
                                 myDuration_sec = paramsIN.SCC.EndTime_sec/FreqFact-paramsIN.SCC.StartTime_sec;
+                                
+                                %%%
                                 [NSCCs{ROWind,ATTind}{SCCind},NSCC_delays_usec{ROWind,ATTind}{SCCind},NSCC_avgrates{ROWind,ATTind}{SCCind},NSCC_nsps{ROWind,ATTind}{SCCind}] ...
                                     = ShufCrossCorr(SpikeTrains,paramsIN.SCC.DELAYbinwidth_sec,myDuration_sec);
 
+                                CCCparamsIN.SCC_onsetIGNORE_sec = 0.000; % we already trimmed the onset
+                                CCCparamsIN.durA_msec = paramsIN.SCC.EndTime_sec*1e3/FreqFact;
+                                CCCparamsIN.durB_msec = paramsIN.SCC.EndTime_sec*1e3/FreqFact;
+                                CCCparamsIN.CF_A_Hz = yTEMP.BFs_kHz(NSCC_BFinds{SCCind}(1));
+                                CCCparamsIN.CF_B_Hz = yTEMP.BFs_kHz(NSCC_BFinds{SCCind}(2));
+
+                                [SACSCCfunctions,SACSCCmetrics,CCCparamsOUT] =...
+                                    CCCanal_6({SCC_allSpikeTrains{NSCC_BFinds{SCCind}(1)},{};...
+                                        SCC_allSpikeTrains{NSCC_BFinds{SCCind}(2)},{}},CCCparamsIN,0);
+
+                                NSCCs{ROWind,ATTind}{SCCind} = SACSCCfunctions{end}.SCC_AB_avg;
+                                NSCC_delays_usec{ROWind,ATTind}{SCCind} = SACSCCfunctions{end}.delays_usec;
+                                NSCC_avgrates{ROWind,ATTind}{SCCind} = SACSCCmetrics{end}.AvgRate_sps(1,1);
+                                NSCC_nsps{ROWind,ATTind}{SCCind} = SACSCCmetrics{end}.NumDrivenSpikes(1,1);
+                                %%%
+                                
+                                
                                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                                 %disp('   ********* Converting NSCC[0,1] to SCC_CD(sp/sec) by SCC_CD=NSCC*binwidth*rA*rB')
                                 %%% 12/31/05: TRY SCCs as CD_sp/sec instead of NSCC!!!
@@ -707,16 +760,16 @@ if ~loadBOOL
                                     NSCCs_sps{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}* ...
                                         NSCCbinwidth_sec * ...
                                         NSCC_avgrates{ROWind,ATTind}{SCCind}{1} * ...
-                                        cell2mat(unit.EHvLTASS_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
+                                        cell2mat(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
                                         NSCC_avgrates{ROWind,ATTind}{SCCind}{2} * ...
-                                        cell2mat(unit.EHvLTASS_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
+                                        cell2mat(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
                                 catch
                                     NSCCs_sps{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}* ...
                                         NSCCbinwidth_sec * ...
                                         NSCC_avgrates{ROWind,ATTind}{SCCind}{1} * ...
-                                        cell2mat(unit.EHvN_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
+                                        cell2mat(unit.EHvN_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
                                         NSCC_avgrates{ROWind,ATTind}{SCCind}{2} * ...
-                                        cell2mat(unit.EHvN_reBF_simFF.F1{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
+                                        cell2mat(unit.EHvN_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
                                 end
 
                                 % Determine Maximum of ALL plotted SCCs (i.e., post-Smoothing)
@@ -1996,7 +2049,7 @@ if doSCC
                 end
                 if FeatIND==3
                     xlimfac=0.3;ylimfac=0.6;
-                elseif FeatIND==4
+                else%if FeatIND==4
                     xlimfac=1.1;ylimfac=1.6;
                 end
                 yind=0;
@@ -2125,7 +2178,7 @@ else
 end
 
 
-if doSCC %% [[JDB TO DO]] fix x,y (both should be 1x2)
+if doSCC && size(SMP_NSCC_CD_at_Oct_Feat_Lev,1)>1 %% [[JDB TO DO]] fix x,y (both should be 1x2)
     % CD(@ OctDiff=0.25) vs. Feature Level
     SensitivitySlopes_nsccCD_pos{1}=NaN+ones(size(Nattens_dB));
     SensitivitySlopes_nsccCD_neg{1}=NaN+ones(size(Nattens_dB));
@@ -2360,7 +2413,7 @@ set(hleg,'FontSize',SMPlegFontSize)
 hold off
 set(gca,'FontSize',FIG.FontSize)
 
-if doSCC
+if doSCC && exist('SensitivitySlopes_nscc0_pos')
     %%%% OctDiff(@ NSCC_Rho=0.6)-vs-FeatureLevels for each OAL
     subplot(223)
     LEGtext='';
@@ -2703,7 +2756,7 @@ end
 subplot(3,length(FeatINDs),1), ylabel('CD (ms)')
 subplot(3,length(FeatINDs),length(FeatINDs)+1), ylabel('Peak')
 subplot(3,length(FeatINDs),2*length(FeatINDs)+1), ylabel('Rho')
-subplot(3,length(FeatINDs),4),legend(LEGtext,'FontSize',6,'location','northeast');
+subplot(3,length(FeatINDs),1),legend(LEGtext,'FontSize',6,'location','northeast');
 hold off
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2828,7 +2881,8 @@ for FeatIND=FeatINDs
             myX=log2(myFeatures_kHz(myF)/BFs(COLind));
             plot(myX*ones(1,2),ylimits(ROWind+1,:),':','color',[.5 .5 .5]), hold on
             text(myX,ylimits(ROWind+1,1),FeaturesText{myF},'HorizontalAlignment','center','VerticalAlignment','bottom')
-            xlim(xlimits(COLind,:)), ylim(ylimits(ROWind+1,:))
+            ylimits(ROWind+1,isnan(ylimits(ROWind+1,:)))=0; % no NaN's allowed
+            xlim(xlimits(COLind,:)), ylim(ylimits(ROWind+1,:)+[0 eps])
         end
     end
 end
@@ -2838,12 +2892,14 @@ COLind=0;
 for FeatIND=FeatINDs
     COLind=COLind+1;
     subplot(3,length(FeatINDs),COLind)
+    d2p_NSACind(COLind)=min(d2p_NSACind(COLind),size(size(altCD{COLind}),1));
     plot(altCD{COLind}(1:d2p_NSACind(COLind),1).*(-1),altCD{COLind}(1:d2p_NSACind(COLind),2),'--k'), hold on
     plot(altCD{COLind}(d2p_NSACind(COLind):end,1),altCD{COLind}(d2p_NSACind(COLind):end,2),'-k'), hold on
     if COLind==1
         ylabel('CD (msec)')
     end
-    xlim([0,xlimits(COLind,2)]), ylim(ylimits(1,:))
+        ylimits(1,isnan(ylimits(1,:)))=0; % no NaN's allowed
+    xlim([0,xlimits(COLind,2)]), ylim(ylimits(1,:)+[0 eps])
     for ATTind=1:length(Nattens_dB)
         subplot(3,length(FeatINDs),length(FeatINDs)+COLind)
         plot(data2plot{COLind,ATTind}(1:d2p_NSACind(COLind),1).*(-1),data2plot{COLind,ATTind}(1:d2p_NSACind(COLind),3),'--','color',ptcolor{ATTind}), hold on
@@ -2851,14 +2907,16 @@ for FeatIND=FeatINDs
         if COLind==1
             ylabel('PEAKS (no unit)')
         end
-        xlim([0,xlimits(COLind,2)]), ylim(ylimits(2,:))
+        ylimits(2,isnan(ylimits(2,:)))=0; % no NaN's allowed
+        xlim([0,xlimits(COLind,2)]), ylim(ylimits(2,:)+[0 eps])
         subplot(3,length(FeatINDs),2*length(FeatINDs)+COLind)
         plot(data2plot{COLind,ATTind}(1:d2p_NSACind(COLind),1).*(-1),data2plot{COLind,ATTind}(1:d2p_NSACind(COLind),4),'--','color',ptcolor{ATTind}), hold on
         plot(data2plot{COLind,ATTind}(d2p_NSACind(COLind):end,1),data2plot{COLind,ATTind}(d2p_NSACind(COLind):end,4),'-','color',ptcolor{ATTind}), hold on
         if COLind==1
             ylabel('Rho (no unit)')
         end
-        xlim([0,xlimits(COLind,2)]), ylim(ylimits(3,:))
+        ylimits(3,isnan(ylimits(3,:)))=0; % no NaN's allowed
+        xlim([0,xlimits(COLind,2)]), ylim(ylimits(3,:)+[0 eps])
     end
     subplot(3,length(FeatINDs),COLind),title(sprintf('feature %s',FeaturesText{FeatIND}))
     subplot(3,length(FeatINDs),2*length(FeatINDs)+COLind),xlabel('octave difference')
@@ -2889,7 +2947,9 @@ plot([xmax Nattens_dB(LOWnoiseIND)+dBAtt_2_SNR],SensitivitySlopes_rate([NOnoiseI
 plot([xmin-2 xmax+2],[0 0],'k:')
 hold off
 % ylim([ymin ymax])
-ylim(sort([yminFACT ymaxFACT]*SensitivitySlopes_rate(NOnoiseIND)))
+if ~isnan(SensitivitySlopes_rate(NOnoiseIND))
+    ylim(sort([yminFACT ymaxFACT]*SensitivitySlopes_rate(NOnoiseIND)));
+end
 text(xmax,yminFACT*SensitivitySlopes_rate(NOnoiseIND),'IQ','units','data','HorizontalAlignment','center','VerticalAlignment','bottom','color','red')
 title(sprintf('     Exp%s, Unit %s: BF=%.2f kHz, Thr=%.f dB SPL, SR=%.1f sps, Q10=%.1f\nRATE', ...
     ExpDate,UnitName,unit.Info.BF_kHz,unit.Info.Threshold_dBSPL,unit.Info.SR_sps,unit.Info.Q10), ...
@@ -2910,7 +2970,7 @@ plot([xmin-2 xmax+2],[0 0],'k:')
 hold off
 if SensitivitySlopes_alsr(NOnoiseIND)>0
     ylim([yminFACT ymaxFACT]*SensitivitySlopes_alsr(NOnoiseIND))
-else
+elseif ~isnan(SensitivitySlopes_alsr(NOnoiseIND))
     ylim([SensitivitySlopes_alsr(NOnoiseIND) 4])
 end
 text(xmax,yminFACT*SensitivitySlopes_alsr(NOnoiseIND),'IQ','units','data','HorizontalAlignment','center','VerticalAlignment','bottom','color','red')
@@ -2919,7 +2979,7 @@ ylabel('SMP Slope (sp/sec/dB)')
 % xlabel('Noise Attenuation (dB)')
 set(gca,'XDir','reverse')
 
-if doSCC
+if doSCC && exist('SensitivitySlopes_nsccCD_pos')
     subplot(413)
     plot(Nattens_dB(noiseINDs)+dBAtt_2_SNR,SensitivitySlopes_nsccCD_pos{1}(noiseINDs),'b-x')
     xlim([xmin-2 xmax+2])
@@ -3056,6 +3116,44 @@ ATTEN=max(Nattens_dB);
 
 %%%%%%%%%%%%%%%%%%%% EH_reBF Plots
 if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
+    
+    if isfield(unit.EHvLTASS_reBF_simFF,'F2')
+        %% get Rho for both F1 and F2
+        COLind=0;
+        BFs=NaN*ones(1,2);
+        data2plot2=cell(2,length(Nattens_dB));
+        FeatIND2=[3,5]; %F1,F2
+        for FeatIND=FeatIND2
+            COLind=COLind+1;
+            for ATTind=1:length(Nattens_dB)
+
+                BFprev=BFs(COLind);
+                [SCCpos,SCCs_belowBF,SCCs_aboveBF,BFind,BFs(COLind)]=...
+                    getSCCindsWithBF(unit.EHvLTASS_reBF_simFF.F2{2,1}.FeatureFreqs_Hz{1}(FeatIND)/1e3,...
+                    NSAC_BFs_kHz{1,ATTind},NSCC_BFs_kHz{1,ATTind});
+
+                if ~isnan(BFprev)&&BFs(COLind)~=BFprev
+                    fprintf('Warning: BFind is not constant within Feature %s: now %.3f, prev %.3f',...
+                        FeaturesText{FeatIND},BFs(COLind),BFprev)
+                end
+
+
+                data2plot2{COLind,ATTind}=zeros(size(SCCpos,1),4);
+                for SCCposind=1:size(SCCpos,1)
+                    oct_diff_temp = log2(...
+                        NSCC_BFs_kHz{1,ATTind}{SCCpos(SCCposind,1)}(3-SCCpos(SCCposind,2))/...
+                        BFs(COLind));
+                    data2plot2{COLind,ATTind}(SCCposind,:)=[...
+                        oct_diff_temp,...
+                        sign(oct_diff_temp)*NSCC_CDs_usec{1,ATTind}{SCCpos(SCCposind,1)}/1000,...
+                        NSCC_peaks{1,ATTind}{SCCpos(SCCposind,1)},...
+                        NSCC_Rho{1,ATTind}{SCCpos(SCCposind,1)}];
+                end
+
+            end
+        end
+    end
+    
     for FeatIND=FeatINDs
         ROWind=ROWind+1;
         try
@@ -3086,6 +3184,7 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
                     hold on
                     if ismember(BFind,find(abs(log2(BFs_kHz{ROWind,ATTind}/unit.Info.BF_kHz))<BFoctCRIT))
                         LEGtext{length(LEGtext)+1}='In Quiet';%sprintf('%.f dB',Nattens_dB(ATTind)+dBAtt_2_SNR);
+%                         LEGtext{length(LEGtext)+1}=sprintf('%.f dB SNR',Nattens_dB(ATTind)-Nattens_dB(yTEMP.EqualSPL_index));
                     end
                     for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))
                         if ~isempty(PERhistXs_sec{ROWind,ATTind2}{BFind})
@@ -3093,16 +3192,23 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
                                 trifilt(PERhists_Smoothed{ROWind,ATTind2}{BFind},ALLlevelsTriFilt)*NormFact+BFs_kHz{ROWind,ATTind2}(BFind), ...
                                 'LineWidth',LINEwidth,'Color',ATTENcolors{ATTind2})
                             if ismember(BFind,find(abs(log2(BFs_kHz{ROWind,ATTind}/unit.Info.BF_kHz))<BFoctCRIT))
+                                % period histograms are indexed from least to greatest attenuation
+                                % make sure legend is filled in accordingly
+                                
                                 %LEGtext{length(LEGtext)+1}=sprintf('%.f dB',Nattens_dB(ATTind2)+dBAtt_2_SNR);
-                                if ATTind2==yTEMP.EqualSL_index
-                                    LEGtext{length(LEGtext)+1}=sprintf('%.f dB SNR',yTEMP.SNR_EqualSL);%+dBAtt_2_SNR);
-                                else
-                                    LEGtext{length(LEGtext)+1}='0 dB SNR';%sprintf('%.f dB',Nattens_dB(ATTind2)+dBAtt_2_SNR);
-                                end
+                                LEGtext{length(LEGtext)+1}=sprintf('%.f dB SNR',Nattens_dB(ATTind2)-Nattens_dB(yTEMP.EqualSPL_index));
+                                
+%                                 if ATTind2==yTEMP.EqualSL_index
+%                                     LEGtext{length(LEGtext)+1}='Equal SL';
+%                                 elseif ATTind2==yTEMP.EqualSPL_index
+%                                     LEGtext{length(LEGtext)+1}='Equal SPL';
+%                                 else
+%                                     LEGtext{length(LEGtext)+1}=sprintf('%.f dB SNR',Nattens_dB(ATTind2)-Nattens_dB(yTEMP.EqualSPL_index));
+%                                 end
                             end
                         end
                     end
-                    if strcmp(FeaturesText{FeatIND},'F1')
+                    if strcmp(FeaturesText{FeatIND},'F2')
                         hleg1000=legend(LEGtext,1);
                         set(hleg1000,'FontSize',10)%LOLbiss
                         set(hleg1000,'pos',[0.356    0.8    0.07    0.17])
@@ -3208,12 +3314,22 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             PLOTnum=(ROWind-1)*NUMcols+4;
             eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);']);
             PLOThand=eval(['h' num2str(PLOTnum)]);
-            for ATTind=1:length(Nattens_dB)
-                %                 [SCCpos,SCCs_belowBF,SCCs_aboveBF,BFind,BFs(COLind)]=getSCCindsWithBF(unit.Info.BF_kHz,NSAC_BFs_kHz{COLind,ATTind},NSCC_BFs_kHz{COLind,ATTind});
-                semilogy(data2plot{ROWind,ATTind}(:,4),unit.Info.BF_kHz*2.^(data2plot{ROWind,ATTind}(:,1)),'*-','Color',ATTENcolors{ATTind});
-                hold on;
+%             for ATTind=1:length(Nattens_dB)
+%                 %                 [SCCpos,SCCs_belowBF,SCCs_aboveBF,BFind,BFs(COLind)]=getSCCindsWithBF(unit.Info.BF_kHz,NSAC_BFs_kHz{COLind,ATTind},NSCC_BFs_kHz{COLind,ATTind});
+%                 semilogy(data2plot{ROWind,ATTind}(:,4),unit.Info.BF_kHz*2.^(data2plot{ROWind,ATTind}(:,1)),'*-','Color',ATTENcolors{ATTind});
+%                 hold on;
+%             end
+            for ROWind2=[1,2] %F1,F2
+                for ATTind=1:length(Nattens_dB)
+                    %                 [SCCpos,SCCs_belowBF,SCCs_aboveBF,BFind,BFs(COLind)]=getSCCindsWithBF(unit.Info.BF_kHz,NSAC_BFs_kHz{COLind,ATTind},NSCC_BFs_kHz{COLind,ATTind});
+                    semilogy(data2plot2{ROWind2,ATTind}(:,4),...
+                        unit.EHvLTASS_reBF_simFF.F2{2,1}.FeatureFreqs_Hz{1}(FeatIND2(ROWind2))/1e3*...
+                        2.^(data2plot2{ROWind2,ATTind}(:,1)),...
+                        '*-','Color',ATTENcolors{ATTind});
+                    hold on;
+                end
             end
-            xlabel(sprintf('Corr Coef (to %s)',FeaturesText{FeatIND}))
+            xlabel(sprintf('Corr Coefs'))
             xlim(XLIMITS_synch)
             set(PLOThand,'XDir','reverse')
             set(PLOThand,'YTick',YTICKS,'YTickLabel',YTICKS)
@@ -3313,10 +3429,10 @@ if 1 % if you want to plot Power Spectral Densities
 
     % Set up parameters to plot
     % Compare PSD/CSD of normal/impaired @ equal SL near F2 @ 1.2kHz
-    FEATind = 3; %F2
+    FEATind = 1; %F2
     ATTENind = yTEMP.EqualSL_index;
-    BFind_feat = 6; % (based on freqs in NSAC_BFs_kHz)
-    BFind = 3; % feature-3  (based on freqs in NSAC_BFs_kHz)
+    BFind_feat = 3; % (based on freqs in NSAC_BFs_kHz)
+    BFind = 4; % (based on freqs in NSAC_BFs_kHz)
     filtlen = 25;
 
     fprintf('Calculating CSD of fibers at %1.2fkHz(F2) and %1.2fkHz...\n',...
@@ -3362,7 +3478,7 @@ if 1 % if you want to plot Power Spectral Densities
     loglog([freq_F2 freq_F2],[1 1e2],'b:');
     loglog([freq_F3 freq_F3],[1 1e2],'b:'); hold off;
     % axis([200 5000 1 1e3]);
-    legend('PSD (F2)','PSD (1.2kHz)','CSD');
+    legend('PSD (F2)','PSD (other CF)','CSD');
     % title('Normal hearing, -6dB SNR, 1.2kHz CF re F2');
     xlim([100 10e3]);
     orient landscape
@@ -3400,12 +3516,13 @@ if 1
                     xlim(XLIMITS_synchs)
                     set(PLOThand,'XDir','reverse')
                     set(PLOThand,'XTick',YTICKS(1:2:end),'XTickLabel',YTICKS(1:2:end))
+                    set(PLOThand,'YScale','log')
                     set(PLOThand,'YTick',YTICKS,'YTickLabel',YTICKS)
                     ylim(YLIMITS)  % Same Ylimits for all plots
                     
                     if ROWind==1
                         title(sprintf('Harmonic Synch (noise=-%1.0fdB)',Nattens_dB(ATTind)));
-                    elseif ROWind==
+                    elseif ROWind==length(FeatINDs)
                         xlabel('Vowel Harmonics (kHz)');
                     end
 
@@ -3428,7 +3545,10 @@ if 1
 
 end
 
-% pause;
+
+% disp('Type ''return'' to continue program execution...');
+% keyboard;
+
 UnitCF=unit.Info.BF_kHz;
 UnitThresh=unit.Info.Threshold_dBSPL;
 UnitQ10=unit.Info.Q10;

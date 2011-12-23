@@ -87,6 +87,12 @@ for PICind=1:Npicts
 	dBAtt_2_SNR = -(noiseAtten_dB(1) - SNR_dB(1)); % Conversion from dBatten to SNR
 	plot(SNR_dB(1:length(driv{PICind})), trifilt(driv{PICind},params.TriFiltWidth),linetype,'LineWidth',LineWidth);
 	hold on
+    
+    % if using LTASS noise
+    if ~isempty(cell2mat(strfind(x{1}.Stimuli.Rlist,'LTASS')))
+        % SNR from base files is 1.0759 dB
+        dBAtt_2_SNR = dBAtt_2_SNR;
+    end
 end
 
 xlabel('Signal to Noise Ratio (dB)','FontSize',TextFontSize)

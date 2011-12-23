@@ -20,12 +20,13 @@ if~exist('F0per_us','var')
     F0per_us=8.5e5;%I don't know if this is a good default. 120Hz gets you 8.33e5.
 end
 
-delaysTEMP_usec=Delays(find((Delays>=-F0per_us)&(Delays<=F0per_us)));
-corrTEMP=Correl(find((Delays>=-F0per_us)&(Delays<=F0per_us)));
+Nperiods=2; %default to 1 period
+delaysTEMP_usec=Delays(find((Delays>=-Nperiods*F0per_us)&(Delays<=Nperiods*F0per_us)));
+corrTEMP=Correl(find((Delays>=-Nperiods*F0per_us)&(Delays<=Nperiods*F0per_us)));
 
 %%%%%%%%%%% LOCAL MAXIMA
 TFiltWidth=3;
-%%%% find local max within 1 period, based on smoothed SCCs
+%%%% find local max within N periods, based on smoothed SCCs
 diff_LtoR=diff(trifilt(corrTEMP,TFiltWidth));
 diff_RtoL=diff(fliplr(trifilt(corrTEMP,TFiltWidth)));
 diffDelays_LtoR=delaysTEMP_usec(1:end-1);
@@ -93,9 +94,13 @@ subplot(2,1,2), hold off;
 title('Previous characteristic delays');
 subplot(2,1,1), hold off;
 octdiff = log2(BFs_kHz{SCCind}(1)/BFs_kHz{SCCind}(2));
-title(sprintf('Pick a peak (or press Enter to accept)\nBF Difference = %1.2f octaves\n(BF1 = %1.2f; BF2 = %1.2f; Formant = %1.2f)',octdiff,BFs_kHz{SCCind}(1),BFs_kHz{SCCind}(2),1e6/F0per_us));
+title(sprintf('Pick a peak (or press Enter to accept)\nBF Difference = %1.2f octaves\n(BF1 = %1.2f; BF2 = %1.2f; F0 = %1.2f)',octdiff,BFs_kHz{SCCind}(1),BFs_kHz{SCCind}(2),1e6/F0per_us));
 
-[x,y] = ginput(1);
+% if max(corrTEMP)>20  % if we have enough data, get peak manually
+    [x,y] = ginput(1);
+% else
+%     x=delaysTEMP_usec(1)-1; % mark it out of bounds
+% end
 close(gcf);
 if ~isempty(x),
     CD=x;

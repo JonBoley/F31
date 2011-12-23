@@ -962,10 +962,11 @@ if ~isempty(picList)
    
 %    SORTattens=unique(TempNattens_dB);
    [b,m,n]=unique(TempNattens_dB); 
-   SORTattens=TempNattens_dB(sort(m)); % keep original order for now [quiet SL SPL]
-   SNR_EqualSL = SORTattens(end-1)-SORTattens(end);
-   EqualSL_index = find(m==length(TempNattens_dB)-1); %second to last atten
-   SORTattens = sort(SORTattens);
+   SORTattens=TempNattens_dB(sort(m)); % keep original order for now [quiet SL SPL ...]
+   SNR_EqualSL = SORTattens(2)-SORTattens(3);
+   EqualSL_index = find(m==length(TempNattens_dB)-(length(m)-1)+1); %second atten
+   EqualSPL_index = find(m==length(TempNattens_dB)-(length(m)-1)+2); %third atten
+   [SORTattens,SORTattens_indices] = sort(SORTattens);
    
    NumF=length(SORTocts);
    NumL=length(SORTlevels);
@@ -992,6 +993,8 @@ if ~isempty(picList)
             TempINDs=find(TempFeatINDs&TempHarmINDs&TempPolINDs);  % 1 for pictures with current: Feature, Harm, Polarity
             
             if ~isempty(TempINDs)
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.SORTattens_indices=SORTattens_indices;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.EqualSPL_index=EqualSPL_index;
                yTEMP{FormsAtHarmsIND,InvertPolarityIND}.EqualSL_index=EqualSL_index;
                yTEMP{FormsAtHarmsIND,InvertPolarityIND}.SNR_EqualSL=SNR_EqualSL;
                yTEMP{FormsAtHarmsIND,InvertPolarityIND}.levels_dBSPL=SORTlevels;
