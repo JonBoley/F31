@@ -170,6 +170,8 @@ for FeatIND=FeatINDs  % Step through each Feature we have data for
 
             yTEMP.BFs_kHz=NaN+zeros(size(yTEMP0.freqs_kHz));
             yTEMP.levels_dBSPL=yTEMP0.levels_dBSPL;
+            yTEMP.SORTattens_indices=yTEMP0.SORTattens_indices;
+            yTEMP.EqualSPL_index=yTEMP0.EqualSPL_index;
             yTEMP.EqualSL_index=yTEMP0.EqualSL_index;
             yTEMP.SNR_EqualSL=yTEMP0.SNR_EqualSL;
             yTEMP.Nattens_dB=yTEMP0.Nattens_dB;
