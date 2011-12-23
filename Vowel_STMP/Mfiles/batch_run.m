@@ -2,111 +2,136 @@
 setup_Vowel_STMP;
 
 %% Run all units for a given experiment
-% date = '041811';
-% switch date
-%     case '041505'   % 04/18/05 fibers: (in noise, normal)
-%         % 1.01, 1.04, 1.10, 2.04, 3.03, 4.06, 4.09, 4.11
-%         unitNums = {1.01, 1.04, 1.10, 2.04, 3.03, 4.06, 4.09, 4.11};
-%     case '111804'    % 11/18/04 fibers: (in quiet, normal)
-%         % unitNums = {1.01, 1.02, 1.03, 1.04, 1.05, 1.08, 1.10, 1.12, 1.13,...
-%         %     1.17, 1.18, 1.19, 1.20, 1.21, 1.22, 1.24, 1.25, 1.26, 1.27, ...
-%         %     1.28, 1.29, 1.30, 1.31, 1.32, 1.34, 1.36};
-%         % these units had >= 2levels tested:
-%         unitNums = {1.02, 1.22, 1.25, 1.27, 1.28, 1.30};
-%         % notes on 11/18/04 experiment:
-%         % Some units had practically no spikes for some cases (T1?)
-%         %   - Units 1.01, 1.10, 1.18
-%     case '032805'   % 03/28/05 fibers: (in quiet, normal)
-%         % 2.11, 2.15, 2.18, 2.21, 2.28, 2.29, 2.31, 2.38, 2.41, 2.48, 2.51, 2.53,
-%         % 2.54, 2.58
-%         unitNums = {2.11, 2.15, 2.18, 2.21, 2.28, 2.29, 2.31, 2.38, 2.41,...
-%             2.48, 2.51, 2.53, 2.54, 2.58};
-%     case '071305'   % 07/13/05 fibers: (in noise, impaired)
-%         % 1.02, 1.04, 1.14, 1.16, 1.17, 1.20, 1.22, 1.26, 1.27, 1.30, 1.33, 1.35,
-%         % 2.04, 2.07
-%         unitNums = {1.02, 1.04, 1.14, 1.16, 1.17, 1.20, 1.22, 1.26, 1.27,...
-%             1.30, 1.33, 1.35, 2.04, 2.07};
-%     case '121404'   % 12/14/04 fibers: (in quiet, impaired)
-%         % 1.03, 1.07, 1.08, 2.03, 2.04, 2.05, 2.07, 2.09, 7.01, 7.02, 7.05, 7.06,
-%         % 7.09, 7.10, 8.01, 9.01, 9.03, 9.05, 9.08, 9.10, 9.15, 9.16, 11.02, 13.01,
-%         % 13.02, 13.04    
-%         
-%     case '011811'   % 01/18/11 fiber: (in noise, normal but exposed)
-%         % 2.01, 2.02, 2.06, 2.08, 3.02, 3.08, 3.10, 3.11
-%         unitNums = {2.01, 2.02, 2.06, 2.08, 3.02, 3.08, 3.10, 3.11};
-%         colors = repmat({'k'},size(unitNums));
-%     case '041811'   % JB-2011_04_18-AN_Normal
-%         % 1.03, 2.01, 2.02, 2.07, 3.03, 3.04
-%         unitNums = {1.03, 2.01, 2.02, 2.07, 3.03, 3.04};
-%         colors = repmat({'k'},size(unitNums));
-%     case '051211'   % JB-2011_05_12-AN_Normal_Chin1120
-%         % 1.01, 1.02, 1.04
-%         unitNums = {1.01, 1.02, 1.04};
-%         colors = repmat({'k'},size(unitNums));
-%     case '062711'   % JB-2011_06_27-Chin1133_AN_Normal
-%         % 1.01, 1.02, 1.03, 1.04, 2.01, 2.02, 2.03, 2.04, 2.05, 2.08, 4.01, 4.05,
-%         % 4.06, 4.08, 4.09
-%         unitNums = {1.01, 1.02, 1.03, 1.04, 2.01, 2.02, 2.03, 2.04, 2.05, 2.08, 4.01, 4.05, 4.06, 4.08, 4.09};
-%         colors = repmat({'k'},size(unitNums));
-%     case '072011'   % JB-2011_07_20-Chin1132_AN_normal
-%         % 1.02, 1.03, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10
-%         unitNums = {1.02, 1.03, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10};
-%         colors = repmat({'k'},size(unitNums));
-%         
-%     case '062311'   % JB-2011_06_23-Chin1119_AN_500OBN
-%         % 1.01, 1.02, 1.09, 1.11, 1.13, 1.14
-%         unitNums = {1.01, 1.02, 1.09, 1.11, 1.13, 1.14};
-%         colors = repmat({'r'},size(unitNums));
-%     case '072111'   % JB-2011_07_21-Chin1124_AN_500OBN
-%         % 1.01, 1.02, 1.06, 1.10, 1.11, 1.12, 1.15, 1.16
-%         unitNums = {1.01, 1.02, 1.06, 1.10, 1.11, 1.12, 1.15, 1.16};
-%         colors = repmat({'r'},size(unitNums));
-%     case '080111'   % JB-2011_08_01-Chin1125_AN_500OBN
-%         % 2.02, 4.01, 4.02, 4.03, 4.05
-%         unitNums = {2.02, 4.01, 4.02, 4.03, 4.05};
-%         colors = repmat({'r'},size(unitNums));
-%     case '080911'   % JB-2011_08_09-Chin1135_AN_500OBN
-%         % 1.04, 1.05, 1.06, 1.07, 1.09, 1.10, 1.11, 1.15, 1.16
-%         unitNums = {1.04, 1.05, 1.06, 1.07, 1.09, 1.10, 1.11, 1.15, 1.16};
-%         colors = repmat({'r'},size(unitNums));
-%     case '081511'   % JB-2011_08_15-Chin1136_AN_500OBN
-%         % 1.01, 1.02, 1.05, 1.06, 1.07, 1.08, 1.10, 1.13, 3.02, 3.05, 3.06, 3.07,
-%         % 3.09
-%         unitNums = {1.01, 1.02, 1.05, 1.06, 1.07, 1.08, 1.10, 1.13, 3.02, 3.05, 3.06, 3.07, 3.09};
-%         colors = repmat({'r'},size(unitNums));
-%         
-%     otherwise
-%         error('Invalid experiment date');
-% end
+date = '062711';
+switch date
+    case '041805'   % 04/18/05 fibers: (in noise, normal)
+        % 1.01, 1.04, 1.10, 2.04, 3.03, 4.06, 4.09, 4.11
+        unitNums = {1.01, 1.04, 1.10, 2.04, 3.03, 4.06, 4.09, 4.11};
+    case '111804'    % 11/18/04 fibers: (in quiet, normal)
+        % unitNums = {1.01, 1.02, 1.03, 1.04, 1.05, 1.08, 1.10, 1.12, 1.13,...
+        %     1.17, 1.18, 1.19, 1.20, 1.21, 1.22, 1.24, 1.25, 1.26, 1.27, ...
+        %     1.28, 1.29, 1.30, 1.31, 1.32, 1.34, 1.36};
+        % these units had >= 2levels tested:
+        unitNums = {1.02, 1.22, 1.25, 1.27, 1.28, 1.30};
+        % notes on 11/18/04 experiment:
+        % Some units had practically no spikes for some cases (T1?)
+        %   - Units 1.01, 1.10, 1.18
+    case '032805'   % 03/28/05 fibers: (in quiet, normal)
+        % 2.11, 2.15, 2.18, 2.21, 2.28, 2.29, 2.31, 2.38, 2.41, 2.48, 2.51, 2.53,
+        % 2.54, 2.58
+        unitNums = {2.11, 2.15, 2.18, 2.21, 2.28, 2.29, 2.31, 2.38, 2.41,...
+            2.48, 2.51, 2.53, 2.54, 2.58};
+    case '071305'   % 07/13/05 fibers: (in noise, impaired)
+        % 1.02, 1.04, 1.14, 1.16, 1.17, 1.20, 1.22, 1.26, 1.27, 1.30, 1.33, 1.35,
+        % 2.04, 2.07
+        unitNums = {1.02, 1.04, 1.14, 1.16, 1.17, 1.20, 1.22, 1.26, 1.27,...
+            1.30, 1.33, 1.35, 2.04, 2.07};
+    case '121404'   % 12/14/04 fibers: (in quiet, impaired)
+        % 1.03, 1.07, 1.08, 2.03, 2.04, 2.05, 2.07, 2.09, 7.01, 7.02, 7.05, 7.06,
+        % 7.09, 7.10, 8.01, 9.01, 9.03, 9.05, 9.08, 9.10, 9.15, 9.16, 11.02, 13.01,
+        % 13.02, 13.04    
+        
+    case '011811'   % 01/18/11 fiber: (in noise, normal but exposed)
+        % 2.01, 2.02, 2.06, 2.08, 3.02, 3.08, 3.10, 3.11
+        unitNums = {2.01, 2.02, 2.06, 2.08, 3.02, 3.08, 3.10, 3.11};
+        colors = repmat({'k'},size(unitNums));
+    case '041811'   % JB-2011_04_18-AN_Normal
+        % 1.03, 2.01, 2.02, 2.07, 3.03, 3.04
+        unitNums = {1.03, 2.01, 2.02, 2.07, 3.03, 3.04};
+        colors = repmat({'k'},size(unitNums));
+    case '051211'   % JB-2011_05_12-AN_Normal_Chin1120
+        % 1.01, 1.02, 1.04
+        unitNums = {1.01, 1.02, 1.04};
+        colors = repmat({'k'},size(unitNums));
+    case '062711'   % JB-2011_06_27-Chin1133_AN_Normal
+        % 1.01, 1.02, 1.03, 1.04, 2.01, 2.02, 2.03, 2.04, 2.05, 2.08, 4.01, 4.05,
+        % 4.06, 4.08, 4.09
+        unitNums = {1.01, 1.02, 1.03, 1.04, 2.01, 2.02, 2.03, 2.04, 2.05, 2.08, 4.01, 4.05, 4.06, 4.08, 4.09};
+        colors = repmat({'k'},size(unitNums));
+    case '072011'   % JB-2011_07_20-Chin1132_AN_normal
+        % 1.02, 1.03, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10
+        unitNums = {1.02, 1.03, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10};
+        colors = repmat({'k'},size(unitNums));
+        
+    case '062311'   % JB-2011_06_23-Chin1119_AN_500OBN
+        % 1.01, 1.02, 1.09, 1.11, 1.13, 1.14
+        unitNums = {1.01, 1.02, 1.09, 1.11, 1.13, 1.14};
+        colors = repmat({'r'},size(unitNums));
+    case '072111'   % JB-2011_07_21-Chin1124_AN_500OBN
+        % 1.01, 1.02, 1.06, 1.10, 1.11, 1.12, 1.15, 1.16
+        unitNums = {1.01, 1.02, 1.06, 1.10, 1.11, 1.12, 1.15, 1.16};
+        colors = repmat({'r'},size(unitNums));
+    case '080111'   % JB-2011_08_01-Chin1125_AN_500OBN
+        % 2.02, 4.01, 4.02, 4.03, 4.05
+        unitNums = {2.02, 4.01, 4.02, 4.03, 4.05};
+        colors = repmat({'r'},size(unitNums));
+    case '080911'   % JB-2011_08_09-Chin1135_AN_500OBN
+        % 1.04, 1.05, 1.06, 1.07, 1.09, 1.10, 1.11, 1.15, 1.16
+        unitNums = {1.04, 1.05, 1.06, 1.07, 1.09, 1.10, 1.11, 1.15, 1.16};
+        colors = repmat({'r'},size(unitNums));
+    case '081511'   % JB-2011_08_15-Chin1136_AN_500OBN
+        % 1.01, 1.02, 1.05, 1.06, 1.07, 1.08, 1.10, 1.13, 3.02, 3.05, 3.06, 3.07,
+        % 3.09
+        unitNums = {1.01, 1.02, 1.05, 1.06, 1.07, 1.08, 1.10, 1.13, 3.02, 3.05, 3.06, 3.07, 3.09};
+        colors = repmat({'r'},size(unitNums));
+    
+    case '100611'  % JB-2011_10_06-Chin1144_AN_normal
+        % 1.02, 1.10, 3.06
+        unitNums = {1.02, 3.06};
+        colors = repmat({'k'},size(unitNums)); %normal=black
+    case '101111'  % JB-2011_10_11-Chin1139_AN_normal
+        % 1.01, 1.03
+        unitNums = {1.01, 1.03};
+        colors = repmat({'k'},size(unitNums)); %normal=black
+    case '101711'  % JB-2011_10_17-Chin1151_AN_normal
+        % 1.03, 2.04, 3.01, 3.02, 3.03
+        unitNums = {1.03, 2.04, 3.01, 3.02, 3.03};
+        colors = repmat({'k'},size(unitNums)); %normal=black
+        
+    % ultra-wide STMP (F1 & F2)    
+    case '112911'   % JB-2011_11_29-Chin1146_AN_normal
+        % 1.09, 3.03, 4.04, 4.12, 4.13, 4.14, 4.16
+        unitNums = {1.09, 3.03, 4.04, 4.12, 4.13, 4.14, 4.16};
+        colors = repmat({'k'},size(unitNums));
+    case '120511' %JB-2011_12_05-Chin1148_AN_normal
+        % 1.09, 2.01, 2.05, 2.08, 2.11, 2.12, 2.14, 2.19, 2.23, 2.26, 2.32, 2.33, 2.34
+        unitNums = {2.05, 2.08, 2.11, 2.12, 2.14, 2.19, 2.32, 2.34};
+        colors = repmat({'k'},size(unitNums));
+        
+    otherwise
+        error('Invalid experiment date');
+end
+dates=repmat({date},size(unitNums));
 
 %% Run a combo of experiments
-dates = {'041811','041811','062711','062711','062711',...
-    '072111','080911','081511','081511','081511'};
-unitNums = {2.01,2.02,1.01,2.02,2.04,...
-    1.11,1.11,1.07,1.08,3.09};
-colors = {'k','k','k','k','k',...
-    'r','r','r','r','r'};
+% dates = {'041811','041811','062711','062711','062711',...
+%     '072111','080911','081511','081511','081511'};
+% unitNums = {2.01,2.02,1.01,2.02,2.04,...
+%     1.11,1.11,1.07,1.08,3.09};
+% colors = {'k','k','k','k','k',...
+%     'r','r','r','r','r'};
 
 %% The loop
-for i=1:length(unitNums)
+for i=1%1:3%length(unitNums)
     date = dates{i};
     disp(sprintf('%d) [%s] Calculating unit %1.2f...',i,date,unitNums{i}));
 
     % Use this for SNR conditions:
-    [UnitCF(i),UnitThresh(i),UnitQ10(i),...
-        Rate_failpoint(i),Rate_fail_limit(i),...
-        ALSR_failpoint(i),ALSR_fail_limit(i),...
-        Nscc_CD_pos_failpoint(i),Nscc_CD_pos_fail_limit(i),...
-        Nscc_CD_neg_failpoint(i),Nscc_CD_neg_fail_limit(i),...
-        Nscc0_pos_failpoint(i),Nscc0_pos_fail_limit(i),...
-        Nscc0_neg_failpoint(i),Nscc0_neg_fail_limit(i)]=...
+%     [UnitCF(i),UnitThresh(i),UnitQ10(i),...
+%         Rate_failpoint(i),Rate_fail_limit(i),...
+%         ALSR_failpoint(i),ALSR_fail_limit(i),...
+%         Nscc_CD_pos_failpoint(i),Nscc_CD_pos_fail_limit(i),...
+%         Nscc_CD_neg_failpoint(i),Nscc_CD_neg_fail_limit(i),...
+%         Nscc0_pos_failpoint(i),Nscc0_pos_fail_limit(i),...
+%         Nscc0_neg_failpoint(i),Nscc0_neg_fail_limit(i)]=...
         UnitLook_EHIN_CoincDet2_JB(date,num2str(unitNums{i}));
 
     % Use this for level conditions:
     %     [UnitCF(i),UnitThresh(i),UnitQ10(i)]=...
     %         UnitLook_EH_CoincDet2_JB(num2str(unitNums{i}));
 
-    pause; close all; home;
+    pause; 
+    close all; home;
 end
 
 % Plot Threshold
