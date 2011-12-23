@@ -1,0 +1,338 @@
+Return-Path: <ibruce@mail.ece.mcmaster.ca>
+Received: from jhuml3.jhu.edu (jhuml3.jhu.edu [128.220.2.66])
+	by storey.bme.jhu.edu (8.11.6/8.11.6) with ESMTP id i2P2xtY29785
+	for <mgheinz@bme.jhu.edu>; Wed, 24 Mar 2004 21:59:55 -0500
+Received: from jhuml3.jhu.edu (jhuml3.jhu.edu [128.220.2.66])
+ by jhuml3.jhu.edu (PMDF V6.2-X20 #30840)
+ with SMTP id <0HV400LOG2XK8E@jhuml3.jhu.edu> for mgheinz@bme.jhu.edu; Wed,
+ 24 Mar 2004 21:59:55 -0500 (EST)
+Received: from jhuml3.jhu.edu ([128.220.2.66])
+ by jhuml3.jhu.edu (SAVSMTP 3.1.5.43) with SMTP id M2004032421595527192 for
+ <mgheinz@bme.jhu.edu>; Wed, 24 Mar 2004 21:59:55 -0500
+Received: from mail.ece.mcmaster.ca (mail.ece.McMaster.CA [130.113.10.149])
+ by jhuml3.jhu.edu (PMDF V6.2-X20 #30840)
+ with ESMTP id <0HV400M2S2ZUCG@jhuml3.jhu.edu> for mgheinz@bme.jhu.edu; Wed,
+ 24 Mar 2004 21:59:55 -0500 (EST)
+Received: from BENDIGO (VPN-90-007.IPReg.McMaster.CA [130.113.90.7])
+	by mail.ece.mcmaster.ca (8.11.6/8.11.6) with SMTP id i2P2xso18600	for
+ <mgheinz@bme.jhu.edu>; Wed, 24 Mar 2004 21:59:54 -0500
+Date: Wed, 24 Mar 2004 21:59:53 -0500
+From: Ian Bruce <ibruce@mail.ece.mcmaster.ca>
+Subject: Re: pdf and AN mode code
+To: "Michael G. Heinz" <mgheinz@bme.jhu.edu>
+Reply-to: Ian Bruce <ibruce@ieee.org>
+Message-id: <001f01c41215$3f88ce40$075a7182@ECE.MCMASTER.CA>
+Organization: McMaster University
+MIME-version: 1.0
+X-MIMEOLE: Produced By Microsoft MimeOLE V6.00.2800.1165
+X-Mailer: Microsoft Outlook Express 6.00.2800.1158
+Content-type: text/plain; charset=iso-8859-1
+Content-transfer-encoding: 7bit
+X-Priority: 3
+X-MSMail-priority: Normal
+References: <004c01c4012d$3fb996e0$6a1d81a2@PROVIDENCE>
+ <006a01c401f8$21010a50$ee0a7182@MELBOURNE>
+ <001301c402c9$9d8eccc0$6a1d81a2@PROVIDENCE>
+ <009901c402d1$17f48de0$ee0a7182@MELBOURNE>
+ <003001c402e2$27246ea0$6a1d81a2@PROVIDENCE>
+X-JHU-BME-MailScanner: Found to be clean
+X-JHU-BME-MailScanner-SpamCheck: not spam, SpamAssassin (score=-0.2,
+	required 5, AWL)
+Status:   
+
+Hi Mike,
+
+I now have a version of my auditory-periphery model ready for public
+distribution.  You can get the code from
+http://www.ece.mcmaster.ca/~ibruce/deafcat2newme/deafcat2newme.htm
+
+Let me know if you have any questions, particularly if you need details of
+the new version of the middle-ear filter that I'm using.
+
+Ian
+
+=================================================
+Ian C. Bruce, Ph.D.
+Assistant Professor and
+   Barber-Gennum Chair in Information Technology
+Department of Electrical and Computer Engineering
+Room CRL-229
+McMaster University
+1280 Main Street West
+Hamilton, Ontario, Canada L8S 4K1
+
+Ph.: (905) 525-9140, ext. 26984
+Fax.: (905) 523-4407
+
+Email: ibruce@ieee.org
+Home page: www.ece.mcmaster.ca/~ibruce/
+=================================================
+----- Original Message ----- 
+From: "Michael G. Heinz" <mgheinz@bme.jhu.edu>
+To: "Ian Bruce" <ibruce@ieee.org>
+Sent: Friday, March 05, 2004 1:46 PM
+Subject: Re: pdf and AN mode code
+
+
+> Ian,
+>
+> Thanks for the code and the info, this will help.  Let me know when you
+get
+> the Windows version settled, but we'll get this going in the mean time.
+>
+> Best wishes,
+>
+> Mike
+>
+>
+> ************************************
+> Michael G. Heinz, Ph.D.
+> Postdoctoral Fellow
+> Dept. of Biomedical Engineering
+> Johns Hopkins University
+> Baltimore, MD  21205  USA
+> Phone: 410-955-0030
+> http://www.bme.jhu.edu/~mgheinz
+>
+>
+> ----- Original Message ----- 
+> From: "Ian Bruce" <ibruce@mail.ece.mcmaster.ca>
+> To: "Michael G. Heinz" <mgheinz@bme.jhu.edu>
+> Sent: Friday, March 05, 2004 11:44 AM
+> Subject: Re: pdf and AN mode code
+>
+>
+> > Mike,
+> >
+> > I've attached the Unix version.  Even if you use Laurel's code for the
+> spike
+> > generator, I think that you need to run it at a sampling frequency of at
+> > least 50 kHz for the Bernoulli approximation of the Poisson process to
+be
+> > accurate up to reasonably high instantaneous discharge rates (before
+> > refractoriness).  I know that Laurel ran her 1993 model at 20 kHz, which
+> is
+> > going to cause some inaccuracies in the PSTH for high instantaneous
+> > discharge rates.  I'm not sure if the precision of rand() at 20 kHz is
+> going
+> > to be that wonderful, but it might be sufficient.  rand() is only 16
+bit,
+> > while drand48() is 48 bit, as the name suggests.
+> >
+> > Cheers,
+> >
+> > Ian
+> >
+> > =================================================
+> > Ian C. Bruce, Ph.D.
+> > Assistant Professor and
+> >    Barber-Gennum Chair in Information Technology
+> > Department of Electrical and Computer Engineering
+> > Room CRL-229
+> > McMaster University
+> > 1280 Main Street West
+> > Hamilton, Ontario, Canada L8S 4K1
+> >
+> > Ph.: (905) 525-9140, ext. 26984
+> > Fax.: (905) 523-4407
+> >
+> > Email: ibruce@ieee.org
+> > Home page: www.ece.mcmaster.ca/~ibruce/
+> > =================================================
+> >
+> > ----- Original Message ----- 
+> > From: "Michael G. Heinz" <mgheinz@bme.jhu.edu>
+> > To: "Ian Bruce" <ibruce@ieee.org>
+> > Sent: Friday, March 05, 2004 10:50 AM
+> > Subject: Re: pdf and AN mode code
+> >
+> >
+> > > Hi Ian,
+> > >
+> > > I think John primarily uses Windows, but he could probably use the
+unix
+> > > version if needed to do what he wants.
+> > >
+> > > Does the rand() issue go away at lower sampling rates?  E.g., can we
+get
+> > > "sout" [r(t)] from you model run at 500 kHz, and then downsample and
+run
+> > > Laurel's "sgmodel", which is a separate MEX file in her version?  That
+> > would
+> > > also be an easy way for us to get individual spike trains for multiple
+> > reps,
+> > > without having to rerun the whole model.  Anyway, let me know if that
+> > would
+> > > work for the Windows version, and if not we can use the unix version
+in
+> > the
+> > > mean time until you get the GSL issue resolved.
+> > >
+> > > Thanks for your help!
+> > >
+> > > Mike
+> > >
+> > >
+> > >
+> > > ************************************
+> > > Michael G. Heinz, Ph.D.
+> > > Postdoctoral Fellow
+> > > Dept. of Biomedical Engineering
+> > > Johns Hopkins University
+> > > Baltimore, MD  21205  USA
+> > > Phone: 410-955-0030
+> > > http://www.bme.jhu.edu/~mgheinz
+> > >
+> > >
+> > > ----- Original Message ----- 
+> > > From: "Ian Bruce" <ibruce@mail.ece.mcmaster.ca>
+> > > To: "Michael G. Heinz" <mgheinz@bme.jhu.edu>
+> > > Sent: Thursday, March 04, 2004 9:51 AM
+> > > Subject: Re: pdf and AN mode code
+> > >
+> > >
+> > > > Hi Mike,
+> > > >
+> > > > > It was great to see you at ARO and to catch up.
+> > > >
+> > > > Likewise.
+> > > >
+> > > > Thanks for the PDFs.  I had looked through your J. Neurophys. paper
+> > > briefly
+> > > > on-line but hadn't downloaded the PDF yet.
+> > > >
+> > > > Re. the model code, is the undergrad going to be compiling it under
+> > > Windows
+> > > > or Unix?  I currently have a Unix version for public distribution,
+but
+> > I'm
+> > > > still working on a Windows version.  The problem is that the rand()
+> > > function
+> > > > does not give enough precision if spikes are being generated at a
+> > sampling
+> > > > frequency of 500 kHz, so I use the drand48() function that is
+> available
+> > > with
+> > > > most Unix compilers.  I have the Gnu Scientific Library (GSL)
+> installed
+> > on
+> > > > my Windows machine, which provides an equivalent to drand48() for
+> > Windows
+> > > > compilers.  However, I haven't had a chance yet to work out how to
+> best
+> > > > include the GSL .h and .lib files into the public distribution (so
+> that
+> > > > users don't have to install the complete GSL) and instruct users how
+> to
+> > > > modify their Matlab MEX setup to include the GSL files.  I'm trying
+to
+> > > make
+> > > > time to do this over the couple of weeks, so I'll let you know when
+> I've
+> > > got
+> > > > it ready.
+> > > >
+> > > > > Please give my best to Gillian, Owen, and Colin
+> > > >
+> > > > Shall do.  And the same to Karen and Jonathan
+> > > >
+> > > > Cheers,
+> > > >
+> > > > Ian
+> > > >
+> > > > =================================================
+> > > > Ian C. Bruce, Ph.D.
+> > > > Assistant Professor and
+> > > >    Barber-Gennum Chair in Information Technology
+> > > > Department of Electrical and Computer Engineering
+> > > > Room CRL-229
+> > > > McMaster University
+> > > > 1280 Main Street West
+> > > > Hamilton, Ontario, Canada L8S 4K1
+> > > >
+> > > > Ph.: (905) 525-9140, ext. 26984
+> > > > Fax.: (905) 523-4407
+> > > >
+> > > > Email: ibruce@ieee.org
+> > > > Home page: www.ece.mcmaster.ca/~ibruce/
+> > > > =================================================
+> > > >
+> > > > ----- Original Message ----- 
+> > > > From: "Michael G. Heinz" <mgheinz@bme.jhu.edu>
+> > > > To: "Ian Bruce" <ibruce@mail.ece.mcmaster.ca>
+> > > > Sent: Wednesday, March 03, 2004 9:38 AM
+> > > > Subject: pdf and AN mode code
+> > > >
+> > > >
+> > > > Hi Ian,
+> > > >
+> > > > It was great to see you at ARO and to catch up.  I wanted to send
+you
+> a
+> > > pdf
+> > > > of our recent J Neurophysiol paper on the slopes of RLFs.  While I'm
+> at
+> > > it,
+> > > > I'll also attach a copy of our paper from the ISH meeting in France
+> last
+> > > > summer; the book is coming out this spring.  Hopefully there will be
+a
+> > few
+> > > > more papers soon from my ARO poster that will more directly address
+> > > > recruitment and JNDs.
+> > > >
+> > > > I also wanted to ask you for the source code from your version of
+the
+> AN
+> > > > model.  We have an undergrad here who is going to use the model this
+> > > > semester to develop some ways to separate and quantify the strengths
+> of
+> > > > compression and suppression in our normal and impaired data.  He has
+> the
+> > > > compiled mex code from your model, but he wants to do things similar
+> to
+> > > what
+> > > > I did in my auditory-filter JASA paper (e.g.,compare different
+> versions
+> > of
+> > > > the model, e.g, broad/narrow-band control path, etc ... to separate
+> > > > compression and suppression), and to do so he needs to be able to
+> modify
+> > > the
+> > > > source code.  Also, he is interested in looking at revcors and
+things
+> > that
+> > > > need individual spike trains, for which it would be helpful to be
+able
+> > to
+> > > > save "sout" after running the model once, and then only have to run
+> the
+> > > > spike-generation model multiple times to get individual spike trains
+> > > rather
+> > > > than the PST, which I guess from what he's told me is what the model
+> > > > currently gives you as output.  Anyway, for several reasons, it
+would
+> > help
+> > > > him a lot for his project to be able to modify the source code to be
+> > able
+> > > to
+> > > > use the model in a more flexible way.
+> > > >
+> > > > Please give my best to Gillian, Owen, and Colin
+> > > >
+> > > > Thanks and best wishes,
+> > > >
+> > > > Mike
+> > > >
+> > > > ************************************
+> > > > Michael G. Heinz, Ph.D.
+> > > > Postdoctoral Fellow
+> > > > Dept. of Biomedical Engineering
+> > > > Johns Hopkins University
+> > > > Baltimore, MD  21205  USA
+> > > > Phone: 410-955-0030
+> > > > http://www.bme.jhu.edu/~mgheinz
+> > > >
+> > >
+> >
+>
