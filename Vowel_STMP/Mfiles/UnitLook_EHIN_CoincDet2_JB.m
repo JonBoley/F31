@@ -5,7 +5,7 @@ function [UnitCF,UnitThresh,UnitQ10,...
     Nscc_CD_neg_failpoint,Nscc_CD_neg_fail_limit,...
     Nscc0_pos_failpoint,Nscc0_pos_fail_limit,...
     Nscc0_neg_failpoint,Nscc0_neg_fail_limit...
-    ]=UnitLook_EHIN_CoincDet2_JB(ExpDate,UnitName)
+    ]=UnitLook_EHIN_CoincDet2_JB(ExpDate,UnitName,RecalcAll)
 % File: UnitLook_EHIN_CoincDet2.m
 % updated: Jun 19, 2009 - from UnitLook_EHIN_CoincDet2_MH2.m (Reiri Sono)
 %
@@ -30,6 +30,9 @@ PRINTyes=0;
 
 doSCC=1;
 
+if nargin<3
+    RecalcAll=0; %don't automatically recalc all, ask the user
+end
 
 global ROOT_dir
 global SavedPICS SavedPICnums SavedPICSuse
@@ -123,7 +126,7 @@ UnitNum=str2num(UnitName(strfind(UnitName,'.')+1:end));
 % LOAD CALCS if available to speed up figure design
 SAVECALCSfilename=sprintf('UnitLook_EHIN.%d.%02d.mat',TrackNum,UnitNum);
 loadBOOL=0;
-if exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
+if ~RecalcAll && exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
     loadBOOL=input('Do you want to load the existing calculations for plotting (0: no; [1]: yes)?? ');
     % 	loadBOOL=1;
     if isempty(loadBOOL)
@@ -199,6 +202,31 @@ if ~loadBOOL
             eval(['load ''' fullfile(unitdata_dir,UnitFileName) ''''])
         end
     end
+    
+    % find HarmonicsIND & PolarityIND (first non-empty element)
+    % NOTE: this assumes F2 exists !!!
+    for HarmonicsIND=1:2
+        for PolarityIND=1:2
+            if isstruct(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND})
+                break;
+            end
+        end
+    end
+    
+    
+    %%% fix for older data that was indexed incorrectly
+    %   (CONDind was off, causing TimeFact to be mismatched across the same condition)
+    %   (basically, the last stimulus to be presented was processed incorrectly)
+    for z=1:size(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact,1)
+        % extract TimeFact for a single freq, across all attenuations
+        blah(z)=unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact{z,1};
+    end
+    if length(unique(blah))-1 % if they aren't all the same
+        UnitAnal_EHvNrBF_simFF(ExpDate,UnitName,0);
+        eval(['load ''' fullfile(unitdata_dir,UnitFileName) ''''])
+    end
+    %%%
+    
 end
 
 % Make sure TC is verfified (i.e., Q10 known)
@@ -303,12 +331,21 @@ clear x
 
 
 if ~loadBOOL
-    %%% Hardcode for NOW
-    HarmonicsIND=2;
-    PolarityIND=2;
-    if strcmp(ExpDate,'041805')
-        HarmonicsIND=1;
-        PolarityIND=1;
+%     %%% Hardcode for NOW
+%     HarmonicsIND=2;
+%     PolarityIND=2;
+%     if strcmp(ExpDate,'041805')
+%         HarmonicsIND=1;
+%         PolarityIND=1;
+%     end
+    % find HarmonicsIND & PolarityIND (first non-empty element)
+    % NOTE: this assumes F2 exists!!!
+    for HarmonicsIND=1:2
+        for PolarityIND=1:2
+            if isstruct(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND})
+                break;
+            end
+        end
     end
 
     %%%% Find number of features to plot (tone, F1, T1, ...)
@@ -324,18 +361,18 @@ if ~loadBOOL
         end
         FeatINDs=FeatINDs(find(FeatINDs~=0));
 
-        loadBOOL2=0;
-        if exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
+        loadBOOL2=RecalcAll; %default to load CD if RecalcAll
+        if ~RecalcAll && exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
             loadBOOL2=input('Do you want to load the existing characteristic delays (0: no; [1]: yes)?? ');
             if isempty(loadBOOL2)
                 loadBOOL2=1;
             end
-            if loadBOOL2
-                disp(sprintf('Loading characteristic delays from ''%s''!!',SAVECALCSfilename))
-                thisPRINTyes=PRINTyes;
-                eval(['load ''' fullfile(unitdata_dir,SAVECALCSfilename) ''' NSCC_CDs_usec NSCC_peaks'])
-                PRINTyes=thisPRINTyes;
-            end
+        end
+        if loadBOOL2 && exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
+            disp(sprintf('Loading characteristic delays from ''%s''!!',SAVECALCSfilename))
+            thisPRINTyes=PRINTyes;
+            eval(['load ''' fullfile(unitdata_dir,SAVECALCSfilename) ''' NSCC_CDs_usec NSCC_peaks'])
+            PRINTyes=thisPRINTyes;
         end
 
         F0min=Inf;
@@ -762,16 +799,16 @@ if ~loadBOOL
                                     NSCCs_sps{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}* ...
                                         NSCCbinwidth_sec * ...
                                         NSCC_avgrates{ROWind,ATTind}{SCCind}{1} * ...
-                                        cell2mat(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
+                                        cell2mat(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(ATTind,NSCC_BFinds{SCCind}(1))) * ...
                                         NSCC_avgrates{ROWind,ATTind}{SCCind}{2} * ...
-                                        cell2mat(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
+                                        cell2mat(unit.EHvLTASS_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(ATTind,NSCC_BFinds{SCCind}(2)));
                                 catch
                                     NSCCs_sps{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}* ...
                                         NSCCbinwidth_sec * ...
                                         NSCC_avgrates{ROWind,ATTind}{SCCind}{1} * ...
-                                        cell2mat(unit.EHvN_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(1))) * ...
+                                        cell2mat(unit.EHvN_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(ATTind,NSCC_BFinds{SCCind}(1))) * ...
                                         NSCC_avgrates{ROWind,ATTind}{SCCind}{2} * ...
-                                        cell2mat(unit.EHvN_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(1,NSCC_BFinds{SCCind}(2)));
+                                        cell2mat(unit.EHvN_reBF_simFF.F2{HarmonicsIND,PolarityIND}.TimeFact(ATTind,NSCC_BFinds{SCCind}(2)));
                                 end
 
                                 % Determine Maximum of ALL plotted SCCs (i.e., post-Smoothing)
