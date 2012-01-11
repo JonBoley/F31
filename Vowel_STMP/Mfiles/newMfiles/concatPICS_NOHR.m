@@ -87,7 +87,9 @@ PIC=rmfield(PIC,'num');
 
 %% If Interleaved data, we need to know which condition to use
 if sum(strcmp(PIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','TrBFi','SACrlv'}))
-   PIC.CONDind=1+mod(min(setdiff(1:excludeLines{1}(end),excludeLines{1})),PIC.x.Stimuli.nstim); %min(setdiff(1:excludeLines{1}(end),excludeLines{1}));
+   PIC.CONDind = min(setdiff(1:excludeLines{1}(end),excludeLines{1}));
+   PIC.CONDind = mod(PIC.CONDind,PIC.x.Stimuli.nstim); %wrap to nstim
+   PIC.CONDind(~PIC.CONDind) = PIC.x.Stimuli.nstim; %mod=0 -> nstim
    % IF this is a TONE from EHrBFi, we need to change the TEMPLATE
    if strcmp(PIC.TEMPLATE,'EHrBFi')&strcmp(deblank(PIC.x.Stimuli.Used.Features_List{PIC.CONDind}),'TN')
       PIC.TEMPLATE='TrBFi';
