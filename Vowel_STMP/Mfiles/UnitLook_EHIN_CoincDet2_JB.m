@@ -614,8 +614,8 @@ if ~loadBOOL
                             len_mismatch = length(PIC.SynchRate_PERhist.HarmonicSynchs)-size(Synchs{ROWind,ATTind},2);
                             if len_mismatch>0
                                 % need to increase size of Synchs
-                                Synchs{ROWind,ATTind}=[Synchs{ROWind,ATTind}, NaN*ones(1,len_mismatch)];
-                                Phases{ROWind,ATTind}=[Phases{ROWind,ATTind}, NaN*ones(1,len_mismatch)];
+                                Synchs{ROWind,ATTind}=[Synchs{ROWind,ATTind}, NaN*ones(size(Synchs{ROWind,ATTind},1),len_mismatch)];
+                                Phases{ROWind,ATTind}=[Phases{ROWind,ATTind}, NaN*ones(size(Synchs{ROWind,ATTind},1),len_mismatch)];
                                 Synchs{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicSynchs;
                                 Synchs{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
                                 Phases{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicPhases;
