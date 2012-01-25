@@ -135,7 +135,7 @@ if ~RecalcAll && exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
     if loadBOOL
         disp(sprintf('Loading ''%s'' with all calculations already done!!',SAVECALCSfilename))
         thisPRINTyes=PRINTyes;
-        eval(['load ''' fullfile(unitdata_dir,SAVECALCSfilename) ''''])
+        eval(['load ''' fullfile(unitdata_dir,SAVECALCSfilename) ''' -regexp ^(?!data_dir_bak$).'])
         PRINTyes=thisPRINTyes;
     end
 end
