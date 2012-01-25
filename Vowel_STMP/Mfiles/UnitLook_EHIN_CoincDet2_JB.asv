@@ -135,7 +135,7 @@ if ~RecalcAll && exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
     if loadBOOL
         disp(sprintf('Loading ''%s'' with all calculations already done!!',SAVECALCSfilename))
         thisPRINTyes=PRINTyes;
-        eval(['load ''' fullfile(unitdata_dir,SAVECALCSfilename) ''''])
+        eval(['load ''' fullfile(unitdata_dir,SAVECALCSfilename) ''' -regexp ^(?!)'])
         PRINTyes=thisPRINTyes;
     end
 end
@@ -616,7 +616,7 @@ if ~loadBOOL
                                 % need to increase size of Synchs
                                 Synchs{ROWind,ATTind}=[Synchs{ROWind,ATTind}, NaN*ones(size(Synchs{ROWind,ATTind},1),len_mismatch)];
                                 Phases{ROWind,ATTind}=[Phases{ROWind,ATTind}, NaN*ones(size(Synchs{ROWind,ATTind},1),len_mismatch)];
-me                                Synchs{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicSynchs;
+                                Synchs{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicSynchs;
                                 Synchs{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
                                 Phases{ROWind,ATTind}(BFind,:)=PIC.SynchRate_PERhist.HarmonicPhases;
                                 Phases{ROWind,ATTind}(BFind,~PIC.SynchRate_PERhist.HarmonicRaySig)=NaN;
