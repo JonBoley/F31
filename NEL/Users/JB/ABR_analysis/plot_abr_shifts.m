@@ -1,7 +1,12 @@
 % plot_abr_shifts
-
-abr_shift_files = dir('C:\Research\MATLAB\Vowel_STMP\ExpData\*_abr_shift.mat');
-exclude = {'chin1103','chin1100'};
+switch lower(getenv('computername'))
+    case {'m4500'}
+        abr_data_dir = 'C:\Research\MATLAB\Vowel_STMP\ExpData\';
+    otherwise
+        abr_data_dir = 'C:\NEL\ExpData\';
+end
+abr_shift_files = dir([abr_data_dir '*_abr_shift.mat']);
+exclude = {'chin1103','chin1100'}; %ignore animals exposed at 117dB
 
 figure(123); hold on;
 colorr=['k';'r';'b';'m';'g';'k';'r';'b';'m';'g';'k';'r';'b';'m';'g'];
@@ -9,6 +14,7 @@ colorr=['k';'r';'b';'m';'g';'k';'r';'b';'m';'g';'k';'r';'b';'m';'g'];
 freqs_all=[];
 shift_db_all=[];
 
+cd(abr_data_dir);
 for i=1:length(abr_shift_files)
     load(abr_shift_files(i).name);
     plot(freqs,shift_db,['*-' colorr(i)]);

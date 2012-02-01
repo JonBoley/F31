@@ -3,8 +3,12 @@ function abrcomp(command_str)
 global abr_data_dir han_abrcomp dd colorr numfiles
 
 %
-
-abr_data_dir = 'C:\NEL\ExpData\'; % added by GE 04Mar2004.
+switch lower(getenv('computername'))
+    case {'m4500'}
+        abr_data_dir = 'C:\Research\MATLAB\Vowel_STMP\ExpData\';
+    otherwise
+        abr_data_dir = 'C:\NEL\ExpData\';
+end
 
 if nargin < 1
 	

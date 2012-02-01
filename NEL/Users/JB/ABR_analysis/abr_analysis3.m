@@ -8,8 +8,8 @@ global abr_FIG abr_Stimuli abr_root_dir abr_data_dir...
 
 
 host = lower(getenv('hostname'));
-abr_root_dir = 'C:\NEL\Users\MH\Matlab_ABR';  % added by GE 04Mar2004.
-abr_data_dir = 'C:\NEL\ExpData\'; % added by GE 04Mar2004.
+abr_root_dir = 'C:\Research\MATLAB\NEL\Users\JB\ABR_analysis';  % added by GE 04Mar2004.
+abr_data_dir = 'C:\Research\MATLAB\Vowel_STMP\ExpData\'; % added by GE 04Mar2004.
 
 
 get_noise
@@ -227,7 +227,7 @@ elseif strcmp(command_str,'process')
 			'FontSize',14,'horizontalalignment','left','VerticalAlignment','bottom')
 		set(han.abr_panel,'Box','on');
 	end;
-% 	zzz
+	zzz
 	set(han.peak_panel,'Box','on');
 	set(abr_FIG.handle, 'CurrentObject', abr_FIG.push.edit);
 

@@ -4,16 +4,25 @@ function abr_analysis2(command_str,parm_num)
 
 global abr_FIG abr_Stimuli abr_root_dir abr_data_dir abr3
 
+if (isunix)
+   [rc host] = dos('hostname');
+   host = lower(strtok(host,'.'));
+else
+   host = lower(getenv('hostname'));
+   if isempty(host)
+       host = lower(getenv('computername'));
+   end
+end
+host = host(~isspace(host));
 
-host = lower(getenv('hostname'));
-% switch (host)
-% case {'north-chamber'}
-abr_root_dir = 'C:\NEL\Users\MH\Matlab_ABR';  % added by GE 04Mar2004.
-abr_data_dir = 'C:\NEL\ExpData\'; % added by GE 04Mar2004.
-% case {'south-chamber'}
-% 	abr_root_dir = 'c:\Users\GE\Matlab_ABR';  % added by GE 04Mar2004.
-% 	abr_data_dir = 'c:\ExpData\'; % added by GE 04Mar2004.
-% end   
+switch (host)
+    case {'m4500'}
+        abr_root_dir = 'C:\Research\MATLAB\NEL\Users\JB\ABR_analysis';
+        abr_data_dir = 'C:\Research\MATLAB\Vowel_STMP\ExpData\';
+    otherwise
+        abr_root_dir = 'C:\NEL\Users\MH\Matlab_ABR';
+        abr_data_dir = 'C:\NEL\ExpData\';
+end
    
 if nargin < 1
 
