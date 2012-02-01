@@ -1,5 +1,10 @@
 %% plot all AN thresholds
-ExpDataDir = 'C:\NEL\ExpData\';
+switch lower(getenv('computername'))
+    case {'m4500'}
+        ExpDataDir = 'C:\Research\MATLAB\Vowel_STMP\ExpData';
+    otherwise
+        ExpDataDir = 'C:\NEL\ExpData\';
+end
 cd(ExpDataDir);
 
 % search for all AN experiments
@@ -163,3 +168,6 @@ figure(2), semilogx(f,audiogram,'bo-');
 xlim([min(f) max(f)]); ylim([-100 0]);
 set(gca,'XTick',f,'XTickLabel',f);
 title('Audiogram'); ylabel('dB HL'); xlabel('Frequency (kHz)');
+
+
+
