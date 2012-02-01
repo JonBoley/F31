@@ -3,8 +3,12 @@ function dp_analysis(command_str)
 global dp_data_dir han_dp z zanimal zdate
 
 %
-
-dp_data_dir = 'C:\NEL\ExpData\'; 
+switch lower(getenv('computername'))
+    case {'m4500'}
+        dp_data_dir = 'C:\Research\MATLAB\Vowel_STMP\ExpData\'; 
+    otherwise
+        dp_data_dir = 'C:\NEL\ExpData\'; 
+end
 
 if nargin < 1
 	
