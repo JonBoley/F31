@@ -11,7 +11,7 @@ end
 
 PlotAllExpThresholds;
 plot_abr_threshes;
-% AN results: [f;-audiogram]
+% AN results: [f;-audiogram] and [f;-audiogram2]
 % ABR results: [freqs_all'/1e3;nanmean(thresh_shift_all,2)']
 
 abr_thresh_shift_avg = nanmean(thresh_shift_all');
@@ -19,8 +19,10 @@ abr_thresh_shift_avg = nanmean(thresh_shift_all');
 
 figure, plot(0:100,'k:'); hold on;
 scatter(-audiogram(ia),abr_thresh_shift_avg(ib),50,f_khz);
+scatter(-audiogram2(ia),abr_thresh_shift_avg(ib),25,f_khz);
 hold off;
 MaxShift = max(max(-audiogram(ia)),max(abr_thresh_shift_avg(ib)));
+MaxShift = max(MaxShift,max(-audiogram(ia)));
 axis([0 MaxShift+10 0 MaxShift+10]);
 xlabel('AN Threshold'); ylabel('ABR Threshold');
 colorbar; colormap(jet(2*length(f_khz)));
@@ -30,8 +32,9 @@ figure, hold on;
 plot(freqs_all,-thresh_shift_all,'k*-'); 
 h_abr=plot(freqs_all,-nanmean(thresh_shift_all')','k-','LineWidth',3); 
 h_an=plot(f*1e3,audiogram,'go-','LineWidth',3);
+h_an2=plot(f*1e3,audiogram2,'go:','LineWidth',3);
 hold off;
-legend([h_abr;h_an],['ABR';'AN ']);
+legend([h_abr;h_an;h_an2],['ABR    ';'AN(avg)';'AN(min)']);
 title('ABR Threshold Shifts');
 xlabel('frequency (Hz)');
 ylabel('threshold shift (dB)');
