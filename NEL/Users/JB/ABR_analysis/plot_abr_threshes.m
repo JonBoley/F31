@@ -7,35 +7,39 @@ switch lower(getenv('computername'))
 end
 abr_files = dir([abr_data_dir 'chin*.mat']);
 
+excludeBeforeChin = 1104; %don't include chins before this guy
+
 % pick earliest as normal (& latest as impaired)
 normal_files={}; impaired_files={};
 for i=1:length(abr_files)
     Chin1 = str2num(abr_files(i).name(5:8));
-    Date1 = datenum(abr_files(i).name(end-12:end-4), 'ddmmmyyyy');
-    for j=i+1:length(abr_files)
-        Chin2 = str2num(abr_files(j).name(5:8));
-        Date2 = datenum(abr_files(j).name(end-12:end-4), 'ddmmmyyyy');
-        if Chin1==Chin2
-            if length(normal_files) && Chin1==str2num(normal_files{end}(5:8)) % already in normal_files
-                if Date2<datenum(normal_files{end}(end-12:end-4), 'ddmmmyyyy')
-                    % if earlier than normal, replace normal
-                    normal_files{end} = abr_files(j).name;
-                elseif Date2>datenum(impaired_files{end}(end-12:end-4), 'ddmmmyyyy')
-                    % if later than impaired, replace impaired
-                    impaired_files{end} = abr_files(j).name;
-                end
-            else % we have more than 2 files for this chin
-                if Date1<Date2
-                    normal_files{end+1} = abr_files(i).name;
-                    impaired_files{end+1} = abr_files(j).name;
-                else %Date2<=Date1
-                    normal_files{end+1} = abr_files(j).name;
-                    impaired_files{end+1} = abr_files(i).name;
-                end
-            end
-        end
-    end
-end
+    if Chin1 >= excludeBeforeChin
+        Date1 = datenum(abr_files(i).name(end-12:end-4), 'ddmmmyyyy');
+        for j=i+1:length(abr_files)
+            Chin2 = str2num(abr_files(j).name(5:8));
+            Date2 = datenum(abr_files(j).name(end-12:end-4), 'ddmmmyyyy');
+            if Chin1==Chin2
+                if length(normal_files)>0 & Chin1==str2num(normal_files{end}(5:8)) % already in normal_files
+                    if Date2<datenum(normal_files{end}(end-12:end-4), 'ddmmmyyyy')
+                        % if earlier than normal, replace normal
+                        normal_files{end} = abr_files(j).name;
+                    elseif Date2>datenum(impaired_files{end}(end-12:end-4), 'ddmmmyyyy')
+                        % if later than impaired, replace impaired
+                        impaired_files{end} = abr_files(j).name;
+                    end
+                else % we have more than 2 files for this chin
+                    if Date1<Date2
+                        normal_files{end+1} = abr_files(i).name;
+                        impaired_files{end+1} = abr_files(j).name;
+                    else %Date2<=Date1
+                        normal_files{end+1} = abr_files(j).name;
+                        impaired_files{end+1} = abr_files(i).name;
+                    end
+                end %if length(normal_files)>0
+            end %if Chin1==Chin2
+        end %for j=i+1:length(abr_files)
+    end %if Chin1 >= excludeBeforeChin
+end %for i=1:length(abr_files)
 
 figure(124); hold on;
 colors=['k';'r']; %normal, impaired
@@ -105,7 +109,7 @@ legend(h,{'normal','impaired'});
 
 figure(125), hold on;
 plot(freqs_all,thresh_shift_all,'k*-'); 
-plot(freqs_all,nanmean(thresh_shift_all,2),'k-','LineWidth',3); hold off;
+plot(freqs_all,nanmean(thresh_shift_all')','k-','LineWidth',3); hold off;
 title('ABR Threshold Shifts');
 xlabel('frequency (Hz)');
 ylabel('threshold shift (dB)');
