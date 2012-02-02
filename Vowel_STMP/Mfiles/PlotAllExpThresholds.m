@@ -122,8 +122,12 @@ for ExpNum=1:length(Experiments)
                     if ~isempty(localThreshes), AvgThresh(i-1)=min(AvgThresh(i-1),min(localThreshes)); end
                 end
                 if exist('hThresh','var')
-                    set(hThresh,'YDataSource','AvgThresh');
-                    refreshdata;
+                    try
+                        set(hThresh,'YDataSource','AvgThresh');
+                        refreshdata;
+                    catch % data linking doesn't work for older versions of Matlab
+                        set(hThresh,'YData',AvgThresh);
+                    end
                 else
                     figure(1), subplot(211), hold on;
                     hThresh = semilogx(ThirdOctaveskHz*2^(1/3),AvgThresh,'r','Linewidth',3); hold off;
@@ -145,7 +149,7 @@ set(gca,'YTick',[0:10:100]);
 set(gca,'XScale','log');
 set(gca,'XTick',[.1 1 10],'XTickLabel',[.1 1 10]);
 title('All Experiments');
-grid on
+grid off
 
 subplot(212), hold on;
 loglog(QlowM97(:,1),QlowM97(:,2),'k-');
@@ -157,7 +161,7 @@ ylim([.1 10]);
 % set(gca,'YTick',[0 20 40 60 80 100])
 set(gca,'XScale','log');
 set(gca,'XTick',[.1 1 10],'XTickLabel',[.1 1 10])
-grid on
+grid off
 
 
 % Calculate audiogram
