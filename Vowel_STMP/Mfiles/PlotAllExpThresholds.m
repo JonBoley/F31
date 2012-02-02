@@ -41,7 +41,13 @@ figure(1); clf;
 load normema;
 
 ThirdOctaveskHz = 0.2*2.^(0:1/3:6);
+MinThresh = NaN*ones(length(ThirdOctaveskHz),1);
 AvgThresh = NaN*ones(length(ThirdOctaveskHz),1);
+MinThresh_Normal = NaN*ones(length(ThirdOctaveskHz),1);
+AvgThresh_Normal = NaN*ones(length(ThirdOctaveskHz),1);
+
+AllThresh_Normal = []; % [Thrs_dbSPL BFs_kHz]
+AllThresh_Impaired = [];
 
 %%%%%%% Add lines from Kale and Heinz (2009) normal-hearing CHIN data
 QlowM97(:,1)=[.4 10]';  QhighM97(:,1)=QlowM97(:,1);
@@ -87,7 +93,17 @@ for ExpNum=1:length(Experiments)
             end %if ~isempty(TCpics)
         end %for ind = 1:NUMunits
 
+        % Normal
         if strfind(lower(Experiments(ExpNum).name),'norm')
+            AllThresh_Normal = [AllThresh_Normal; Thrs_dbSPL{ExpNum} BFs_kHz{ExpNum}];
+            
+            % Find avg normal threshold
+            for i=2:length(ThirdOctaveskHz)
+                localThreshes = AllThresh_Normal((AllThresh_Normal(:,2)>=ThirdOctaveskHz(i-1) & AllThresh_Normal(:,2)<ThirdOctaveskHz(i)),1);
+                if ~isempty(localThreshes), AvgThresh_Normal(i-1)=mean(localThreshes); end
+                if ~isempty(localThreshes), MinThresh_Normal(i-1)=min(localThreshes); end
+            end
+            
             figure(1), subplot(211), hold on;
             semilogx(BFs_kHz{ExpNum},Thrs_dbSPL{ExpNum},'k.','MarkerSize',3); hold off;
             xmin=0.03; xmax=10; ymin=-20; ymax=110;
@@ -96,6 +112,23 @@ for ExpNum=1:length(Experiments)
             loglog(BFs_kHz{ExpNum},Q10s{ExpNum},'k.','MarkerSize',3); hold off;
             xlim([xmin xmax]);
             ylim([.1 10]);
+            
+            if exist('hThresh3','var')
+                try
+                    set(hThresh3,'YDataSource','AvgThresh_Normal');
+                    set(hThresh4,'YDataSource','MinThresh_Normal');
+                    refreshdata;
+                catch % data linking doesn't work for older versions of Matlab
+                    set(hThresh3,'YData',AvgThresh_Normal);
+                    set(hThresh4,'YData',MinThresh_Normal);
+                end
+            else
+                figure(1), subplot(211), hold on;
+                hThresh3 = semilogx(ThirdOctaveskHz*2^(1/3),AvgThresh_Normal,'k:','Linewidth',2);
+                hThresh4 = semilogx(ThirdOctaveskHz*2^(1/3),MinThresh_Normal,'k','Linewidth',2); hold off;
+            end
+            
+        % Impaired
         elseif (~isempty(strfind(lower(Experiments(ExpNum).name),'impaired')) | ~isempty(strfind(lower(Experiments(ExpNum).name),'obn')))
             if strmatch(Experiments(ExpNum).name,SNHL_116) % if exposure was at 116dB SPL
                 marker = 'r.';
@@ -106,6 +139,8 @@ for ExpNum=1:length(Experiments)
             end
             
             if ~isempty(marker)
+                AllThresh_Impaired = [AllThresh_Impaired; Thrs_dbSPL{ExpNum} BFs_kHz{ExpNum}];
+                
                 figure(1), subplot(211), hold on;
                 semilogx(BFs_kHz{ExpNum},Thrs_dbSPL{ExpNum},marker); hold off;
                 xmin=0.03; xmax=10; ymin=-20; ymax=110;
@@ -118,10 +153,20 @@ for ExpNum=1:length(Experiments)
                 % Find threshold shift
                 for i=2:length(ThirdOctaveskHz)
                     %     BFs_kHz{ExpNum},Thrs_dbSPL{ExpNum}
-                    localThreshes = Thrs_dbSPL{ExpNum}(BFs_kHz{ExpNum}>=ThirdOctaveskHz(i-1) & BFs_kHz{ExpNum}<ThirdOctaveskHz(i));
-                    if ~isempty(localThreshes), AvgThresh(i-1)=min(AvgThresh(i-1),min(localThreshes)); end
+%                     localThreshes = Thrs_dbSPL{ExpNum}(BFs_kHz{ExpNum}>=ThirdOctaveskHz(i-1) & BFs_kHz{ExpNum}<ThirdOctaveskHz(i));
+                    localThreshes = AllThresh_Impaired((AllThresh_Impaired(:,2)>=ThirdOctaveskHz(i-1) & AllThresh_Impaired(:,2)<ThirdOctaveskHz(i)),1);
+                    if ~isempty(localThreshes), AvgThresh(i-1)=mean(localThreshes); end
+                    if ~isempty(localThreshes), MinThresh(i-1)=min(localThreshes); end
                 end
                 if exist('hThresh','var')
+                    try
+                        set(hThresh,'YDataSource','AvgThresh');
+                        set(hThresh2,'YDataSource','MinThresh');
+                        refreshdata;
+                    catch % data linking doesn't work for older versions of Matlab
+                        set(hThresh,'YData',AvgThresh);
+                        set(hThresh2,'YData',MinThresh);
+                    end
                     try
                         set(hThresh,'YDataSource','AvgThresh');
                         refreshdata;
@@ -130,7 +175,8 @@ for ExpNum=1:length(Experiments)
                     end
                 else
                     figure(1), subplot(211), hold on;
-                    hThresh = semilogx(ThirdOctaveskHz*2^(1/3),AvgThresh,'r','Linewidth',3); hold off;
+                    hThresh = semilogx(ThirdOctaveskHz*2^(1/3),AvgThresh,'r:','Linewidth',2);
+                    hThresh2 = semilogx(ThirdOctaveskHz*2^(1/3),MinThresh,'r','Linewidth',2); hold off;
                 end
             end %if ~isempty(marker)
         end % if normal, else impaired
@@ -166,9 +212,13 @@ grid off
 
 % Calculate audiogram
 f = [0.25 0.5 1 2 3 4 6]; %kHz
-audiogram = interp1(normt(1,:),normt(2,:),f) -...
+audiogram = interp1(ThirdOctaveskHz*2^(1/3),AvgThresh_Normal,f) -...
     interp1(ThirdOctaveskHz*2^(1/3),AvgThresh,f);
-figure(2), semilogx(f,audiogram,'bo-');
+audiogram2 = interp1(normt(1,:),normt(2,:),f) -...
+    interp1(ThirdOctaveskHz*2^(1/3),MinThresh,f);
+figure(2), semilogx(f,audiogram,'bo-'); hold on;
+semilogx(f,audiogram2,'bo:'); hold off;
+legend('Avg','Min');
 xlim([min(f) max(f)]); ylim([-100 0]);
 set(gca,'XTick',f,'XTickLabel',f);
 title('Audiogram'); ylabel('dB HL'); xlabel('Frequency (kHz)');
