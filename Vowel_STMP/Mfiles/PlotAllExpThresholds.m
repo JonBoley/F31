@@ -133,7 +133,7 @@ for ExpNum=1:length(Experiments)
             if strmatch(Experiments(ExpNum).name,SNHL_116) % if exposure was at 116dB SPL
                 marker = 'r.';
             elseif strmatch(Experiments(ExpNum).name,SNHL_117) % if exposure was at 117dB SPL
-                marker = 'r.';
+                marker = 'm.';
             else
                 marker = '';
             end
@@ -223,5 +223,6 @@ xlim([min(f) max(f)]); ylim([-100 0]);
 set(gca,'XTick',f,'XTickLabel',f);
 title('Audiogram'); ylabel('dB HL'); xlabel('Frequency (kHz)');
 
-
-
+Thresh_SPL_normal(1,:) = audiogram+interp1(ThirdOctaveskHz*2^(1/3),AvgThresh,f);
+Thresh_SPL_normal(2,:) = audiogram2+interp1(ThirdOctaveskHz*2^(1/3),MinThresh,f);
+Thresh_SPL_normal(3,:) = mean(Thresh_SPL_normal);
