@@ -4,7 +4,8 @@ function [UnitCF,UnitThresh,UnitQ10,...
     Nscc_CD_pos_failpoint,Nscc_CD_pos_fail_limit,...
     Nscc_CD_neg_failpoint,Nscc_CD_neg_fail_limit,...
     Nscc0_pos_failpoint,Nscc0_pos_fail_limit,...
-    Nscc0_neg_failpoint,Nscc0_neg_fail_limit...
+    Nscc0_neg_failpoint,Nscc0_neg_fail_limit,...
+    Rho_width,CD_slope,SNR...
     ]=UnitLook_EHIN_CoincDet2_JB(ExpDate,UnitName,RecalcAll)
 % File: UnitLook_EHIN_CoincDet2.m
 % updated: Jun 19, 2009 - from UnitLook_EHIN_CoincDet2_MH2.m (Reiri Sono)
@@ -983,29 +984,33 @@ if ~loadBOOL
 
                 % [[ JDB TO DO]] need to extract feature level for each OctDiff
 
-                % find CD at 0.25 octaves away from feature
-                %                 SMP_NSCC_CD_at_Oct{ROWind,ATTind} = max(abs(MyCD_interp(abs(Octaves_interp)<=0.25)));
+                % find CD (from -0.05 octaves to +0.05 octaves) relative to the feature
                 if exist('MyCD_interp')
-                    SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = max(MyCD_interp(Octaves_interp>=0.25));
+                    %SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = max(MyCD_interp(Octaves_interp>=0.25));
+                     SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = ...
+                         abs(max(MyCD_interp(Octaves_interp<=-0.05)))+...
+                         abs(max(MyCD_interp(Octaves_interp>=0.05)));
                 else
                     SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = [];
                     Octaves_interp = NaN;
                     MyCD_interp = NaN;
                 end
                 if isempty(SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind})
-                    warning(sprintf('0.25 Octaves not found.  Using %1.3f octaves.',max(Octaves_interp)));
-                    SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = abs(max(MyCD_interp(Octaves_interp==min(Octaves_interp))));
+                    error('Could not find any CD values near feature');
+%                     warning(sprintf('0.25 Octaves not found.  Using %1.3f octaves.',max(Octaves_interp)));
+%                     SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = abs(max(MyCD_interp(Octaves_interp==min(Octaves_interp))));
                 end
-                SMP_NSCC_CD_at_Oct_neg{ROWind,ATTind} = abs(max(MyCD_interp(Octaves_interp<=-0.25)));
+                %SMP_NSCC_CD_at_Oct_neg{ROWind,ATTind} = abs(max(MyCD_interp(Octaves_interp<=-0.25)));
+                SMP_NSCC_CD_at_Oct_neg{ROWind,ATTind} = SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind};
                 if isempty(SMP_NSCC_CD_at_Oct_neg{ROWind,ATTind})
-                    warning(sprintf('-0.25 Octaves not found.  Using %1.3f octaves.',min(Octaves_interp)));
-                    SMP_NSCC_CD_at_Oct_neg{ROWind,ATTind} = abs(max(MyCD_interp(Octaves_interp==min(Octaves_interp))));
+                    error('Could not find any CD values near feature');
+%                     warning(sprintf('-0.25 Octaves not found.  Using %1.3f octaves.',min(Octaves_interp)));
+%                     SMP_NSCC_CD_at_Oct_neg{ROWind,ATTind} = abs(max(MyCD_interp(Octaves_interp==min(Octaves_interp))));
                 end
                 SMP_NSCC_CD_at_Oct_Feat_Lev{ROWind,ATTind} = FeatureLevels_dB(FeatIND);
-                % find oct diff at which NSCC_Rho=0.6
-                %                 SMP_NSCC_Oct_at_Rho{ROWind,ATTind} = max(abs(Octaves_interp(MyNSCC_Rho_interp>=0.6)));
-                SMP_NSCC_Oct_at_Rho_pos{ROWind,ATTind} = max(Octaves_interp(Octaves_interp>0 & MyNSCC_Rho_interp>=0.6));
-                SMP_NSCC_Oct_at_Rho_neg{ROWind,ATTind} = max(Octaves_interp(Octaves_interp<0 & MyNSCC_Rho_interp<=0.6));
+                % find oct diff at which NSCC_Rho=0.8
+                SMP_NSCC_Oct_at_Rho_pos{ROWind,ATTind} = max(Octaves_interp(Octaves_interp>0 & MyNSCC_Rho_interp>=0.8));
+                SMP_NSCC_Oct_at_Rho_neg{ROWind,ATTind} = max(Octaves_interp(Octaves_interp<0 & MyNSCC_Rho_interp<=0.8));
                 SMP_NSCC_Oct_at_Rho_Feat_Lev{ROWind,ATTind} = FeatureLevels_dB(FeatIND);
                 if isempty(SMP_NSCC_Oct_at_Rho_pos{ROWind,ATTind})
                     SMP_NSCC_Oct_at_Rho_pos{ROWind,ATTind} = max(Octaves);
@@ -2370,6 +2375,13 @@ if doSCC && size(SMP_NSCC_CD_at_Oct_Feat_Lev,1)>1 %% [[JDB TO DO]] fix x,y (both
             SensitivityIntercepts_nsccPEAK{1}(ATTind)=Cfit(2);
         end
     end
+    
+    
+    %%%%%%%%%%%%%
+    % outputs: Rho_width,CD_slope,SNR
+    SNR = Nattens_dB-Nattens_dB(yTEMP.EqualSPL_index);
+    Rho_width = SMP_NSCC_Oct_at_Rho_pos;
+    CD_slope = SMP_NSCC_CD_at_Oct_pos;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
