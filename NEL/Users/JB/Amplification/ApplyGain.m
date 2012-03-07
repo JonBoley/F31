@@ -1,18 +1,21 @@
-function output=ApplyGain(input,Fs,calib,atten,audiogram,freqs_Hz,strategy)
-% output=ApplyGain(input,Fs,SPLatfullScale,audiogram,freqs_Hz,strategy)
-% strategy = 'linear' or 'nonlinear_quiet' or 'nonlinear_noise'
+function output=ApplyGain(input,Fs,MaxSPL,atten,audiogram,freqs_Hz,strategy)
+% output=ApplyGain(input,Fs,MaxSPL,atten,audiogram,freqs_Hz,strategy)
+% strategy = 1 or 'linear' or
+%         or 2 or 'nonlinear_quiet' or
+%         or 3 or 'nonlinear_noise'
 
 plotYes=0;
 if nargin<1  % if no input, just test gain settings
     Fs=22e3;
     %input = 0.1*sin(2*pi*997*(0:1/Fs:1)); %1sec @ 997Hz
     input = randn(5*Fs,1); input=input/max(abs(input)); %white noise
-    calib = [120 120]; % SPLs
-    calib_freqs = [100 10e3]; % Freqs_Hz
+%     calib = [120 120]; % SPLs
+%     calib_freqs = [100 10e3]; % Freqs_Hz
+    MaxSPL = 105;
     atten = 50;
     audiogram = [16   18   20    9    9]; % based on avg animal data (500OBN exposure)
     freqs_Hz = [500,1000,2000,4000,6000];
-    strategy = 'nonlinear_quiet';
+    strategy = 2; %'nonlinear_quiet';
     plotYes=1;
 end
 
@@ -23,7 +26,7 @@ dBLoss = abs(audiogram);
 dBLoss = interp1(freqs_Hz,dBLoss,freqs_Hz_std,'nearest','extrap');
 
 switch strategy
-    case 'linear'
+    case {1,'linear'}
         % NAL equations
         % frequency shaping (250,500,1000,2000,3000,4000,6000Hz)
         k_NAL = [-17 -8 1 -1 -2 -2 -2]; % dB
@@ -35,11 +38,11 @@ switch strategy
 
         output = FIRgain(input,NAL_IG,freqs_Hz_std,Fs);
 
-    case {'nonlinear_quiet','nonlinear_noise'}
+    case {2,'nonlinear_quiet',3,'nonlinear_noise'}
         InputRMS = norm(input)/sqrt(length(input));
 
         % Estimate max SPL (only consider 100-4000Hz)
-        MaxSPL = mean(calib(calib_freqs>=100 & calib_freqs<=4000));
+%         MaxSPL = mean(calib(calib_freqs>=100 & calib_freqs<=4000));
 
         % InputSPL = (maxSPL w/ atten) + (rms re fullscale tone)
         InputSPL = (MaxSPL-atten) + 20*log10(InputRMS/(1/sqrt(2)));
@@ -55,8 +58,8 @@ switch strategy
             %  in_noise_band1,in_noise_band2]
             [Gain, Thresh, Ratio, TargetREAR_60dBSPL] = readDSLfile('ChinchillaDSLtargets.csv');
             switch strategy
-                case 'nonlinear_quiet', indx=1;
-                case 'nonlinear_noise', indx=2;
+                case {2,'nonlinear_quiet'}, indx=1;
+                case {3,'nonlinear_noise'}, indx=2;
             end
 
             % Initialize gains based on compression parameters
@@ -91,7 +94,8 @@ switch strategy
         end
 
     otherwise
-        error('I don''t know what strategy you want to use. (strategy = ''linear'' or ''nonlinear_quiet'' or ''nonlinear_noise'')');
+        % No amplification
+        output = input;
 end
 
 if plotYes
