@@ -59,7 +59,7 @@ for i=1:3
             % Get DSL Compression parameters
             % [in_quiet_band1,in_quiet_band2;
             %  in_noise_band1,in_noise_band2]
-            [Gain, Thresh, Ratio, TargetREAR_60dBSPL] = readDSLfile('..\Amplification\ChinchillaDSLtargets.csv');
+            [Gain, Thresh, Ratio, TargetREAR_60dBSPL] = readDSLfile('C:\NEL\Users\JB\Amplification\ChinchillaDSLtargets.csv');
             switch strategy
             case {2,'nonlinear_quiet'}, indx=1;
             case {3,'nonlinear_noise'}, indx=2;
@@ -124,7 +124,6 @@ if plotYes
     legend('in','out');
 end
 
-end % function
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -197,7 +196,6 @@ CR_out = [CR(1,indices(1)),CR(1,indices(end));...
 Target_out = [TargetAvg(1,indices(1)),TargetAvg(1,indices(end));...
         TargetAvg(2,indices(1)),TargetAvg(2,indices(end))];
 
-end %function
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -229,5 +227,4 @@ end
 if ~isColMatrix
     spectrum_smoothed=spectrum_smoothed';
 end
-end %function
 

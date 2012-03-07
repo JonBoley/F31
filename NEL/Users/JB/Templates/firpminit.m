@@ -198,7 +198,7 @@ end
 %
 % NOTE! The frf needs to see normalized frequencies in the range
 % [0,1].
-[des,wt] = frf(order, ff, grid, wtx, frf_params{:}); 
+[des,wt] = firpmfrf(order, ff, grid, wtx, frf_params{:}); 
 
 %--------------------------------------------------------------------------
 function grid = firpmgrid(nfilt,lgrid,ff,neg,nodd)

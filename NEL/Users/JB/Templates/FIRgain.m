@@ -10,4 +10,4 @@ a=[a(1:end-1) a(end-1) a(end) a(end) 0];
 b = firpm(32,f,a);
 
 out=filter(b,1,in);
-end %function
+
