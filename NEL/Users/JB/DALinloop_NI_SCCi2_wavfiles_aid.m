@@ -341,25 +341,25 @@ if static_bi.Used.HearingAid_List(ind)
     % 1) Calculate hearing aid amplification
     audiogram = [16   18   20    9    9]; % based on avg animal data (500OBN exposure)
     freqs_Hz = [500,1000,2000,4000,6000];
-    gainStruct = calcgain(input,ur_Hz,...
+    gainStruct = calcgain(input,static_bi.BASELINE.Fs_Hz,...
         static_bi.max_dBSPL(ind),static_bi.attens(min(ind,end)),...
         audiogram,freqs_Hz,static_bi.Used.HearingAid_List(ind));
     
     % 2) Apply amplification to signal & noise separately
     MaxLevel0 = max(abs(Chan0data));
     MaxLevel1 = max(abs(Chan1data));
-    fc = 500*2^(0.5*log2(1700/500));
-%     fc = 500*2^(0.5*log2(1700/500)) * ur_Hz/???; % cross-over frequency (between F1 & F2)
+%     freqShift = static_bi.updateRate_Hz(ind)/static_bi.BASELINE.Fs_Hz;
+    fc = 500*2^(0.5*log2(1700/500)); % cross-over frequency (between F1 & F2)
     switch static_bi.Used.HearingAid_List(ind)
     case 1 % linear
-        Chan0data = FIRgain(Chan0data,gainStruct.linear.gain_dB,gainStruct.linear.f_Hz,ur_Hz);
-        Chan1data = FIRgain(Chan1data,gainStruct.linear.gain_dB,gainStruct.linear.f_Hz,ur_Hz);
+        Chan0data = FIRgain(Chan0data,gainStruct.linear.gain_dB,gainStruct.linear.f_Hz,static_bi.BASELINE.Fs_Hz);
+        Chan1data = FIRgain(Chan1data,gainStruct.linear.gain_dB,gainStruct.linear.f_Hz,static_bi.BASELINE.Fs_Hz);
     case 2 % nonlinear (quiet)
-        Chan0data = TwoBandGain(Chan0data,fc,ur_Hz,gainStruct.nonlinear.quiet.gains);
-        Chan1data = TwoBandGain(Chan1data,fc,ur_Hz,gainStruct.nonlinear.quiet.gains);
+        Chan0data = TwoBandGain(Chan0data,fc,static_bi.BASELINE.Fs_Hz,gainStruct.nonlinear.quiet.gains);
+        Chan1data = TwoBandGain(Chan1data,fc,static_bi.BASELINE.Fs_Hz,gainStruct.nonlinear.quiet.gains);
     case 3 % nonlinear (noise)
-        Chan0data = TwoBandGain(Chan0data,fc,ur_Hz,gainStruct.nonlinear.noise.gains);
-        Chan1data = TwoBandGain(Chan1data,fc,ur_Hz,gainStruct.nonlinear.noise.gains);
+        Chan0data = TwoBandGain(Chan0data,fc,static_bi.BASELINE.Fs_Hz,gainStruct.nonlinear.noise.gains);
+        Chan1data = TwoBandGain(Chan1data,fc,static_bi.BASELINE.Fs_Hz,gainStruct.nonlinear.noise.gains);
     otherwise
         % no amplification
     end
