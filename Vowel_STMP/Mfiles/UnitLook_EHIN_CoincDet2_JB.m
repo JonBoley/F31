@@ -5,7 +5,7 @@ function [UnitCF,UnitThresh,UnitQ10,...
     Nscc_CD_neg_failpoint,Nscc_CD_neg_fail_limit,...
     Nscc0_pos_failpoint,Nscc0_pos_fail_limit,...
     Nscc0_neg_failpoint,Nscc0_neg_fail_limit,...
-    Rho_width,CD_slope,SNR...
+    Rho_width,CD_slope,SNR,SyncValues,FeatureFreqs...
     ]=UnitLook_EHIN_CoincDet2_JB(ExpDate,UnitName,RecalcAll)
 % File: UnitLook_EHIN_CoincDet2.m
 % updated: Jun 19, 2009 - from UnitLook_EHIN_CoincDet2_MH2.m (Reiri Sono)
@@ -23,6 +23,8 @@ function [UnitCF,UnitThresh,UnitQ10,...
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 close all
+
+loadBOOL=[1]; % if empty, ask... otherwise, use this value
 
 % PRINTyes=input('Do you want to print figures automatically ([0]: no; 1: yes)?? ');
 % if isempty(PRINTyes)
@@ -126,9 +128,11 @@ UnitNum=str2num(UnitName(strfind(UnitName,'.')+1:end));
 
 % LOAD CALCS if available to speed up figure design
 SAVECALCSfilename=sprintf('UnitLook_EHIN.%d.%02d.mat',TrackNum,UnitNum);
-loadBOOL=0;
+
 if ~RecalcAll && exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
-    loadBOOL=input('Do you want to load the existing calculations for plotting (0: no; [1]: yes)?? ');
+    if isempty(loadBOOL)
+        loadBOOL=input('Do you want to load the existing calculations for plotting (0: no; [1]: yes)?? ');
+    end
     % 	loadBOOL=1;
     if isempty(loadBOOL)
         loadBOOL=1;
@@ -139,6 +143,8 @@ if ~RecalcAll && exist(fullfile(unitdata_dir,SAVECALCSfilename),'file')
         eval(['load ''' fullfile(unitdata_dir,SAVECALCSfilename) ''' -regexp ^(?!data_dir_bak$|ROOT_dir$).'])
         PRINTyes=thisPRINTyes;
     end
+else
+    loadBOOL=0;
 end
 
 if ~loadBOOL
@@ -2382,6 +2388,10 @@ if doSCC && size(SMP_NSCC_CD_at_Oct_Feat_Lev,1)>1 %% [[JDB TO DO]] fix x,y (both
     SNR = Nattens_dB-Nattens_dB(yTEMP.EqualSPL_index);
     Rho_width = SMP_NSCC_Oct_at_Rho_pos;
     CD_slope = SMP_NSCC_CD_at_Oct_pos;
+    
+    % Normalize CD_slope, from (usec/0.1oct) to (CF_cycles/octave)
+    CF_cycle_usec = 1e6/(unit.TC{1}.book_BF_kHz*1e3);
+    CD_slope = CF_cycle_usec./cell2mat(CD_slope)*10;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3557,11 +3567,15 @@ if 1
                     PLOThand=eval(['h' num2str(PLOTnum)]);
 
                     %%%%% plot synch re each harmonic
-                    scalefactor=100;
                     [xdim,ydim]=size(Synchs{ROWind,ATTind});
-                    scatter(yTEMP.FeatureFreqs_Hz{ROWind}(1)/1e3*reshape(repmat(1:ydim,xdim,1),1,xdim*ydim),...
-                        BFs_kHz{ROWind,ATTind}(repmat(1:xdim,1,ydim)),...
-                        scalefactor*reshape(Synchs{ROWind,ATTind},1,xdim*ydim),'filled');
+                    SyncValues{ROWind,ATTind} = [yTEMP.FeatureFreqs_Hz{ROWind}(1)/1e3*reshape(repmat(1:ydim,xdim,1),1,xdim*ydim);...
+                        BFs_kHz{ROWind,ATTind}(repmat(1:xdim,1,ydim));...
+                        reshape(Synchs{ROWind,ATTind},1,xdim*ydim)];
+                    
+                    scalefactor=100;
+                    scatter(SyncValues{ROWind}(1,:),...
+                        SyncValues{ROWind}(2,:),...
+                        scalefactor*SyncValues{ROWind}(3,:),'filled');
 
                     XLIMITS_synchs = YLIMITS;%[1 20];
                     xlim(XLIMITS_synchs)
@@ -3577,6 +3591,7 @@ if 1
                         xlabel('Vowel Harmonics (kHz)');
                     end
 
+                    FeatureFreqs{ROWind,ATTind} = yTEMP.FeatureFreqs_Hz{ATTind}/1e3;
                     % Plot lines at all features
                     hold on
                     for FeatINDPlot=find(~strcmp(FeaturesText,'TN'))
