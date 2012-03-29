@@ -144,11 +144,19 @@ colors = {'k','k','k','k','k','k',...
 %% The loop
 RecalcAll = 0;  % if enabled, this automatically recalculates everything,
                 % but loads previous characteristic delays
-for i=1:length(unitNums)
-    date = dates{i};
-    disp(sprintf('%d of %d) [%s] Calculating unit %1.2f...',i,length(unitNums),date,unitNums{i}));
+LoadMAT = 1; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
 
-    % Use this for SNR conditions:
+if LoadMAT
+    [FileName,PathName,FilterIndex] = uigetfile('*.mat','Pick a file',...
+        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_032912.mat');
+    if ~FileName, LoadMAT=0; end
+end
+if ~LoadMAT
+    for i=1:length(unitNums)
+        date = dates{i};
+        disp(sprintf('%d of %d) [%s] Calculating unit %1.2f...',i,length(unitNums),date,unitNums{i}));
+
+        % Use this for SNR conditions:
         [UnitCF(i),UnitThresh(i),UnitQ10(i),...
             Rate_failpoint(i),Rate_fail_limit(i),...
             ALSR_failpoint(i),ALSR_fail_limit(i),...
@@ -158,19 +166,72 @@ for i=1:length(unitNums)
             Nscc0_neg_failpoint(i),Nscc0_neg_fail_limit(i),...
             Rho_width{i},CD_slope{i},CDatHalfOct{i},SNR{i},...
             SyncValues{i},FeatureFreqs{i}]=...
-    UnitLook_EHIN_CoincDet2_JB(date,num2str(unitNums{i}),RecalcAll);
+            UnitLook_EHIN_CoincDet2_JB(date,num2str(unitNums{i}),RecalcAll);
 
-    % Use this for level conditions:
-    %     [UnitCF(i),UnitThresh(i),UnitQ10(i)]=...
-    %         UnitLook_EH_CoincDet2_JB(num2str(unitNums{i}));
+        % Use this for level conditions:
+        %     [UnitCF(i),UnitThresh(i),UnitQ10(i)]=...
+        %         UnitLook_EH_CoincDet2_JB(num2str(unitNums{i}));
 
-%     if ~RecalcAll, pause; end
-    close all; home;
+        %     if ~RecalcAll, pause; end
+        close all; home;
+    end
 end
 
 
 if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
-    
+    figure;
+    FeatureNums = [1 3]; %F1,F2
+    for i=1:length(CDatHalfOct) % for each unit
+        plotNum=0;
+        for FeatureNum=FeatureNums % sync to which feature?
+            for j=1:length(SNR{i})
+                plotNum=plotNum+1;
+                subplot(length(FeatureNums),length(SNR{i}),plotNum), hold on;
+                switch j % find indx_snr
+                    case 1
+                        indx_snr = find(SNR{i}==max(SNR{i}));
+                    case 2
+                        indx_snr = find(SNR{i}==0);
+                    case 3
+                        indx_snr = find(SNR{i}~=max(SNR{i}) & SNR{i}~=0);
+                end
+                
+                % convert from us to CF cycles
+                tempCD = CDatHalfOct{i}{FeatureNum,indx_snr};
+                CF_cycle_usec = 1e6/(UnitCF(i)*1e3);
+                tempCD = tempCD./CF_cycle_usec;
+                
+                h1=semilogx(UnitCF(i),tempCD,[colors{i},'.']);
+                set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
+                xlim([0.1 10]); ylim([0 10]);
+                
+                if j==1 % apply ylabels
+                    switch FeatureNum
+                        case 1
+                            ylabel(sprintf('CD (CF cycles)\n[0.5 oct re F1]'));
+                        case 3
+                            ylabel(sprintf('CD (CF cycles)\n[0.5 oct re F2]'));
+                    end
+                end
+                switch FeatureNum % apply xlabels & titles
+                    case FeatureNums(1)
+                        switch j
+                            case 1
+                                title('In Quiet');
+                            case 2
+                                title('Equal SPL');
+                            case 3
+                                title('Equal SL');
+%                                 legend([h1 h2 h3 h4],'F1 @ CF','T1 @ CF','F2 @ CF','T2 @ CF');
+%                                 legend([h1 h3],'F1 @ CF','F2 @ CF');
+%                                 legend([h2 h4],'T1 @ CF','T2 @ CF');
+                        end
+                    case FeatureNums(end)
+                        xlabel('CF (kHz)');
+                end %switch FeatureNum
+            end
+        end 
+    end
 end
 
 

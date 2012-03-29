@@ -2396,7 +2396,7 @@ if doSCC && size(SMP_NSCC_CD_at_Oct_Feat_Lev,1)>1 %% [[JDB TO DO]] fix x,y (both
     
     % Normalize CD_slope, from (usec/0.1oct) to (CF_cycles/octave)
     CF_cycle_usec = 1e6/(unit.TC{1}.book_BF_kHz*1e3);
-    CD_slope = CF_cycle_usec./cell2mat(CD_slope)*10;
+    CD_slope = cell2mat(CD_slope)./CF_cycle_usec*10;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
