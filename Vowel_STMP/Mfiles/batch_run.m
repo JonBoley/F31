@@ -148,8 +148,14 @@ LoadMAT = 1; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
 
 if LoadMAT
     [FileName,PathName,FilterIndex] = uigetfile('*.mat','Pick a file',...
-        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_032912.mat');
-    if ~FileName, LoadMAT=0; end
+        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_040112.mat');
+    if FileName
+        LoadMATbackup = LoadMAT;
+        load(fullfile(PathName,FileName),'-regexp','[^h1]');
+        LoadMAT = LoadMATbackup;
+    else
+        LoadMAT=0;
+    end
 end
 if ~LoadMAT
     for i=1:length(unitNums)
@@ -181,6 +187,16 @@ end
 if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
     figure;
     FeatureNums = [1 3]; %F1,F2
+    
+    arrayCDatHalfOct.nh = cell(length(FeatureNums),length(SNR{1})); %normal
+    arrayCDatHalfOct.snhl = cell(length(FeatureNums),length(SNR{1})); %SNHL
+    for i=1:length(FeatureNums)
+        for j=1:length(SNR{1})
+            arrayCDatHalfOct.nh{i,j} = NaN*ones(length(CDatHalfOct),2);
+            arrayCDatHalfOct.snhl{i,j} = NaN*ones(length(CDatHalfOct),2);
+        end
+    end
+    
     for i=1:length(CDatHalfOct) % for each unit
         plotNum=0;
         for FeatureNum=FeatureNums % sync to which feature?
@@ -201,9 +217,75 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 CF_cycle_usec = 1e6/(UnitCF(i)*1e3);
                 tempCD = tempCD./CF_cycle_usec;
                 
-                h1=semilogx(UnitCF(i),tempCD,[colors{i},'.']);
+                
+                switch colors{i}
+                    case {'k'} % normal
+                        arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(i,:) =...
+                            [UnitCF(i), tempCD];
+                    case {'r'} % impaired
+                        arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(i,:) =...
+                            [UnitCF(i), tempCD];
+                end
+                
+                if exist('h1'), cla(h1); cla(h2); end
+                h1=semilogx(arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
+                    arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,2),'k.');
+                h2=semilogx(arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
+                    arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(:,2),'r.');
+                
                 set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
                 xlim([0.1 10]); ylim([0 10]);
+                
+                if i==1
+                    h_text(plotNum)=text(1,9,'[empty]');
+                    set(h_text(plotNum),'HandleVisibility','off');
+                end
+                
+                % smooth the data
+                smoothOct = 0.7; % number of octaves to smooth over
+                xData = arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,1);
+                yData = arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,2);
+                indexNaN = isnan(xData); xData = xData(~indexNaN); yData = yData(~indexNaN);
+                indexNaN = isnan(yData); xData = xData(~indexNaN); yData = yData(~indexNaN);
+                [xData,IX]=unique(xData); yData=yData(IX); %warning: this throws away duplicate CFs
+                if length(xData)>2
+                    clear xData_smoothed yData_smoothed;
+                    xData_smoothed = 100e-3*2.^(0:smoothOct/2:5.5); yData_smoothed=NaN*ones(size(xData_smoothed));
+                    for q=1:length(xData_smoothed)
+                        temp_ind = xData<=(xData_smoothed(q)*2^(smoothOct/2)) & xData>=(xData_smoothed(q)*2^(-smoothOct/2));
+                        distance_oct = abs(log2(xData(temp_ind)/xData_smoothed(q)));
+                        triangular_weights=-(abs(distance_oct)-(smoothOct/2))/(smoothOct/2);
+                        yData_smoothed(q) = median(yData(temp_ind));
+                    end
+                    semilogx(xData_smoothed,yData_smoothed,'k');
+                    
+%                     cfun1 = fit(xData,yData,'linearinterp');
+%                     plot(cfun1,'k'); drawnow;
+                end
+                xData2 = arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(:,1);
+                yData2 = arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(:,2);
+                indexNaN = isnan(xData2); xData2 = xData2(~indexNaN); yData2 = yData2(~indexNaN);
+                indexNaN = isnan(yData2); xData2 = xData2(~indexNaN); yData2 = yData2(~indexNaN);
+                [xData2,IX]=unique(xData2); yData2=yData2(IX); %warning: this throws away duplicate CFs
+                if length(xData2)>2
+                    clear xData2_smoothed yData2_smoothed;
+                    xData2_smoothed = 100e-3*2.^(0:smoothOct/2:5.5); yData2_smoothed=NaN*ones(size(xData2_smoothed));
+                    for q=1:length(xData2_smoothed)
+                        temp_ind = xData2<=(xData2_smoothed(q)*2^(smoothOct/2)) & xData2>=(xData2_smoothed(q)*2^(-smoothOct/2));
+                        distance_oct = abs(log2(xData2(temp_ind)/xData2_smoothed(q)));
+                        triangular_weights=-(abs(distance_oct)-(smoothOct/2))/(smoothOct/2);
+                        yData2_smoothed(q) = median(yData2(temp_ind));
+                    end
+                    semilogx(xData2_smoothed,yData2_smoothed,'r');
+                    
+                    deltaCD = yData2_smoothed-yData_smoothed;
+                    set(h_text(plotNum),'String',['\DeltaCD=' sprintf('%1.1f cycles',mean(deltaCD(~isnan(deltaCD))))]);
+                    set(h_text(plotNum),'HorizontalAlignment','center');
+
+%                     cfun2 = fit(xData,yData,'linearinterp');
+%                     plot(cfun2,'r'); drawnow;
+                end
+                
                 
                 if j==1 % apply ylabels
                     switch FeatureNum
@@ -238,6 +320,15 @@ end
 
 if exist('SyncValues') % plot SyncValues as a function of CF & noise level
     % SyncValues{featureNum,snrNum} = [FeatureFreqs;BFs;Synchs];
+    array_syncPlotValsF1.nh = cell(length(FeatureNums),length(SNR{1}));
+    array_syncPlotValsT1.nh = cell(length(FeatureNums),length(SNR{1}));
+    array_syncPlotValsF2.nh = cell(length(FeatureNums),length(SNR{1}));
+    array_syncPlotValsT2.nh = cell(length(FeatureNums),length(SNR{1}));
+    array_syncPlotValsF1.snhl = cell(length(FeatureNums),length(SNR{1}));
+    array_syncPlotValsT1.snhl = cell(length(FeatureNums),length(SNR{1}));
+    array_syncPlotValsF2.snhl = cell(length(FeatureNums),length(SNR{1}));
+    array_syncPlotValsT2.snhl = cell(length(FeatureNums),length(SNR{1}));
+    
     figure; 
     FeatureNums=[1 3 5]; %F0,F1,F2
     for i=1:length(SyncValues) % for each unit
@@ -292,6 +383,34 @@ if exist('SyncValues') % plot SyncValues as a function of CF & noise level
                 indxCF_t1 = interp1(syncPlotCFsT1,1:length(syncPlotCFsT1),UnitCF(i),'nearest','extrap');
                 indxCF_f2 = interp1(syncPlotCFsF2,1:length(syncPlotCFsF2),UnitCF(i),'nearest','extrap');
                 indxCF_t2 = interp1(syncPlotCFsT2,1:length(syncPlotCFsT2),UnitCF(i),'nearest','extrap');
+                
+                switch colors{i}
+                    case 'k'
+                        array_syncPlotValsF1.nh{find(FeatureNum==FeatureNums),j}(i) = syncPlotValsF1(indxCF_f1);
+                        array_syncPlotValsT1.nh{find(FeatureNum==FeatureNums),j}(i) = syncPlotValsT1(indxCF_t1);
+                        array_syncPlotValsF2.nh{find(FeatureNum==FeatureNums),j}(i) = syncPlotValsF2(indxCF_f2);
+                        array_syncPlotValsT2.nh{find(FeatureNum==FeatureNums),j}(i) = syncPlotValsT2(indxCF_t2);
+                        
+                        array_syncPlotValsF1.snhl{find(FeatureNum==FeatureNums),j}(i) = NaN;
+                        array_syncPlotValsT1.snhl{find(FeatureNum==FeatureNums),j}(i) = NaN;
+                        array_syncPlotValsF2.snhl{find(FeatureNum==FeatureNums),j}(i) = NaN;
+                        array_syncPlotValsT2.snhl{find(FeatureNum==FeatureNums),j}(i) = NaN;
+                    otherwise
+                        array_syncPlotValsF1.nh{find(FeatureNum==FeatureNums),j}(i) = NaN;
+                        array_syncPlotValsT1.nh{find(FeatureNum==FeatureNums),j}(i) = NaN;
+                        array_syncPlotValsF2.nh{find(FeatureNum==FeatureNums),j}(i) = NaN;
+                        array_syncPlotValsT2.nh{find(FeatureNum==FeatureNums),j}(i) = NaN;
+                        
+                        array_syncPlotValsF1.snhl{find(FeatureNum==FeatureNums),j}(i) = syncPlotValsF1(indxCF_f1);
+                        array_syncPlotValsT1.snhl{find(FeatureNum==FeatureNums),j}(i) = syncPlotValsT1(indxCF_t1);
+                        array_syncPlotValsF2.snhl{find(FeatureNum==FeatureNums),j}(i) = syncPlotValsF2(indxCF_f2);
+                        array_syncPlotValsT2.snhl{find(FeatureNum==FeatureNums),j}(i) = syncPlotValsT2(indxCF_t2);
+                end
+                array_syncPlotValsF1.CFs(i) = UnitCF(i);
+                array_syncPlotValsT1.CFs(i) = UnitCF(i);
+                array_syncPlotValsF2.CFs(i) = UnitCF(i);
+                array_syncPlotValsT2.CFs(i) = UnitCF(i);
+
                 
                 hold on;
                 h1=semilogx(UnitCF(i),syncPlotValsF1(indxCF_f1),[colors{i},'x']);
@@ -360,6 +479,153 @@ if exist('SyncValues') % plot SyncValues as a function of CF & noise level
     end
 end
 
+
+if exist('array_syncPlotValsF1') % group sync by CF range
+    % array_syncPlotValsF1.snhl{find(FeatureNum==FeatureNums),j}(i)
+    LocalSymbols = ['x','s','h'];
+    centerCFs = [0.5 1 2]; %kHz
+    CFrange = 1; % octaves
+    CFranges = [centerCFs'*2^(-CFrange/2), centerCFs'*2^(CFrange/2)];
+    
+    figure; plotNum=0;
+    for FeatureIndex=1:size(array_syncPlotValsF1.nh,1)
+        for SNRIndex=1:size(array_syncPlotValsF1.nh,2)
+            plotNum=plotNum+1;
+            subplot(length(FeatureNums),length(SNR{i}),plotNum), hold on;
+
+            for centerCFIndex=1:length(centerCFs)
+                CFindices = find(array_syncPlotValsF1.CFs>=CFranges(centerCFIndex,1) &...
+                    array_syncPlotValsF1.CFs<CFranges(centerCFIndex,2));
+                
+                NHindices = intersect(CFindices,find(~isnan(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex})));
+                SNHLindices = intersect(CFindices,find(~isnan(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex})));
+                h_syncCF(1)=semilogx(centerCFs(centerCFIndex),...
+                    mean(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(NHindices)),...
+                    ['k','x']);
+                if isnan(mean(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(NHindices)))
+                    semilogx(centerCFs(centerCFIndex),0,'kx');
+                end
+                semilogx(centerCFs(centerCFIndex),...
+                    mean(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(SNHLindices)),...
+                    ['r','x']);
+                if isnan(mean(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(SNHLindices)))
+                    semilogx(centerCFs(centerCFIndex),0.01,'rx');
+                end
+                syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex)=...
+                    mean(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(NHindices));
+                syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex)=...
+                    mean(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(SNHLindices));
+                
+                NHindices = intersect(CFindices,find(~isnan(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex})));
+                SNHLindices = intersect(CFindices,find(~isnan(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex})));
+                h_syncCF(2)=semilogx(centerCFs(centerCFIndex),...
+                    mean(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(NHindices)),...
+                    ['k','o']);
+                if isnan(mean(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(NHindices)))
+                    semilogx(centerCFs(centerCFIndex),0,'ko');
+                end
+                semilogx(centerCFs(centerCFIndex),...
+                    mean(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(SNHLindices)),...
+                    ['r','o']);
+                if isnan(mean(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(SNHLindices)))
+                    semilogx(centerCFs(centerCFIndex),0.01,'ro');
+                end
+                syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex)=...
+                    mean(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(NHindices));
+                syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex)=...
+                    mean(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(SNHLindices));
+                
+            end
+            
+            set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
+            xlim([0.35 7]); ylim([0 1]);
+            
+            if SNRIndex==1 % apply ylabels
+                switch FeatureIndex
+                    case 1
+                        ylabel('Sync (F0)');
+                    case 2
+                        ylabel('Sync (F1)');
+                    case 3
+                        ylabel('Sync (F2)');
+                end
+            end
+            switch FeatureIndex % apply xlabels & titles
+                case 1
+                    switch SNRIndex
+                        case 1
+                            title('In Quiet');
+                        case 2
+                            title('Equal SPL');
+                        case 3
+                            title('Equal SL');
+                            legend(h_syncCF,'F1 @ CF','F2 @ CF');
+                    end
+                case FeatureNums(end)
+                    xlabel('CF (kHz)');
+            end %switch FeatureNum
+        end
+    end
+end
+set(gcf,'visible','off');
+
+if exist('syncCFgroups')
+    % syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex)
+    figure; 
+    plotNum=0;
+    for FeatureIndex=1:size(syncCFgroups.F1.nh,1)
+        for centerCFIndex=1:length(syncCFgroups.F2.snhl{FeatureIndex,1})
+            plotNum=plotNum+1;
+            subplot(length(FeatureNums),length(SNR{i}),plotNum), hold on;
+            for SNRIndex=1:size(syncCFgroups.F1.nh,2)
+                tmpF1_nh(SNRIndex) = syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex);
+                tmpF1_snhl(SNRIndex) = syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex);
+                tmpF2_nh(SNRIndex) = syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex);
+                tmpF2_snhl(SNRIndex) = syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex);
+                
+                if isnan(tmpF1_nh(SNRIndex)), tmpF1_nh(SNRIndex)=0; end
+                if isnan(tmpF1_snhl(SNRIndex)), tmpF1_snhl(SNRIndex)=0.01; end
+                if isnan(tmpF2_nh(SNRIndex)), tmpF2_nh(SNRIndex)=0; end
+                if isnan(tmpF2_snhl(SNRIndex)), tmpF2_snhl(SNRIndex)=0.01; end
+            end %SNRIndex
+            h1=plot(tmpF1_nh,'kx-'); hold on;
+            plot(tmpF1_snhl,'rx-');
+            h2=plot(tmpF2_nh,'ko-');
+            plot(tmpF2_snhl,'ro-'); hold off;
+            
+            xlim([0.5 3.5]); ylim([0 1]);
+            set(gca,'XTick',[1 2 3]);
+            set(gca,'XTickLabel',{'Quiet','SNR','SL'});
+            
+            if centerCFIndex==1 % apply ylabels
+                switch FeatureIndex
+                    case 1
+                        ylabel('Sync (F0)');
+                    case 2
+                        ylabel('Sync (F1)');
+                    case 3
+                        ylabel('Sync (F2)');
+                end
+            end
+            switch FeatureIndex % apply xlabels & titles
+                case 1
+                    switch centerCFIndex
+                        case 1
+                            title('500Hz (+/- 0.5oct)');
+                        case 2
+                            title('1kHz (+/- 0.5oct)');
+                        case 3
+                            title('2kHz (+/- 0.5oct)');
+                            legend([h1,h2],'F1 @ CF','F2 @ CF');
+                    end
+                case FeatureNums(end)
+                    %N/A
+            end %switch FeatureNum
+            
+        end %centerCFIndex
+    end %FeatureIndex
+    
+end %if exist('syncCFgroups')
 
 
 if exist('Rho_width') % plot Rho & CD as a function of CF & noise level
