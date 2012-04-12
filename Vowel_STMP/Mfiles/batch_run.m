@@ -144,7 +144,7 @@ colors = {'k','k','k','k','k','k',...
 %% The loop
 RecalcAll = 0;  % if enabled, this automatically recalculates everything,
                 % but loads previous characteristic delays
-LoadMAT = 1; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
+LoadMAT = 0; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
 
 if LoadMAT
     [FileName,PathName,FilterIndex] = uigetfile('*.mat','Pick a file',...
@@ -317,7 +317,6 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
 end
 
 
-
 if exist('SyncValues') % plot SyncValues as a function of CF & noise level
     % SyncValues{featureNum,snrNum} = [FeatureFreqs;BFs;Synchs];
     array_syncPlotValsF1.nh = cell(length(FeatureNums),length(SNR{1}));
@@ -413,11 +412,11 @@ if exist('SyncValues') % plot SyncValues as a function of CF & noise level
 
                 
                 hold on;
-                h1=semilogx(UnitCF(i),syncPlotValsF1(indxCF_f1),[colors{i},'x']);
+                h1=semilogx(UnitCF(i),syncPlotValsF1(indxCF_f1),[colors{i},'+']);
                 if isnan(syncPlotValsF1(indxCF_f1))
                     switch colors{i}
-                        case 'k', h1=semilogx(UnitCF(i),0,[colors{i},'x']); 
-                        otherwise, h1=semilogx(UnitCF(i),0.01,[colors{i},'x']);
+                        case 'k', h1=semilogx(UnitCF(i),0,[colors{i},'+']); 
+                        otherwise, h1=semilogx(UnitCF(i),0.01,[colors{i},'+']);
                     end
                 end
                 
@@ -483,7 +482,7 @@ end
 if exist('array_syncPlotValsF1') % group sync by CF range
     % array_syncPlotValsF1.snhl{find(FeatureNum==FeatureNums),j}(i)
     LocalSymbols = ['x','s','h'];
-    centerCFs = [0.5 1 2]; %kHz
+    centerCFs = [0.5 1 2 4]; %kHz
     CFrange = 1; % octaves
     CFranges = [centerCFs'*2^(-CFrange/2), centerCFs'*2^(CFrange/2)];
     
@@ -497,43 +496,59 @@ if exist('array_syncPlotValsF1') % group sync by CF range
                 CFindices = find(array_syncPlotValsF1.CFs>=CFranges(centerCFIndex,1) &...
                     array_syncPlotValsF1.CFs<CFranges(centerCFIndex,2));
                 
-                NHindices = intersect(CFindices,find(~isnan(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex})));
-                SNHLindices = intersect(CFindices,find(~isnan(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex})));
-                h_syncCF(1)=semilogx(centerCFs(centerCFIndex),...
-                    mean(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(NHindices)),...
-                    ['k','x']);
-                if isnan(mean(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(NHindices)))
-                    semilogx(centerCFs(centerCFIndex),0,'kx');
-                end
-                semilogx(centerCFs(centerCFIndex),...
-                    mean(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(SNHLindices)),...
-                    ['r','x']);
-                if isnan(mean(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(SNHLindices)))
-                    semilogx(centerCFs(centerCFIndex),0.01,'rx');
-                end
-                syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex)=...
-                    mean(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(NHindices));
-                syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex)=...
-                    mean(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(SNHLindices));
+                %%%% F1
+                % replace NaN's with zeros
+                NaN_NHindices = find(isnan(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}));
+                NaN_SNHLindices = find(isnan(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}));
+                array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(intersect(CFindices,NaN_NHindices)) = 0;
+                array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(intersect(CFindices,NaN_SNHLindices)) = 0;
+                % save mean & std error
+                syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex,1)=...
+                    mean(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(CFindices));
+                syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex,2)=...
+                    std(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(CFindices))/...
+                    numel(array_syncPlotValsF1.nh{FeatureIndex,SNRIndex}(CFindices));
+                syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex,1)=...
+                    mean(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(CFindices));
+                syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex,2)=...
+                    std(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(CFindices))/...
+                    numel(array_syncPlotValsF1.snhl{FeatureIndex,SNRIndex}(CFindices));
+                % plot
+                h_syncCF(1)=errorbar(centerCFs(centerCFIndex),...
+                    syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex,1),...
+                    syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex,2),...
+                    'k+');
+                errorbar(centerCFs(centerCFIndex),...
+                    max(0.01,syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex,1)),...
+                    syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex,2),...
+                    'r+');
                 
-                NHindices = intersect(CFindices,find(~isnan(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex})));
-                SNHLindices = intersect(CFindices,find(~isnan(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex})));
-                h_syncCF(2)=semilogx(centerCFs(centerCFIndex),...
-                    mean(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(NHindices)),...
-                    ['k','o']);
-                if isnan(mean(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(NHindices)))
-                    semilogx(centerCFs(centerCFIndex),0,'ko');
-                end
-                semilogx(centerCFs(centerCFIndex),...
-                    mean(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(SNHLindices)),...
-                    ['r','o']);
-                if isnan(mean(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(SNHLindices)))
-                    semilogx(centerCFs(centerCFIndex),0.01,'ro');
-                end
-                syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex)=...
-                    mean(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(NHindices));
-                syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex)=...
-                    mean(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(SNHLindices));
+                %%%% F2
+                % replace NaN's with zeros
+                NaN_NHindices = find(isnan(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}));
+                NaN_SNHLindices = find(isnan(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}));
+                array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(intersect(CFindices,NaN_NHindices)) = 0;
+                array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(intersect(CFindices,NaN_SNHLindices)) = 0;
+                % save mean & std error
+                syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex,1)=...
+                    mean(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(CFindices));
+                syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex,2)=...
+                    std(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(CFindices))/...
+                    numel(array_syncPlotValsF2.nh{FeatureIndex,SNRIndex}(CFindices));
+                syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex,1)=...
+                    mean(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(CFindices));
+                syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex,2)=...
+                    std(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(CFindices))/...
+                    numel(array_syncPlotValsF2.snhl{FeatureIndex,SNRIndex}(CFindices));
+                % plot
+                h_syncCF(1)=errorbar(centerCFs(centerCFIndex),...
+                    syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex,1),...
+                    syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex,2),...
+                    'ko');
+                errorbar(centerCFs(centerCFIndex),...
+                    max(0.01,syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex,1)),...
+                    syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex,2),...
+                    'ro');
                 
             end
             
@@ -569,53 +584,55 @@ if exist('array_syncPlotValsF1') % group sync by CF range
 end
 set(gcf,'visible','off');
 
-if exist('syncCFgroups')
+if exist('syncCFgroups') % plot sync as a function noise level (grouped by CF)
     % syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex)
     figure; 
     plotNum=0;
     for FeatureIndex=1:size(syncCFgroups.F1.nh,1)
         for centerCFIndex=1:length(syncCFgroups.F2.snhl{FeatureIndex,1})
             plotNum=plotNum+1;
-            subplot(length(FeatureNums),length(SNR{i}),plotNum), hold on;
+            subplot(length(FeatureNums),length(syncCFgroups.F2.snhl{FeatureIndex,1}),plotNum), hold on;
             for SNRIndex=1:size(syncCFgroups.F1.nh,2)
-                tmpF1_nh(SNRIndex) = syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex);
-                tmpF1_snhl(SNRIndex) = syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex);
-                tmpF2_nh(SNRIndex) = syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex);
-                tmpF2_snhl(SNRIndex) = syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex);
+                tmpF1_nh(SNRIndex,1) = syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex,1);
+                tmpF1_snhl(SNRIndex,1) = syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex,1);
+                tmpF2_nh(SNRIndex,1) = syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex,1);
+                tmpF2_snhl(SNRIndex,1) = syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex,1);
                 
-                if isnan(tmpF1_nh(SNRIndex)), tmpF1_nh(SNRIndex)=0; end
-                if isnan(tmpF1_snhl(SNRIndex)), tmpF1_snhl(SNRIndex)=0.01; end
-                if isnan(tmpF2_nh(SNRIndex)), tmpF2_nh(SNRIndex)=0; end
-                if isnan(tmpF2_snhl(SNRIndex)), tmpF2_snhl(SNRIndex)=0.01; end
+                tmpF1_nh(SNRIndex,2) = syncCFgroups.F1.nh{FeatureIndex,SNRIndex}(centerCFIndex,2);
+                tmpF1_snhl(SNRIndex,2) = syncCFgroups.F1.snhl{FeatureIndex,SNRIndex}(centerCFIndex,2);
+                tmpF2_nh(SNRIndex,2) = syncCFgroups.F2.nh{FeatureIndex,SNRIndex}(centerCFIndex,2);
+                tmpF2_snhl(SNRIndex,2) = syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex,2);
             end %SNRIndex
-            h1=plot(tmpF1_nh,'kx-'); hold on;
-            plot(tmpF1_snhl,'rx-');
-            h2=plot(tmpF2_nh,'ko-');
-            plot(tmpF2_snhl,'ro-'); hold off;
+            h1=errorbar(tmpF1_nh(:,1),tmpF1_nh(:,2),'k+-'); hold on;
+            errorbar(tmpF1_snhl(:,1),tmpF1_snhl(:,2),'r+-');
+            h2=errorbar(tmpF2_nh(:,1),tmpF2_nh(:,2),'ko-');
+            errorbar(tmpF2_snhl(:,1),tmpF2_snhl(:,2),'ro-'); hold off;
             
             xlim([0.5 3.5]); ylim([0 1]);
             set(gca,'XTick',[1 2 3]);
-            set(gca,'XTickLabel',{'Quiet','SNR','SL'});
+            set(gca,'XTickLabel',{'Quiet','SPL','SL'});
             
             if centerCFIndex==1 % apply ylabels
                 switch FeatureIndex
                     case 1
-                        ylabel('Sync (F0)');
+                        ylabel('Sync to F0');
                     case 2
-                        ylabel('Sync (F1)');
+                        ylabel('Sync to F1');
                     case 3
-                        ylabel('Sync (F2)');
+                        ylabel('Sync to F2');
                 end
             end
             switch FeatureIndex % apply xlabels & titles
                 case 1
                     switch centerCFIndex
                         case 1
-                            title('500Hz (+/- 0.5oct)');
+                            title('CF\approx500Hz (\pm0.5oct)');
                         case 2
-                            title('1kHz (+/- 0.5oct)');
+                            title('CF\approx1kHz (\pm0.5oct)');
                         case 3
-                            title('2kHz (+/- 0.5oct)');
+                            title('CF\approx2kHz (\pm0.5oct)');
+                        case 4
+                            title('CF\approx4kHz (\pm0.5oct)');
                             legend([h1,h2],'F1 @ CF','F2 @ CF');
                     end
                 case FeatureNums(end)
@@ -625,57 +642,207 @@ if exist('syncCFgroups')
         end %centerCFIndex
     end %FeatureIndex
     
-end %if exist('syncCFgroups')
+end
 
 
 if exist('Rho_width') % plot Rho & CD as a function of CF & noise level
     figure;
-    FeatureNum=3;
+    FeatureNum=3; %F2
     for i=1:length(Rho_width)
         subplot(231), hold on;
         indx = find(SNR{i}==max(SNR{i}));
         semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum,indx)),[colors{i},'o']);
-        
+
         subplot(232), hold on;
         indx = find(SNR{i}==0);
         semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum,indx)),[colors{i},'o']);
-        
+
         subplot(233), hold on;
         indx = find(SNR{i}~=max(SNR{i}) & SNR{i}~=0);
         semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum,indx)),[colors{i},'o']);
     end
     subplot(231), set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
-        title('In Quiet');
+    title('In Quiet');
     ylabel('\Delta\rho@0.8 (octaves)');
     subplot(232), set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
-        title('Equal SPL');
+    title('Equal SPL');
     subplot(233), set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
-        title('Equal SL');
-    
-    
+    title('Equal SL');
+
+
     for i=1:length(CD_slope)
         subplot(234), hold on;
         indx = find(SNR{i}==max(SNR{i}));
         semilogx(UnitCF(i),(CD_slope{i}(FeatureNum,indx)),[colors{i},'o']);
-        
+
         subplot(235), hold on;
         indx = find(SNR{i}==0);
         semilogx(UnitCF(i),(CD_slope{i}(FeatureNum,indx)),[colors{i},'o']);
-        
+
         subplot(236), hold on;
         indx = find(SNR{i}~=max(SNR{i}) & SNR{i}~=0);
         semilogx(UnitCF(i),(CD_slope{i}(FeatureNum,indx)),[colors{i},'o']);
     end
     subplot(234), set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
-        xlabel('CF (kHz)');
+    xlabel('CF (kHz)');
     ylabel('CD Slope (CF cycles/octave)');
     subplot(235), set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
-        xlabel('CF (kHz)');
+    xlabel('CF (kHz)');
     subplot(236), set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
-        xlabel('CF (kHz)');
-      
+    xlabel('CF (kHz)');
+
+    %%% save rho & CD
+    array_rho.nh=cell(2,length(SNR{1}));
+    array_cd.nh=cell(2,length(SNR{1}));
+    array_rho.snhl=cell(2,length(SNR{1}));
+    array_cd.snhl=cell(2,length(SNR{1}));
+    nhCFs=UnitCF(cell2mat(colors)=='k'); 
+    snhlCFs=UnitCF(cell2mat(colors)=='r');
+    FeatureIndex=0;
+    for FeatureNum=[1 3]; %F1,F2
+        FeatureIndex=FeatureIndex+1;
+        for CFindex=1:length(Rho_width)
+            indx = find(SNR{CFindex}==max(SNR{CFindex}));
+            if colors{CFindex}=='k'
+                array_rho.nh{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
+                array_cd.nh{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+            else
+                array_rho.snhl{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
+                array_cd.snhl{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum,indx);                
+            end
+
+            indx = find(SNR{CFindex}==0);
+            if colors{CFindex}=='k'
+                array_rho.nh{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
+                array_cd.nh{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+            else
+                array_rho.snhl{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
+                array_cd.snhl{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+            end
+
+            indx = find(SNR{CFindex}~=max(SNR{CFindex}) & SNR{CFindex}~=0);
+            if colors{CFindex}=='k'
+                array_rho.nh{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
+                array_cd.nh{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+            else
+                array_rho.snhl{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
+                array_cd.snhl{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+            end
+        end
+    end
 end
 
+
+if exist('array_rho') % plot Rho & CD as a function noise level (grouped by CF)
+    centerCFs = [0.5 1 2 4]; %kHz
+    CFrange = 1; % octaves
+    CFranges = [centerCFs'*2^(-CFrange/2), centerCFs'*2^(CFrange/2)];
+    
+    figure(998); 
+    figure(999);
+    plotNum=0;
+    for FeatureNum=1:size(array_rho.nh,1)
+        for centerCFIndex=1:length(centerCFs)
+            plotNum=plotNum+1;
+            
+            for SNRindex=1:size(array_rho.nh,2)
+                %NH
+                CFindices1 = find(nhCFs>=CFranges(centerCFIndex,1) &...
+                    nhCFs<CFranges(centerCFIndex,2));
+                
+                rhoCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,1) = ...
+                    mean(array_rho.nh{FeatureNum,SNRindex}(CFindices1));
+                rhoCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,2) = ...
+                    std(array_rho.nh{FeatureNum,SNRindex}(CFindices1))/...
+                    numel(array_rho.nh{FeatureNum,SNRindex}(CFindices1));
+                tmpRho_nh(SNRindex,:) = rhoCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,:);
+                
+                cdCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,1) = ...
+                    mean(array_cd.nh{FeatureNum,SNRindex}(CFindices1));
+                cdCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,2) = ...
+                    std(array_cd.nh{FeatureNum,SNRindex}(CFindices1))/...
+                    numel(array_cd.nh{FeatureNum,SNRindex}(CFindices1));
+                tmpCD_nh(SNRindex,:) = cdCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,:);
+                
+                %SNHL
+                CFindices2 = find(snhlCFs>=CFranges(centerCFIndex,1) &...
+                    snhlCFs<CFranges(centerCFIndex,2));
+                
+                rhoCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,1) = ...
+                    mean(array_rho.snhl{FeatureNum,SNRindex}(CFindices2));
+                rhoCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,2) = ...
+                    std(array_rho.snhl{FeatureNum,SNRindex}(CFindices2))/...
+                    numel(array_rho.snhl{FeatureNum,SNRindex}(CFindices2));
+                tmpRho_snhl(SNRindex,:) = rhoCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,:);
+                
+                cdCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,1) = ...
+                    mean(array_cd.snhl{FeatureNum,SNRindex}(CFindices2));
+                cdCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,2) = ...
+                    std(array_cd.snhl{FeatureNum,SNRindex}(CFindices2))/...
+                    numel(array_cd.snhl{FeatureNum,SNRindex}(CFindices2));
+                tmpCD_snhl(SNRindex,:) = cdCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,:);
+            end
+            
+            figure(998), subplot(size(array_rho.nh,1),length(centerCFs),plotNum), hold on;
+            errorbar(tmpRho_nh(:,1),tmpRho_nh(:,2),'k-');
+            errorbar(tmpRho_snhl(:,1),tmpRho_snhl(:,2),'r-');
+            set(gca,'XTick',[1 2 3]);
+            set(gca,'XTickLabel',{'Quiet','SPL','SL'});
+            ylim([0 0.5]);
+            legend(sprintf('%d NH units',length(CFindices1)),...
+                sprintf('%d SNHL units',length(CFindices2)));
+            
+            figure(999), subplot(size(array_rho.nh,1),length(centerCFs),plotNum), hold on;
+            errorbar(tmpCD_nh(:,1),tmpCD_nh(:,2),'k-');
+            errorbar(tmpCD_snhl(:,1),tmpCD_snhl(:,2),'r-');
+            set(gca,'XTick',[1 2 3]);
+            set(gca,'XTickLabel',{'Quiet','SPL','SL'});
+            ylim([0 50]);
+            legend(sprintf('%d NH units',length(CFindices1)),...
+                sprintf('%d SNHL units',length(CFindices2)));
+            
+            if centerCFIndex==1 % apply ylabels
+                switch FeatureNum
+                    case 1
+                        figure(998), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        ylabel('\rho width (octaves re F1)');
+                        figure(999), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        ylabel('CD slope (cycles/oct, re F1)');
+                    case 2
+                        figure(998), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        ylabel('\rho width (octaves re F2)');
+                        figure(999), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        ylabel('CD slope (cycles/oct, re F2)');
+                end
+            end
+            if FeatureNum==1 % apply xlabels & titles
+                switch centerCFIndex
+                    case 1
+                        figure(998), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        title('CF\approx500Hz (\pm0.5oct)');
+                        figure(999), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        title('CF\approx500Hz (\pm0.5oct)');
+                    case 2
+                        figure(998), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        title('CF\approx1kHz (\pm0.5oct)');
+                        figure(999), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        title('CF\approx1kHz (\pm0.5oct)');
+                    case 3
+                        figure(998), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        title('CF\approx2kHz (\pm0.5oct)');
+                        figure(999), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        title('CF\approx2kHz (\pm0.5oct)');
+                    case 4
+                        figure(998), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        title('CF\approx4kHz (\pm0.5oct)');
+                        figure(999), subplot(size(array_rho.nh,1),length(centerCFs),plotNum),
+                        title('CF\approx4kHz (\pm0.5oct)');
+                end
+            end
+            
+        end
+    end
+end
 
 
 if exist('UnitCF') % Plot Thresholds/Q10s & Failpoints
