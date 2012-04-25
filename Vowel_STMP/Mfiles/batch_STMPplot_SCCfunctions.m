@@ -1,4 +1,8 @@
 %% batch_STMPplot_SCCfunctions
+if ~exist('ExpList','var')
+    setup_Vowel_STMP;
+end
+
 dates = {'062311','062311','062311','062311',...
     '072111','072111','072111','072111','072111','072111',...
     '080111','080111','080111','080111','080111',...
@@ -10,7 +14,7 @@ unitNums = {1.01,1.09,1.11,1.14,...
     1.04, 1.05, 1.06, 1.07, 1.09, 1.11, 1.15, 1.16...
     };
 
-for i=1:length(dates)
+for i=1%:length(dates)
     FeatureIndices=3;
     AttenIndices=1;
     STMPplot_SCCfunctions(dates{i},num2str(unitNums{i}),FeatureIndices,AttenIndices);
