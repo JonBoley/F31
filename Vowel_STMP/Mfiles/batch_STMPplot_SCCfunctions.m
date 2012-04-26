@@ -17,9 +17,15 @@ unitNums = {1.01,1.09,1.11,1.14,...
 for i=1%:length(dates)
     FeatureIndices=3;
     AttenIndices=1;
-    STMPplot_SCCfunctions(dates{i},num2str(unitNums{i}),FeatureIndices,AttenIndices);
+    
+    % just plot
+%     STMPplot_SCCfunctions(dates{i},num2str(unitNums{i}),FeatureIndices,AttenIndices);
+    
+    % interactive plot (lets you manually fix peaks)
+    if exist('h_calcCDreBF_manual','var'), uiwait(h_calcCDreBF_manual); end; 
+    h_calcCDreBF_manual = calcCDreBF_manual(dates{i},num2str(unitNums{i}),FeatureIndices,AttenIndices);
     
 %     count=fprintf('%d of %d',i,length(dates));
 %     pause; fprintf(repmat('\b',1,count));
 end
-
+clear h_calcCDreBF_manual;

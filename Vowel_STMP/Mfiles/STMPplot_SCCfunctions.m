@@ -3,6 +3,7 @@ function STMPplot_SCCfunctions(ExpDate,UnitName,FeatureIndices,AttenIndices)
 % Plots Cross-Correlation Functions for a STMP POPULATION.
 % Modified specifically for vowel STMP in noise (EHIN) data
 % 
+% J. Boley (April 12, 2012)
 % FROM: STMPplot_SCCfunctions (M. Heinz May 28, 2009)
 % 
 % Calls basic function: neurogram
