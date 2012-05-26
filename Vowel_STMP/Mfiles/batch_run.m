@@ -3,7 +3,7 @@ setup_Vowel_STMP;
 
 %% Run all units for a given experiment
 if ~exist('date','var')
-    date = '041811';
+    date = '050412';
 end
 switch date
     case '041805'   % 04/18/05 fibers: (in noise, normal)
@@ -110,6 +110,11 @@ switch date
         unitNums = {2.05, 2.08, 2.11, 2.12, 2.14, 2.19, 2.32, 2.34};
         colors = repmat({'k'},size(unitNums));
 
+    case '050412' %JB-2012_05_04-Chin1149_AN_500OBN (with linear amplification)
+        % 1.01, 1.02, 1.03, 1.05, 2.01, 2.03, 2.10
+        unitNums = {1.05};%{1.01, 1.02, 1.03, 1.05, 2.01, 2.03, 2.10};
+        colors = repmat({'r'},size(unitNums));
+
     otherwise
         error('Invalid experiment date');
 end
@@ -144,11 +149,11 @@ colors = {'k','k','k','k','k','k',...
 %% The loop
 RecalcAll = 0;  % if enabled, this automatically recalculates everything,
                 % but loads previous characteristic delays
-LoadMAT = 0; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
+LoadMAT = 1; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
 
 if LoadMAT
     [FileName,PathName,FilterIndex] = uigetfile('*.mat','Pick a file',...
-        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_040112.mat');
+        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_051912.mat');
     if FileName
         LoadMATbackup = LoadMAT;
         load(fullfile(PathName,FileName),'-regexp','[^h1]');
@@ -170,7 +175,7 @@ if ~LoadMAT
             Nscc_CD_neg_failpoint(i),Nscc_CD_neg_fail_limit(i),...
             Nscc0_pos_failpoint(i),Nscc0_pos_fail_limit(i),...
             Nscc0_neg_failpoint(i),Nscc0_neg_fail_limit(i),...
-            Rho_width{i},CD_slope{i},CDatHalfOct{i},SNR{i},...
+            Rho_width{i},CD_slope{i},CD_slope2{i},CDatHalfOct{i},SNR{i},...
             SyncValues{i},FeatureFreqs{i}]=...
             UnitLook_EHIN_CoincDet2_JB(date,num2str(unitNums{i}),RecalcAll);
 
@@ -183,6 +188,9 @@ if ~LoadMAT
     end
 end
 
+% use CD_slope2
+CD_slope_bak = CD_slope;
+CD_slope = CD_slope2;
 
 if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
     figure;
@@ -250,7 +258,7 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 [xData,IX]=unique(xData); yData=yData(IX); %warning: this throws away duplicate CFs
                 if length(xData)>2
                     clear xData_smoothed yData_smoothed;
-                    xData_smoothed = 100e-3*2.^(0:smoothOct/2:5.5); yData_smoothed=NaN*ones(size(xData_smoothed));
+                    xData_smoothed = 100e-3*2.^(0:smoothOct/4:6); yData_smoothed=NaN*ones(size(xData_smoothed));
                     for q=1:length(xData_smoothed)
                         temp_ind = xData<=(xData_smoothed(q)*2^(smoothOct/2)) & xData>=(xData_smoothed(q)*2^(-smoothOct/2));
                         distance_oct = abs(log2(xData(temp_ind)/xData_smoothed(q)));
@@ -269,7 +277,7 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 [xData2,IX]=unique(xData2); yData2=yData2(IX); %warning: this throws away duplicate CFs
                 if length(xData2)>2
                     clear xData2_smoothed yData2_smoothed;
-                    xData2_smoothed = 100e-3*2.^(0:smoothOct/2:5.5); yData2_smoothed=NaN*ones(size(xData2_smoothed));
+                    xData2_smoothed = 100e-3*2.^(0:smoothOct/4:6); yData2_smoothed=NaN*ones(size(xData2_smoothed));
                     for q=1:length(xData2_smoothed)
                         temp_ind = xData2<=(xData2_smoothed(q)*2^(smoothOct/2)) & xData2>=(xData2_smoothed(q)*2^(-smoothOct/2));
                         distance_oct = abs(log2(xData2(temp_ind)/xData2_smoothed(q)));
@@ -278,9 +286,28 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                     end
                     semilogx(xData2_smoothed,yData2_smoothed,'r');
                     
-                    deltaCD = yData2_smoothed-yData_smoothed;
-                    set(h_text(plotNum),'String',['\DeltaCD=' sprintf('%1.1f cycles',mean(deltaCD(~isnan(deltaCD))))]);
+                    % avg CD within a half-octave of 1.4kHz
+                    avgCD_nh = yData_smoothed(abs(log2(xData2_smoothed/1.414))<0.5);
+                    avgCD_snhl = yData2_smoothed(abs(log2(xData2_smoothed/1.414))<0.5);
+                    deltaCD = avgCD_snhl - avgCD_nh;
+                    set(h_text(plotNum),'Interpreter','latex');
+                    set(h_text(plotNum),'String',[sprintf('From 1kHz to 2kHz: \n'),...
+                        '$\overline{CD_{NH}}$=' sprintf('%1.2f cycles\n',mean(avgCD_nh(~isnan(avgCD_nh)))),...
+                        '$\overline{CD_{SNHL}}$=' sprintf('%1.2f cycles\n',mean(avgCD_snhl(~isnan(avgCD_snhl)))),...
+                        '$\overline{\Delta CD}$=' sprintf('%1.2f cycles',mean(deltaCD(~isnan(deltaCD))))]);
                     set(h_text(plotNum),'HorizontalAlignment','center');
+                    
+                    % avg [of trend line]...
+                    avgCD2_nh(FeatureNum,j) = mean(avgCD_nh(~isnan(avgCD_nh)));
+                    avgCD2_snhl(FeatureNum,j) = mean(avgCD_snhl(~isnan(avgCD_snhl)));
+                    
+                    % stderr [of actual points]
+                    temp = yData(abs(log2(xData/1.414))<0.5);
+                    temp2 = yData(abs(log2(xData2/1.414))<0.5);
+                    stderrCD_nh(FeatureNum,j) = ...
+                        sqrt(sum((temp(~isnan(temp))-mean(temp(~isnan(temp)))).^2/length(temp)))/sqrt(length(temp));
+                    stderrCD_snhl(FeatureNum,j) = ...
+                        sqrt(sum((temp2(~isnan(temp2))-mean(temp2(~isnan(temp2)))).^2/length(temp2)))/sqrt(length(temp2));
 
 %                     cfun2 = fit(xData,yData,'linearinterp');
 %                     plot(cfun2,'r'); drawnow;
@@ -758,10 +785,10 @@ if exist('array_rho') % plot Rho & CD as a function noise level (grouped by CF)
                 tmpRho_nh(SNRindex,:) = rhoCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,:);
                 
                 cdCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,1) = ...
-                    mean(array_cd.nh{FeatureNum,SNRindex}(CFindices1));
+                    mean(array_cd.nh{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.nh{FeatureNum,SNRindex})),CFindices1)));
                 cdCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,2) = ...
-                    std(array_cd.nh{FeatureNum,SNRindex}(CFindices1))/...
-                    numel(array_cd.nh{FeatureNum,SNRindex}(CFindices1));
+                    std(array_cd.nh{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.nh{FeatureNum,SNRindex})),CFindices1)))/...
+                    numel(array_cd.nh{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.nh{FeatureNum,SNRindex})),CFindices1)));
                 tmpCD_nh(SNRindex,:) = cdCFgroups.nh{FeatureNum,SNRindex}(centerCFIndex,:);
                 
                 %SNHL
@@ -776,10 +803,10 @@ if exist('array_rho') % plot Rho & CD as a function noise level (grouped by CF)
                 tmpRho_snhl(SNRindex,:) = rhoCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,:);
                 
                 cdCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,1) = ...
-                    mean(array_cd.snhl{FeatureNum,SNRindex}(CFindices2));
+                    mean(array_cd.snhl{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.snhl{FeatureNum,SNRindex})),CFindices2)));
                 cdCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,2) = ...
-                    std(array_cd.snhl{FeatureNum,SNRindex}(CFindices2))/...
-                    numel(array_cd.snhl{FeatureNum,SNRindex}(CFindices2));
+                    std(array_cd.snhl{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.snhl{FeatureNum,SNRindex})),CFindices2)))/...
+                    numel(array_cd.snhl{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.snhl{FeatureNum,SNRindex})),CFindices2)));
                 tmpCD_snhl(SNRindex,:) = cdCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,:);
             end
             
@@ -980,4 +1007,30 @@ if exist('UnitCF') % Plot Thresholds/Q10s & Failpoints
         title('Delay Failure Point');
     end
 end
+
+figure, subplot(121),
+errorbar([1:3],avgCD2_nh(1,:),stderrCD_nh(1,:),'ko-'); hold on;
+errorbar([1:3],avgCD2_snhl(1,:),stderrCD_snhl(1,:),'ro-');
+set(gca,'XTick',[1 2 3]);
+set(gca,'XTickLabel',{'Quiet','SPL','SL'});
+ylabel('CD re Normal (CF cycles) [0.5 oct re F1]');
+title('Strength of Spatiotemporal Coding (CF=1-2kHz)');
+legend('Normal','Impaired'); ylim([0 3]);
+subplot(122),
+errorbar([1:3],avgCD2_nh(3,:),stderrCD_nh(3,:),'ko-'); hold on;
+errorbar([1:3],avgCD2_snhl(3,:),stderrCD_snhl(3,:),'ro-');
+set(gca,'XTick',[1 2 3]);
+set(gca,'XTickLabel',{'Quiet','SPL','SL'});
+ylabel('CD (CF cycles) [0.5 oct re F2]');
+title('Strength of Spatiotemporal Coding (CF=1-2kHz)');
+legend('Normal','Impaired'); ylim([0 3]);
+
+figure
+plot([1:3],avgCD2_snhl(1,:)-avgCD2_nh(1,:),'ro-'); hold on;
+plot([1:3],avgCD2_snhl(3,:)-avgCD2_nh(3,:),'rsq-'); hold off;
+set(gca,'XTick',[1 2 3]);
+set(gca,'XTickLabel',{'Quiet','SPL','SL'});
+ylabel('CD re Normal (CF cycles) [0.5 oct re F1]');
+title('Reduction of Spatiotemporal Coding (CF=1-2kHz)');
+legend('F1','F2'); ylim([-1 0]);
 

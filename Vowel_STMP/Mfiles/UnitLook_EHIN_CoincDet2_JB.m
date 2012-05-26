@@ -5,7 +5,7 @@ function [UnitCF,UnitThresh,UnitQ10,...
     Nscc_CD_neg_failpoint,Nscc_CD_neg_fail_limit,...
     Nscc0_pos_failpoint,Nscc0_pos_fail_limit,...
     Nscc0_neg_failpoint,Nscc0_neg_fail_limit,...
-    Rho_width,CD_slope,CDatHalfOct,SNR,SyncValues,FeatureFreqs...
+    Rho_width,CD_slope,CD_slope2,CDatHalfOct,SNR,SyncValues,FeatureFreqs...
     ]=UnitLook_EHIN_CoincDet2_JB(ExpDate,UnitName,RecalcAll)
 % File: UnitLook_EHIN_CoincDet2.m
 % updated: Jun 19, 2009 - from UnitLook_EHIN_CoincDet2_MH2.m (Reiri Sono)
@@ -90,6 +90,8 @@ elseif strcmp(ExpDate,'112911')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_11_29-Chin1146_AN_normal') ''''])
 elseif strcmp(ExpDate,'120511')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_12_05-Chin1148_AN_normal') ''''])
+elseif strcmp(ExpDate,'050412')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2012_05_04-Chin1149_AN_500OBN') ''''])
     
     %%%%%%%%%%%%%%%%
 
@@ -829,12 +831,20 @@ if ~loadBOOL
 
 
                                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                                % Manually select characteristic delay
+                                % Automatically select characteristic delay
                                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                                 if ~loadBOOL2
                                     [NSCC_CDs_usec{ROWind,ATTind}{SCCind},NSCC_peaks{ROWind,ATTind}{SCCind}] =...
-                                        calcCD_manual(NSCCs{ROWind,ATTind}{SCCind},NSCC_delays_usec{ROWind,ATTind}{SCCind},F0per_us,NSCC_CDs_usec{ROWind,ATTind},NSCC_BFs_kHz{ROWind,ATTind},SCCind);
+                                        calcCD(NSCCs{ROWind,ATTind}{SCCind},NSCC_delays_usec{ROWind,ATTind}{SCCind},F0per_us);
                                 end
+
+                                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                                % Manually select characteristic delay
+                                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                 if ~loadBOOL2
+%                                     [NSCC_CDs_usec{ROWind,ATTind}{SCCind},NSCC_peaks{ROWind,ATTind}{SCCind}] =...
+%                                         calcCD_manual(NSCCs{ROWind,ATTind}{SCCind},NSCC_delays_usec{ROWind,ATTind}{SCCind},F0per_us,NSCC_CDs_usec{ROWind,ATTind},NSCC_BFs_kHz{ROWind,ATTind},SCCind);
+%                                 end
 
 
                                 %%%%%%%%%%%%%%%%%%%%%
@@ -996,6 +1006,20 @@ if ~loadBOOL
                      SMP_NSCC_CD_at_Oct_pos{ROWind,ATTind} = ...
                          abs(max(MyCD_interp(Octaves_interp<=-0.05)))+...
                          abs(max(MyCD_interp(Octaves_interp>=0.05)));
+                     
+                     %%%%%
+                     MyCD2=MyCD;
+                     MyCD2(Octaves<0)=-MyCD2(Octaves<0);
+                     %figure, plot(Octaves,MyCD2,'.-');
+                     MyCD2_interp=interp1(Octaves,MyCD2,Octaves_interp);
+                     maxDeltaCF_oct = 0.1;
+                     [Cfit,MSE,fit]=fit1slope(...
+                         Octaves_interp(Octaves_interp>=-maxDeltaCF_oct & Octaves_interp<=maxDeltaCF_oct),...
+                         MyCD2_interp(Octaves_interp>=-maxDeltaCF_oct & Octaves_interp<=maxDeltaCF_oct));
+                     %hold on; plot(Octaves_interp(Octaves_interp>=-maxDeltaCF_oct & Octaves_interp<=maxDeltaCF_oct),fit,'r');
+                     SMP_NSCC_CD2_at_Oct_pos{ROWind,ATTind} = ...
+                         abs(max(fit)) + abs(min(fit));
+                     %%%%%
                      
                      % CD @ +0.5oct
                      SMP_NSCC_CD_at_HalfOct{ROWind,ATTind} = ...
@@ -2392,11 +2416,13 @@ if doSCC && size(SMP_NSCC_CD_at_Oct_Feat_Lev,1)>1 %% [[JDB TO DO]] fix x,y (both
     SNR = Nattens_dB-Nattens_dB(yTEMP.EqualSPL_index);
     Rho_width = SMP_NSCC_Oct_at_Rho_pos;
     CD_slope = SMP_NSCC_CD_at_Oct_pos;
+    CD_slope2 = SMP_NSCC_CD2_at_Oct_pos;
     CDatHalfOct = SMP_NSCC_CD_at_HalfOct;
     
     % Normalize CD_slope, from (usec/0.1oct) to (CF_cycles/octave)
     CF_cycle_usec = 1e6/(unit.TC{1}.book_BF_kHz*1e3);
-    CD_slope = cell2mat(CD_slope)./CF_cycle_usec*10;
+    CD_slope = cell2mat(CD_slope)./CF_cycle_usec*10; %based on center 0.1 oct
+    CD_slope2 = cell2mat(CD_slope2)./CF_cycle_usec*5; %based on center 0.2 oct
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

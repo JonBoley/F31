@@ -62,7 +62,7 @@ if size(varargin,2)<2, ExpDate='062311'; UnitName='1.01'; end
 if size(varargin,2)<4, 
     FeatureIndices=[3]; AttenIndices=[1]; 
 else
-    ExpDate=varargin{1}; 
+    ExpDate=varargin{1}{1}; 
     UnitName=varargin{2}; 
     FeatureIndices=varargin{3}; 
     AttenIndices=varargin{4};
@@ -112,7 +112,8 @@ set(handles.detailsText,'String',sprintf('CF = %1.3f kHz\nPlease Select CD',...
 
 % RE-COLOR THE SELECTED CF ?
 % get the SCC data for this curve
-CFindexTEMP = find(round(1e4*handles.data.CHdata.CHvals)/1e4==handles.data.selectedCFkHz);
+BFoctCRIT = 1/128;
+CFindexTEMP = find(abs(log2(handles.data.CHdata.CHvals/handles.data.selectedCFkHz))<BFoctCRIT);
 handles.data.selectedCFind = CFindexTEMP;
 corrTEMP = handles.data.CHdata.Ydata{CFindexTEMP,1};
 delaysTEMP_usec = handles.data.CHdata.Xdata{CFindexTEMP,1};
@@ -177,19 +178,19 @@ load(handles.data.SCCs_filename,'NSCC_peaks','NSCC_CDs_usec');
 
 ChanIND = handles.data.selectedCFind;
 FeatIND = handles.data.FeatureIndices;
-ParamIND = handles.data.AttenIndices;
+AttIND = handles.data.AttenIndices;
 
 if handles.data.CHdata.CHvals(ChanIND)<handles.data.CHdata.CHvals(handles.data.CHdata.BFref_ind)
     % SCCs: CF2 re CF1, so if CF1>CF2, CD>0
     % but we want other way around, so need to flip 1st set here
-    NSCC_peaks{FeatIND,round(ParamIND/2)}{handles.data.SCCpos(ChanIND-1,1)}=...
+    NSCC_peaks{FeatIND,AttIND}{handles.data.SCCpos(ChanIND-1,1)}=...
         handles.data.selectedPeak;
-    NSCC_CDs_usec{FeatIND,round(ParamIND/2)}{handles.data.SCCpos(ChanIND-1,1)}=...
+    NSCC_CDs_usec{FeatIND,AttIND}{handles.data.SCCpos(ChanIND-1,1)}=...
         -handles.data.selectedCD;
 elseif handles.data.CHdata.CHvals(ChanIND)>handles.data.CHdata.CHvals(handles.data.CHdata.BFref_ind)
-    NSCC_peaks{FeatIND,round(ParamIND/2)}{handles.data.SCCpos(ChanIND-1,1)}=...
+    NSCC_peaks{FeatIND,AttIND}{handles.data.SCCpos(ChanIND-1,1)}=...
         handles.data.selectedPeak;
-    NSCC_CDs_usec{FeatIND,round(ParamIND/2)}{handles.data.SCCpos(ChanIND-1,1)}=...
+    NSCC_CDs_usec{FeatIND,AttIND}{handles.data.SCCpos(ChanIND-1,1)}=...
         handles.data.selectedCD;
 end
 
@@ -306,9 +307,15 @@ for FeatNUM=1:NumFEATURES
         case 1
             [HarmIND,PolIND]=find(~cellfun(@isempty,unit.EHvLTASS_reBF_simFF.F1));
             FIGinfo.CONDlabel_text=sprintf('Feature: %s','F1');
+        case 2
+            [HarmIND,PolIND]=find(~cellfun(@isempty,unit.EHvLTASS_reBF_simFF.T1));
+            FIGinfo.CONDlabel_text=sprintf('Feature: %s','T1');
         case 3
             [HarmIND,PolIND]=find(~cellfun(@isempty,unit.EHvLTASS_reBF_simFF.F2));
             FIGinfo.CONDlabel_text=sprintf('Feature: %s','F2');
+        case 4
+            [HarmIND,PolIND]=find(~cellfun(@isempty,unit.EHvLTASS_reBF_simFF.T2));
+            FIGinfo.CONDlabel_text=sprintf('Feature: %s','T2');
     end
 
 
@@ -330,41 +337,42 @@ for FeatNUM=1:NumFEATURES
 
     for ChanIND=1:NumCH
         for ParamIND=1:NumP
+            AttIND=AttenIndices(round(ParamIND/2));
             if mod(ParamIND,2) % odd params = full SCC sequence
                 if CHdata.CHvals(ChanIND)<CHdata.CHvals(CHdata.BFref_ind)
                     % SCCs: CF2 re CF1, so if CF1>CF2, CD>0
                     % but we want other way around, so need to flip 1st set here
                     CHdata.Ydata{ChanIND,ParamIND}= ...
-                        fliplr(NSCCs{FeatIND,round(ParamIND/2)}{SCCpos(ChanIND-1,1)});
+                        fliplr(NSCCs{FeatIND,AttIND}{SCCpos(ChanIND-1,1)});
                     CHdata.Xdata{ChanIND,ParamIND}= ...
-                        NSCC_delays_usec{FeatIND,round(ParamIND/2)}{SCCpos(ChanIND-1,1)};
+                        NSCC_delays_usec{FeatIND,AttIND}{SCCpos(ChanIND-1,1)};
                 elseif ChanIND==CHdata.BFref_ind % should be ch.1
                     CHdata.Ydata{ChanIND,ParamIND}= ...
-                        NSACs{FeatIND,round(ParamIND/2)}{BFind};
+                        NSACs{FeatIND,AttIND}{BFind};
                     CHdata.Xdata{ChanIND,ParamIND}= ...
-                        NSCC_delays_usec{FeatIND,round(ParamIND/2)}{BFind};
+                        NSCC_delays_usec{FeatIND,AttIND}{BFind};
                 elseif CHdata.CHvals(ChanIND)>CHdata.CHvals(CHdata.BFref_ind)
                     CHdata.Ydata{ChanIND,ParamIND}= ...
-                        NSCCs{FeatIND,round(ParamIND/2)}{SCCpos(ChanIND-1,1)};
+                        NSCCs{FeatIND,AttIND}{SCCpos(ChanIND-1,1)};
                     CHdata.Xdata{ChanIND,ParamIND}= ...
-                        NSCC_delays_usec{FeatIND,round(ParamIND/2)}{SCCpos(ChanIND-1,1)};
+                        NSCC_delays_usec{FeatIND,AttIND}{SCCpos(ChanIND-1,1)};
                 end
             else  % even params = hand-picked CDs
                 if CHdata.CHvals(ChanIND)<CHdata.CHvals(CHdata.BFref_ind)
                     % SCCs: CF2 re CF1, so if CF1>CF2, CD>0
                     % but we want other way around, so need to flip 1st set here
                     CHdata.Ydata{ChanIND,ParamIND}= ...
-                        NSCC_peaks{FeatIND,round(ParamIND/2)}{SCCpos(ChanIND-1,1)};
+                        NSCC_peaks{FeatIND,AttIND}{SCCpos(ChanIND-1,1)};
                     CHdata.Xdata{ChanIND,ParamIND}= ...
-                        -NSCC_CDs_usec{FeatIND,round(ParamIND/2)}{SCCpos(ChanIND-1,1)};
+                        -NSCC_CDs_usec{FeatIND,AttIND}{SCCpos(ChanIND-1,1)};
                 elseif ChanIND==CHdata.BFref_ind % should be ch.1
                     CHdata.Ydata{ChanIND,ParamIND}= NaN;
                     CHdata.Xdata{ChanIND,ParamIND}= NaN;
                 elseif CHdata.CHvals(ChanIND)>CHdata.CHvals(CHdata.BFref_ind)
                     CHdata.Ydata{ChanIND,ParamIND}= ...
-                        NSCC_peaks{FeatIND,round(ParamIND/2)}{SCCpos(ChanIND-1,1)};
+                        NSCC_peaks{FeatIND,AttIND}{SCCpos(ChanIND-1,1)};
                     CHdata.Xdata{ChanIND,ParamIND}= ...
-                        NSCC_CDs_usec{FeatIND,round(ParamIND/2)}{SCCpos(ChanIND-1,1)};
+                        NSCC_CDs_usec{FeatIND,AttIND}{SCCpos(ChanIND-1,1)};
                 end
             end
         end
