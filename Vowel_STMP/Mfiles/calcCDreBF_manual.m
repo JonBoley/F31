@@ -303,7 +303,13 @@ FIGinfo.title = regexprep(FIGinfo.title, '[_]', '\\_'); % fix underscores
 
 for FeatNUM=1:NumFEATURES 
     FeatIND=FeatureIndices(FeatNUM);
-    switch FeatIND
+    FeatIND2=FeatIND;
+    if length(fieldnames(unit.EHvLTASS_reBF_simFF))==2
+        if FeatIND2==2
+            FeatIND2=3; %if only two fields available, do F1,F2
+        end
+    end
+    switch FeatIND2
         case 1
             [HarmIND,PolIND]=find(~cellfun(@isempty,unit.EHvLTASS_reBF_simFF.F1));
             FIGinfo.CONDlabel_text=sprintf('Feature: %s','F1');
