@@ -183,7 +183,7 @@ if (exist('stimulus_vals','var') == 1)
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% FIX Duration to allow for proper STMP shifting of WAV files
-    BASELINE_Duration = 2500; % (can be based on specific WAV files used)
+    BASELINE_Duration = 4000; % (can be based on specific WAV files used)
     EXTENDED_Duration = BASELINE_Duration * 2^(-min(OctShifts));
     OFFtime = stimulus_vals.Gating.Period - stimulus_vals.Gating.Duration;
     stimulus_vals.Gating.Duration = EXTENDED_Duration;
@@ -537,8 +537,8 @@ end
 %%%%%%%%%%%%%%%%%%%%
 %% Gating Section 
 %%%%%%%%%%%%%%%%%%%%
-IO_def.Gating.Duration             = {2500    'ms'   [20 4000]};
-IO_def.Gating.Period               = {3000    'ms'   [50 5000]};
+IO_def.Gating.Duration             = {4000    'ms'   [20 4000]};
+IO_def.Gating.Period               = {5000    'ms'   [50 5000]};
 % IO_def.Gating.Period               = {'default_period(this.Duration)'    'ms'   [50 5000]};
 IO_def.Gating.Rise_fall_time       = {'default_rise_time(this.Duration)' 'ms'   [0  1000]};
 
