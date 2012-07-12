@@ -39,11 +39,12 @@ if (exist('stimulus_vals','var') == 1)
    %PolarityFact=(strcmp(stimulus_vals.Inloop.InvertPolarity,'yes')-.5)*-2;  % For inverting waveform if necessary
    %     OctShifts=[-0.5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.30,0.40,0.50];  % 11 CFs: NOHR
 %    OctShifts=[-0.25,-0.15,-0.05,0,0.05,0.15,0.30];  % 7 CFs: R01 (122208)
-   OctShifts=[-0.5 -0.35,-0.15,-0.05,0,0.05,0.15,0.40 0.50];  % 9 CFs: R01 (011909-add 2 and shift few)
+%    OctShifts=[-0.5 -0.35,-0.15,-0.05,0,0.05,0.15,0.40 0.50];  % 9 CFs: R01 (011909-add 2 and shift few)
+   OctShifts=[-.75 -.50 -.25 -.15 -.05 0 .05 .15 .25 .35 .50]; %JDB (added July 12 2012)
    stimulus_vals.Inloop.OctShifts=OctShifts;
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    %% FIX Duration to allow for proper STMP shifting of WAV files
-   BASELINE_Duration = 1700; % (based on specific WAV files used)
+   BASELINE_Duration = 2000; % (based on specific WAV files used)
    EXTENDED_Duration = BASELINE_Duration * 2^(-min(stimulus_vals.Inloop.OctShifts));
    OFFtime = stimulus_vals.Gating.Period - stimulus_vals.Gating.Duration;
    stimulus_vals.Gating.Duration = EXTENDED_Duration;
@@ -67,16 +68,16 @@ if (exist('stimulus_vals','var') == 1)
    % Setup levels to run (allow different attens for diferent files)
    % LATER : ADD list of levels
    %    AttenOFFsets=[10 30 50];
-   %    stimulus_vals.Inloop.BBN_A_thr;
+   %    stimulus_vals.Inloop.NOISE_thr;
    FileAttenList=zeros(size(Llist));
    for i=1:length(Llist)
-      if ~isempty(findstr(Llist{i},'BBN_A_'))
-         FileAttenList(i)=stimulus_vals.Inloop.BBN_A_thr-stimulus_vals.Inloop.Thr_Offset;
-      elseif ~isempty(findstr(Llist{i},'BoyFell_'))
-         FileAttenList(i)=stimulus_vals.Inloop.BoyFell_thr-stimulus_vals.Inloop.Thr_Offset;
+      if ~isempty(findstr(Llist{i},'LTASS'))
+         FileAttenList(i)=stimulus_vals.Inloop.NOISE_thr-stimulus_vals.Inloop.Thr_Offset;
+      elseif ~isempty(findstr(Llist{i},'EH'))
+         FileAttenList(i)=stimulus_vals.Inloop.SIGNAL_thr-stimulus_vals.Inloop.Thr_Offset;
       else
          FileAttenList(i)=NaN;
-         error('File Mismatch in assigning level (not "BBN_A_" or "BoyFell_"')
+         error('File Mismatch in assigning level (not "LTASS" or "EH"')
       end
    end
    
@@ -138,8 +139,8 @@ if (exist('stimulus_vals','var') == 1)
    Inloop.params.Condition.BestFrequency           = stimulus_vals.Inloop.BestFrequency;
    Inloop.params.Condition.OctShifts               = stimulus_vals.Inloop.OctShifts;
    Inloop.params.Condition.InvertPolarity          = 'no';
-   Inloop.params.Condition.BBN_A_thr               = stimulus_vals.Inloop.BBN_A_thr;
-   Inloop.params.Condition.BoyFell_thr               = stimulus_vals.Inloop.BoyFell_thr;
+   Inloop.params.Condition.NOISE_thr               = stimulus_vals.Inloop.NOISE_thr;
+   Inloop.params.Condition.SIGNAL_thr               = stimulus_vals.Inloop.SIGNAL_thr;
    Inloop.params.Condition.Thr_Offset               = stimulus_vals.Inloop.Thr_Offset;
    
    Inloop.params.Computed.FeatureTarget_Hz_List   = stimulus_vals.Inloop.Computed_FeatureTarget_Hz_List;
@@ -211,8 +212,8 @@ persistent prev_unit_bf
 %% Inloop Section 
 %%%%%%%%%%%%%%%%%%%%
 IO_def.Inloop.List_File             = { {['uigetfile(''' signals_dir 'Lists\MH\ISH2009\ISH2009.m'')']} };
-IO_def.Inloop.BBN_A_thr           = {'max(0,current_unit_thresh-40)'  'dB'    [0    120]      };
-IO_def.Inloop.BoyFell_thr           = {'max(0,current_unit_thresh-50)'  'dB'    [0    120]      };
+IO_def.Inloop.NOISE_thr           = {'max(0,current_unit_thresh-40)'  'dB'    [0    120]      };
+IO_def.Inloop.SIGNAL_thr           = {'max(0,current_unit_thresh-50)'  'dB'    [0    120]      };
 IO_def.Inloop.Thr_Offset           = {10  'dB'    [0    120]      };
 IO_def.Inloop.Repetitions           = { 25                        ''      [1    Inf]      };
 IO_def.Inloop.BaseUpdateRate        = { 33000                  'Hz'      [1    NI6052UsableRate_Hz(Inf)]      };
