@@ -27,6 +27,8 @@ function [tmplt,DAL,stimulus_vals,units,errstr] = WAV_reBFi_template(fieldname,s
 % For example, if the play duration is changed we would like to update the gating information.
 % We restict the automatic updates to allow the user the overide them.
 persistent prev_maxlen
+global signals_dir
+EHsignals_dir=strcat(signals_dir,'JB\EHvowels');
 
 % used_devices.File         = 'L3';    % ge debug: what if R3 is used also?
 used_devices.Llist         = 'L3';   % added by GE 26Jul2002
@@ -51,40 +53,60 @@ if (exist('stimulus_vals','var') == 1)
    stimulus_vals.Gating.Period = EXTENDED_Duration + OFFtime;
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    
-   
+   Llist=[];
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    % GENERATE STIMULI
-   
    % Hearing Aid Prescriptions
    % strategy = 0 (no gain)
    %        or {1 or 'linear'}
    %        or {2 or 'nonlinear_quiet'}
    %        or {3 or 'nonlinear_noise'}
-   strategy=0;
-   if strcmp(stimulus_vals.Inloop.HearingAid_Linear,'yes'), strategy = 1;  end
-   if strcmp(stimulus_vals.Inloop.HearingAid_Nonlinear,'yes'), strategy = 2;  end
+   strategy=[];
+   if strcmp(stimulus_vals.Inloop.HearingAid_None,'yes'), strategy = [strategy 0];  end
+   if strcmp(stimulus_vals.Inloop.HearingAid_Linear,'yes'), strategy = [strategy 1];  end
+   if strcmp(stimulus_vals.Inloop.HearingAid_Nonlinear,'yes'), strategy = [strategy 2];  end
    % only use 3 in noise (never specify it here)
+   if isempty(strategy), strategy=0; end;
    
    % Write WAV files for F1,F2, and 3 noise levels (this may take some time...)
-   newMixedAtten = writeVowelSTMPwavs(stimulus_vals.Inloop.CalibPicNum,...
-       stimulus_vals.Inloop.BaseFrequency, stimulus_vals.Inloop.Signal_Level,...
-       stimulus_vals.Inloop.Noise_Atten_mid,strategy);
-   
+   if ~isempty(stimulus_vals.Inloop.CalibPicNum)
+       cdd;
+       [newMixedAtten,filename_mixed] = writeVowelSTMPwavs(stimulus_vals.Inloop.CalibPicNum,...
+           stimulus_vals.Inloop.BaseFrequency, stimulus_vals.Inloop.Signal_Level,...
+           stimulus_vals.Inloop.Noise_Atten_mid,BASELINE_Duration/1e3,strategy);
+       
+       LlistIndex=1; 
+       for i=1:size(filename_mixed,1) %features
+           for j=1:size(filename_mixed,2) %attens
+               for k=1:size(filename_mixed,3) %strategies
+                   Llist{LlistIndex} = fullfile(EHsignals_dir,filename_mixed{i,j,k});
+                   LlistIndex=LlistIndex+1;
+               end
+           end
+       end
+       Rlist=[];
+       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       [data fs] = wavread(Llist{1});
+       [stimulus_vals units] = NI_check_gating_params(stimulus_vals, units);%optional??
+       [stimulus_vals.Mix units.Mix] = structdlg(tmplt.IO_def.Mix,'',stimulus_vals.Mix,'off');
+       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+   end
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    
-   if (exist(stimulus_vals.Inloop.List_File,'file') ~= 0)
-      [Llist,Rlist] = read_rotate_list_file(stimulus_vals.Inloop.List_File);
-      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      [data fs] = wavread(Llist{1});
-      [stimulus_vals units] = NI_check_gating_params(stimulus_vals, units);%optional??
-      [stimulus_vals.Mix units.Mix] = structdlg(tmplt.IO_def.Mix,'',stimulus_vals.Mix,'off');
-      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%       
-   else
-      Llist = [];
-      Rlist = [];
-      prev_maxlen = 0;
-   end
+%    if (exist(stimulus_vals.Inloop.List_File,'file') ~= 0)
+%       [Llist,Rlist] = read_rotate_list_file(stimulus_vals.Inloop.List_File);
+%       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%       [data fs] = wavread(Llist{1});
+%       [stimulus_vals units] = NI_check_gating_params(stimulus_vals, units);%optional??
+%       [stimulus_vals.Mix units.Mix] = structdlg(tmplt.IO_def.Mix,'',stimulus_vals.Mix,'off');
+%       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%       
+%    else
+%       Llist = [];
+%       Rlist = [];
+%       prev_maxlen = 0;
+%    end
 
+    
    %%%%%%%%%%%%%%%%%%%%
    % Setup levels to run (allow different attens for diferent files)
    % LATER : ADD list of levels
@@ -92,12 +114,40 @@ if (exist('stimulus_vals','var') == 1)
    %    stimulus_vals.Inloop.NOISE_thr;
    FileAttenList=zeros(size(Llist));
    for i=1:length(Llist)
-      if ~isempty(findstr(Llist{i},'EHLTASS'))
-         FileAttenList(i)=stimulus_vals.Inloop.NOISE_thr-stimulus_vals.Inloop.Thr_Offset;
-      else
-         FileAttenList(i)=NaN;
-         error('File Mismatch in assigning level (not "EHLTASS")')
-      end
+       stratAttenIndex=0;    
+       featAttenIndex=0;    
+       attenAttenIndex=0;
+       
+       if ~isempty(findstr(Llist{i},'nonlinearAid'))
+           stratAttenIndex=3;
+       elseif ~isempty(findstr(Llist{i},'linearAid'))
+           stratAttenIndex=2;
+       else % no amplification
+           stratAttenIndex=1;
+       end
+       % the order will always be [none, linear, nonlinear], but may not include all
+       stratAttenIndex=max(stratAttenIndex,length(strategy));
+       
+       if ~isempty(findstr(Llist{i},'F1'))
+           featAttenIndex=1;
+       elseif ~isempty(findstr(Llist{i},'F2'))
+           featAttenIndex=2;
+       end
+       
+       if ~isempty(findstr(Llist{i},'quiet'))
+           attenAttenIndex=1;
+       elseif ~isempty(findstr(Llist{i},'equalSL'))
+           attenAttenIndex=2;
+       elseif ~isempty(findstr(Llist{i},'equalSPL'))
+           attenAttenIndex=3;
+       end
+       
+       if stratAttenIndex & featAttenIndex & attenAttenIndex
+           FileAttenList(i)=newMixedAtten(featAttenIndex,attenAttenIndex,stratAttenIndex);
+       else
+           FileAttenList(i)=NaN;
+           error('File Mismatch in assigning level (not "F1"/"F"2 and "quiet"/"equalSL"/"equalSPL")');
+       end
    end
    
    
@@ -169,7 +219,7 @@ if (exist('stimulus_vals','var') == 1)
    Inloop.params.Condition.HearingAid_None      = stimulus_vals.Inloop.HearingAid_None;
    Inloop.params.Condition.HearingAid_Linear    = stimulus_vals.Inloop.HearingAid_Linear;
    Inloop.params.Condition.HearingAid_Nonlinear = stimulus_vals.Inloop.HearingAid_Nonlinear;
-   
+  
    Inloop.params.Computed.FeatureTarget_Hz_List   = stimulus_vals.Inloop.Computed_FeatureTarget_Hz_List;
    Inloop.params.Computed.UpdateRate_Hz_List   = stimulus_vals.Inloop.Computed_UpdateRate_Hz_List;
    Inloop.params.Used.FeatureTarget_Hz_List   = stimulus_vals.Inloop.Used_FeatureTarget_Hz_List;
@@ -198,10 +248,10 @@ end
 %----------------------------------------------------------------------------------------
 function str = build_description(DAL,stimulus_vals)
 p = DAL.Inloop.params;
-[listpath,listfile] = fileparts(stimulus_vals.Inloop.List_File);
+% [listpath,listfile] = fileparts(stimulus_vals.Inloop.List_File);
 str{1} = sprintf('%d reps:', p.repetitions);
-str{1} = sprintf('%s List ''%s'' (%d files x %d CFs) ', str{1},listfile, length(unique(p.list)), length(p.Condition.OctShifts));
-str{1} = sprintf('%s @THR+%1.1fdB,', str{1}, p.Condition.Thr_Offset);
+str{1} = sprintf('%s %d files x %d CFs ', str{1}, length(unique(p.list)), length(p.Condition.OctShifts));
+% str{1} = sprintf('%s @THR+%1.1fdB,', str{1}, p.Condition.Thr_Offset);
 
 %----------------------------------------------------------------------------------------
 function errstr = check_DAL_params(DAL,fieldname)
@@ -249,10 +299,14 @@ IO_def.Inloop.HearingAid_None       =  {'no|{yes}'};
 IO_def.Inloop.HearingAid_Linear     =  {'{no}|yes'};
 IO_def.Inloop.HearingAid_Nonlinear  =  {'{no}|yes'};
 
-IO_def.Inloop.List_File             = { {['uigetfile(''' signals_dir 'Lists\JB\VowelLTASS\VowelLTASS.m'')']} };
+% IO_def.Inloop.List_File             = { {['uigetfile(''' signals_dir 'Lists\JB\VowelLTASS\notVowelLTASS.m'')']} };
 IO_def.Inloop.Repetitions           = { 25                        ''      [1    Inf]      };
 IO_def.Inloop.BaseUpdateRate        = { 33000                  'Hz'      [1    NI6052UsableRate_Hz(Inf)]      };
 
+if (~isequal(current_unit_bf, prev_unit_bf) & isequal(fieldname,'Inloop'))
+    IO_def.Inloop.BaseFrequency{5}            = 1; % ignore dflt. Always recalculate.
+    prev_unit_bf = current_unit_bf;
+end
 
 %%%%%%%%%%%%%%%%%%%%
 %% Gating Section 
