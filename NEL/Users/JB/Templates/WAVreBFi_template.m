@@ -51,6 +51,27 @@ if (exist('stimulus_vals','var') == 1)
    stimulus_vals.Gating.Period = EXTENDED_Duration + OFFtime;
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    
+   
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   % GENERATE STIMULI
+   
+   % Hearing Aid Prescriptions
+   % strategy = 0 (no gain)
+   %        or {1 or 'linear'}
+   %        or {2 or 'nonlinear_quiet'}
+   %        or {3 or 'nonlinear_noise'}
+   strategy=0;
+   if strcmp(stimulus_vals.Inloop.HearingAid_Linear,'yes'), strategy = 1;  end
+   if strcmp(stimulus_vals.Inloop.HearingAid_Nonlinear,'yes'), strategy = 2;  end
+   % only use 3 in noise (never specify it here)
+   
+   % Write WAV files for F1,F2, and 3 noise levels (this may take some time...)
+   newMixedAtten = writeVowelSTMPwavs(stimulus_vals.Inloop.CalibPicNum,...
+       stimulus_vals.Inloop.BaseFrequency, stimulus_vals.Inloop.Signal_Level,...
+       stimulus_vals.Inloop.Noise_Atten_mid,strategy);
+   
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   
    if (exist(stimulus_vals.Inloop.List_File,'file') ~= 0)
       [Llist,Rlist] = read_rotate_list_file(stimulus_vals.Inloop.List_File);
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -71,13 +92,11 @@ if (exist('stimulus_vals','var') == 1)
    %    stimulus_vals.Inloop.NOISE_thr;
    FileAttenList=zeros(size(Llist));
    for i=1:length(Llist)
-      if ~isempty(findstr(Llist{i},'LTASS'))
+      if ~isempty(findstr(Llist{i},'EHLTASS'))
          FileAttenList(i)=stimulus_vals.Inloop.NOISE_thr-stimulus_vals.Inloop.Thr_Offset;
-      elseif ~isempty(findstr(Llist{i},'EH'))
-         FileAttenList(i)=stimulus_vals.Inloop.SIGNAL_thr-stimulus_vals.Inloop.Thr_Offset;
       else
          FileAttenList(i)=NaN;
-         error('File Mismatch in assigning level (not "LTASS" or "EH"')
+         error('File Mismatch in assigning level (not "EHLTASS")')
       end
    end
    
@@ -139,9 +158,17 @@ if (exist('stimulus_vals','var') == 1)
    Inloop.params.Condition.BestFrequency           = stimulus_vals.Inloop.BestFrequency;
    Inloop.params.Condition.OctShifts               = stimulus_vals.Inloop.OctShifts;
    Inloop.params.Condition.InvertPolarity          = 'no';
-   Inloop.params.Condition.NOISE_thr               = stimulus_vals.Inloop.NOISE_thr;
-   Inloop.params.Condition.SIGNAL_thr               = stimulus_vals.Inloop.SIGNAL_thr;
-   Inloop.params.Condition.Thr_Offset               = stimulus_vals.Inloop.Thr_Offset;
+   
+   Inloop.params.Condition.BaseFrequency        = stimulus_vals.Inloop.BaseFrequency;
+   Inloop.params.Condition.CalibPicNum          = stimulus_vals.Inloop.CalibPicNum;
+   Inloop.params.Condition.Signal_Level         = stimulus_vals.Inloop.Signal_Level;
+   Inloop.params.Condition.Noise_Atten_mid      = stimulus_vals.Inloop.Noise_Atten_mid;
+   Inloop.params.Condition.use_F1               = stimulus_vals.Inloop.use_F1;
+   Inloop.params.Condition.use_F2               = stimulus_vals.Inloop.use_F2;
+   Inloop.params.Condition.FormsAtHarmonics     = stimulus_vals.Inloop.FormsAtHarmonics;
+   Inloop.params.Condition.HearingAid_None      = stimulus_vals.Inloop.HearingAid_None;
+   Inloop.params.Condition.HearingAid_Linear    = stimulus_vals.Inloop.HearingAid_Linear;
+   Inloop.params.Condition.HearingAid_Nonlinear = stimulus_vals.Inloop.HearingAid_Nonlinear;
    
    Inloop.params.Computed.FeatureTarget_Hz_List   = stimulus_vals.Inloop.Computed_FeatureTarget_Hz_List;
    Inloop.params.Computed.UpdateRate_Hz_List   = stimulus_vals.Inloop.Computed_UpdateRate_Hz_List;
@@ -211,10 +238,18 @@ persistent prev_unit_bf
 %%%%%%%%%%%%%%%%%%%%
 %% Inloop Section 
 %%%%%%%%%%%%%%%%%%%%
-IO_def.Inloop.List_File             = { {['uigetfile(''' signals_dir 'Lists\MH\ISH2009\ISH2009.m'')']} };
-IO_def.Inloop.NOISE_thr           = {'max(0,current_unit_thresh-40)'  'dB'    [0    120]      };
-IO_def.Inloop.SIGNAL_thr           = {'max(0,current_unit_thresh-50)'  'dB'    [0    120]      };
-IO_def.Inloop.Thr_Offset           = {10  'dB'    [0    120]      };
+IO_def.Inloop.BaseFrequency    =  {'current_unit_bf'   'kHz'      [0.04  50] 0 0};
+IO_def.Inloop.CalibPicNum  =  {[]   ''       [0 6000]};
+IO_def.Inloop.Signal_Level     =  {65 'dB SPL'       [-50    150]   0  0}; 
+IO_def.Inloop.Noise_Atten_mid  =  {30 'dB atten'       [0    120]   0  0};
+IO_def.Inloop.use_F1           =  {'no|{yes}'};
+IO_def.Inloop.use_F2           =  {'no|{yes}'};
+IO_def.Inloop.FormsAtHarmonics =  {'{no}|yes'};
+IO_def.Inloop.HearingAid_None       =  {'no|{yes}'};
+IO_def.Inloop.HearingAid_Linear     =  {'{no}|yes'};
+IO_def.Inloop.HearingAid_Nonlinear  =  {'{no}|yes'};
+
+IO_def.Inloop.List_File             = { {['uigetfile(''' signals_dir 'Lists\JB\VowelLTASS\VowelLTASS.m'')']} };
 IO_def.Inloop.Repetitions           = { 25                        ''      [1    Inf]      };
 IO_def.Inloop.BaseUpdateRate        = { 33000                  'Hz'      [1    NI6052UsableRate_Hz(Inf)]      };
 
@@ -223,8 +258,8 @@ IO_def.Inloop.BaseUpdateRate        = { 33000                  'Hz'      [1    N
 %% Gating Section 
 %%%%%%%%%%%%%%%%%%%%
 % NOTE: these are for the BASELINE stim (WAV files should be desired duration, with equal zeros at end of WAV file to allow STMP shifting!)
-IO_def.Gating.Duration             = {1700       'ms'    [20 4000]};
-IO_def.Gating.Period               = {2200    'ms'   [50 5000]};
+IO_def.Gating.Duration             = {2000       'ms'    [20 4000]};
+IO_def.Gating.Period               = {3000    'ms'   [50 5000]};
 IO_def.Gating.Rise_fall_time       = {'default_rise_time(this.Duration)' 'ms'   [0  1000]}; 
 %%%%%%%%%%%%%%%%%%%%
 %% Mix Section 
