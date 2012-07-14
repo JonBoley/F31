@@ -1,10 +1,10 @@
 function [mixed,Fs,filename_mixed,newMixedAtten,dBreTONE,NEWforms_Hz]=...
     synth_BASELINE_ehLTASS_aid(TargetFreq_Hz,NEWF0_Hz,TargetFeature,...
-    Fix2Harms,mode,aidParams)
+    Fix2Harms,mode,stimDur,aidParams)
 % function [vowel,noise,Fs,filename_vowel,filename_noise,newVowelAtten,...
 %     newNoiseAtten,dBreTONE,NEWforms_Hz]=...
 %     synth_BASELINE_ehLTASS_aid(TargetFreq_Hz,NEWF0_Hz,TargetFeature,...
-%     Fix2Harms,mode,aidParams)
+%     Fix2Harms,mode,stimDur,aidParams)
 % 
 % aidParams.vowelAtten
 % aidParams.noiseAtten
@@ -36,6 +36,9 @@ function [mixed,Fs,filename_mixed,newMixedAtten,dBreTONE,NEWforms_Hz]=...
 %         or 2 for 'nonlinear_quiet'
 %         or 3 for 'nonlinear_noise'
 %
+
+global signals_dir
+EHsignals_dir=strcat(signals_dir,'JB\EHvowels');
 
 if ~exist('mode','var')
     mode=1;
@@ -77,21 +80,20 @@ filename_vowel=sprintf('baseEH_%sat%05.f_F0at%03.f%s.wav',TargetFeature,TargetFr
 
 % Mode 3 only returns info; Modes 1 and 2 return the synthesized vowel
 if mode<3
-    disp('***New vowel synthesized')
+%     disp('***New vowel synthesized')
     if Fix2Harms
         disp(sprintf('     - Formants: %s adjusted to be at harmonics',mat2str(AdjustedHarms)))
     end
-    %% returned vowel will be 1 cycle, but any analysis and/or plotting will be done with a longer vowel
-    FULLdur=0.6;   % This will be made to an integer number of periods (<=FULLdur)
-    dur=1/NEWF0_Hz;
-    Nreps=ceil(FULLdur/dur);  % Create full-duration waveform
+%     FULLdur=0.6;   % This will be made to an integer number of periods (<=FULLdur)
+%     dur=1/NEWF0_Hz;
+%     Nreps=ceil(FULLdur/dur);  % Create full-duration waveform
 
-    [time, vowel] = dovowl(NEWforms_Hz(1:NUMforms), NEWbws_Hz(1:NUMforms), NEWF0_Hz, dur, Fs);
+    [time, vowel] = dovowl(NEWforms_Hz(1:NUMforms), NEWbws_Hz(1:NUMforms), NEWF0_Hz, stimDur, Fs);
 
     vowel=vowel'-mean(vowel);  % Remove DC
     vowel=vowel/max(abs(vowel))*.999;  % Need amplitude to fit in wavwrite
 
-    noise=GenLTASS(dur,Fs); % Generate noise
+    noise=GenLTASS(stimDur,Fs); % Generate noise
     noise=noise/max(abs(noise))*.999;  % Need amplitude to fit in wavwrite
 
     % Mode 2 uses getVowelParams to calculate params; mode 2 also will view the vowel
@@ -107,7 +109,7 @@ if mode<3
     else
         viewVowel=0;
     end
-    [feat_freqs_Hz,feat_levs_dB,dBreTONE]=getVowelParams(vowel,Fs,FULLdur,NEWforms_Hz,viewVowel);
+    [feat_freqs_Hz,feat_levs_dB,dBreTONE]=getVowelParams(vowel,Fs,stimDur,NEWforms_Hz,viewVowel);
 else
     vowel=[]; Fs=[]; dBreTONE=[]; noise=[];
 end
@@ -118,96 +120,118 @@ end
 % APPLY HEARING AID GAIN
 CalcSeparately = 0; % Calculate signal & noise separately?
 
-if aidParams.strategy
-    switch aidParams.strategy
-        case 1, strategyText='_linearAid';
-        case 2, strategyText='_nonlinearAid';
-        case 3, strategyText='_nonlinearNoiseAid';
-        otherwise, strategyText='';
+mixed = vowel + (10^((aidParams.vowelAtten-aidParams.noiseAtten)/20)*noise);
+MaxLevelRatio2 = max(abs(mixed))/max(abs(vowel)); %this one relative to vowel alone
+mixed = mixed / MaxLevelRatio2;
+newMixedAtten = aidParams.vowelAtten - 20*log10(MaxLevelRatio2);
+
+switch aidParams.strategy
+case 1, strategyText='_linearAid';
+case 2, strategyText='_nonlinearAid';
+case 3, strategyText='_nonlinearNoiseAid';
+otherwise, strategyText='';
+end
+
+filename_vowel=sprintf('baseEH_%sat%05.f_F0at%03.f%s%s_%03.fdBEH_%03.fdBLTASS.wav',...
+    TargetFeature,TargetFreq_Hz,NEWF0_Hz,FHtext,strategyText,aidParams.vowelAtten,aidParams.noiseAtten);
+filename_noise=sprintf('baseLTASS%s_%03.fdBEH_%03.fdBLTASS.wav',...
+    strategyText,aidParams.vowelAtten,aidParams.noiseAtten);
+filename_mixed=sprintf('baseEHLTASS_%sat%05.f_F0at%03.f%s%s_%03.fdBEH_%03.fdBLTASS.wav',...
+    TargetFeature,TargetFreq_Hz,NEWF0_Hz,FHtext,strategyText,aidParams.vowelAtten,aidParams.noiseAtten);
+
+
+if length(dir(fullfile(EHsignals_dir,[filename_mixed(1:end-4) '*.wav'])))
+    existingFile = dir(fullfile(EHsignals_dir,[filename_mixed(1:end-4) '*.wav']));
+    if length(existingFile)>1
+        error(['Multiple file matches found matching ' filename_mixed(1:end-4) '*.wav']);
     end
-    filename_vowel=sprintf('baseEH_%sat%05.f_F0at%03.f%s%s_vowelat%03.fdB_noiseat%03.fdB.wav',...
-        TargetFeature,TargetFreq_Hz,NEWF0_Hz,FHtext,strategyText,aidParams.vowelAtten,aidParams.noiseAtten);
-    filename_noise=sprintf('baseLTASS%s_vowelat%03.fdB_noiseat%03.fdB.wav',...
-        strategyText,aidParams.vowelAtten,aidParams.noiseAtten);
-    filename_mixed=sprintf('baseEHLTASS_%sat%05.f_F0at%03.f%s%s_vowelat%03.fdB_noiseat%03.fdB.wav',...
-        TargetFeature,TargetFreq_Hz,NEWF0_Hz,FHtext,strategyText,aidParams.vowelAtten,aidParams.noiseAtten);
-
-    if ~isempty(vowel) && ~isempty(noise)
-        % 0) Combine vowel & noise
-        mixed = vowel + (10^(aidParams.vowelAtten-aidParams.noiseAtten)*noise);
-
-        % 1) Calculate hearing aid amplification
-        audiogram = [16   18   20    9    9]; % based on avg animal data (500OBN exposure)
-        freqs_Hz = [500,1000,2000,4000,6000];
-        gainStruct = calcgain(mixed,aidParams.Fs_Hz,...
-            aidParams.max_dBSPL,aidParams.vowelAtten,...
-            audiogram,freqs_Hz,aidParams.strategy);
-
-        % 2) Apply amplification to signal & noise separately
-        MaxLevel0 = max(abs(vowel));
-        MaxLevel1 = max(abs(noise));
-        MaxLevel2 = max(abs(mixed));
-
-        % frequency shift of CF (@F2) relative to base F2
-        if strcmp(TargetFeature,'F1')
-            freqShift = TargetFreq_Hz / ORIGforms_Hz(1);
-        elseif strcmp(TargetFeature,'F1')
-            freqShift = TargetFreq_Hz / ORIGforms_Hz(2);
+    newMixedAtten=str2num(existingFile.name(strfind(existingFile.name,'dBWAV')-3:strfind(existingFile.name,'dBWAV')-1));
+    fprintf('File found: %s\n... Using Atten=%1.fdB\n',existingFile.name,newMixedAtten);
+    filename_mixed = [filename_mixed(1:end-4) sprintf('_%03.fdBWAV',newMixedAtten) '.wav'];
+    return; % if this file already exists, just return
+elseif aidParams.strategy & ~isempty(vowel) & ~isempty(noise)
+    % 0) Combine vowel & noise
+    mixed = vowel + (10^((aidParams.vowelAtten-aidParams.noiseAtten)/20)*noise);
+    
+    % 1) Calculate hearing aid amplification
+    audiogram = [16   18   20    9    9]; % based on avg animal data (500OBN exposure)
+    freqs_Hz = [500,1000,2000,4000,6000];
+    gainStruct = calcgain(mixed,aidParams.Fs_Hz,...
+        aidParams.max_dBSPL,aidParams.vowelAtten,...
+        audiogram,freqs_Hz,aidParams.strategy);
+    
+    % 2) Apply amplification to signal & noise separately
+    MaxLevel0 = max(abs(vowel));
+    MaxLevel1 = max(abs(noise));
+    MaxLevel2 = max(abs(mixed));
+    
+    % frequency shift of CF (@F2) relative to base F2
+    if strcmp(TargetFeature,'F1')
+        freqShift = TargetFreq_Hz / ORIGforms_Hz(1);
+    elseif strcmp(TargetFeature,'F2')
+        freqShift = TargetFreq_Hz / ORIGforms_Hz(2);
+    else
+        error('Only F1 and F2 formants are currently supported!');
+    end
+    fc = freqShift * 500*2^(0.5*log2(1700/500)); % cross-over frequency (between F1 & F2)
+    
+    switch aidParams.strategy
+    case 1 % linear
+        if CalcSeparately
+            vowel = FIRgain(vowel,gainStruct.linear.gain_dB,...
+                gainStruct.linear.f_Hz*freqShift,aidParams.Fs_Hz);
+            noise = FIRgain(noise,gainStruct.linear.gain_dB,...
+                gainStruct.linear.f_Hz*freqShift,aidParams.Fs_Hz);
+        else
+            mixed = FIRgain(mixed,gainStruct.linear.gain_dB,...
+                gainStruct.linear.f_Hz*freqShift,aidParams.Fs_Hz);
         end
-        fc = freqShift * 500*2^(0.5*log2(1700/500)); % cross-over frequency (between F1 & F2)
-
-        switch aidParams.strategy
-            case 1 % linear
-                if CalcSeparately
-                    vowel = FIRgain(vowel,gainStruct.linear.gain_dB,...
-                        gainStruct.linear.f_Hz*freqShift,aidParams.Fs_Hz);
-                    noise = FIRgain(noise,gainStruct.linear.gain_dB,...
-                        gainStruct.linear.f_Hz*freqShift,aidParams.Fs_Hz);
-                else
-                    mixed = FIRgain(mixed,gainStruct.linear.gain_dB,...
-                        gainStruct.linear.f_Hz*freqShift,aidParams.Fs_Hz);
-                end
-            case 2 % nonlinear (quiet)
-                if CalcSeparately
-                    vowel = TwoBandGain(vowel,fc,aidParams.Fs_Hz,...
-                        gainStruct.nonlinear.quiet.gains);
-                    noise = TwoBandGain(noise,fc,aidParams.Fs_Hz,...
-                        gainStruct.nonlinear.quiet.gains);
-                else
-                    mixed = TwoBandGain(mixed,fc,aidParams.Fs_Hz,...
-                        gainStruct.nonlinear.quiet.gains);
-                end
-            case 3 % nonlinear (noise)
-                if CalcSeparately
-                    vowel = TwoBandGain(vowel,fc,aidParams.Fs_Hz,...
-                        gainStruct.nonlinear.noise.gains);
-                    noise = TwoBandGain(noise,fc,aidParams.Fs_Hz,...
-                        gainStruct.nonlinear.noise.gains);
-                else
-                    mixed = TwoBandGain(mixed,fc,aidParams.Fs_Hz,...
-                        gainStruct.nonlinear.noise.gains);
-                end
-            otherwise
-                % no amplification
+    case 2 % nonlinear (quiet)
+        if CalcSeparately
+            vowel = TwoBandGain(vowel,fc,aidParams.Fs_Hz,...
+                gainStruct.nonlinear.quiet.gains);
+            noise = TwoBandGain(noise,fc,aidParams.Fs_Hz,...
+                gainStruct.nonlinear.quiet.gains);
+        else
+            mixed = TwoBandGain(mixed,fc,aidParams.Fs_Hz,...
+                gainStruct.nonlinear.quiet.gains);
         end
+    case 3 % nonlinear (noise)
+        if CalcSeparately
+            vowel = TwoBandGain(vowel,fc,aidParams.Fs_Hz,...
+                gainStruct.nonlinear.noise.gains);
+            noise = TwoBandGain(noise,fc,aidParams.Fs_Hz,...
+                gainStruct.nonlinear.noise.gains);
+        else
+            mixed = TwoBandGain(mixed,fc,aidParams.Fs_Hz,...
+                gainStruct.nonlinear.noise.gains);
+        end
+    otherwise
+        % no amplification
+    end
+    
+    % 3) Calculate how much the peak changed (e.g., increased)
+    MaxLevelRatio0 = max(abs(vowel))/MaxLevel0;
+    MaxLevelRatio1 = max(abs(noise))/MaxLevel1;
+    MaxLevelRatio2 = max(abs(mixed))/MaxLevel0; %this one relative to vowel alone
+    
+    % 4) Change scale back to original dynamic range (to prevent clipping)
+    vowel = vowel / MaxLevelRatio0;
+    noise = noise / MaxLevelRatio1;
+    mixed = mixed / MaxLevelRatio2;
+    
+    % 5) Adjust attenuation to get the intended level (e.g., decrease)
+    newVowelAtten = aidParams.vowelAtten - 20*log10(MaxLevelRatio0);
+    newNoiseAtten = aidParams.noiseAtten - 20*log10(MaxLevelRatio1);
+    newMixedAtten = aidParams.vowelAtten - 20*log10(MaxLevelRatio2);
+    
+    filename_vowel = [filename_vowel(1:end-4) sprintf('_%03.fdBWAV',newVowelAtten) '.wav'];
+    filename_noise = [filename_noise(1:end-4) sprintf('_%03.fdBWAV',newNoiseAtten) '.wav'];
+    
+end %if ~isempty(vowel) (& filename doesn't exist)
 
-        % 3) Calculate how much the peak changed (e.g., increased)
-        MaxLevelRatio0 = max(abs(vowel))/MaxLevel0;
-        MaxLevelRatio1 = max(abs(noise))/MaxLevel1;
-        MaxLevelRatio2 = max(abs(mixed))/MaxLevel0; %this one relative to vowel alone
+filename_mixed = [filename_mixed(1:end-4) sprintf('_%03.fdBWAV',newMixedAtten) '.wav'];
 
-        % 4) Change scale back to original dynamic range (to prevent clipping)
-        vowel = vowel / MaxLevelRatio0;
-        noise = noise / MaxLevelRatio1;
-        mixed = mixed / MaxLevelRatio2;
-
-        % 5) Adjust attenuation to get the intended level (e.g., decrease)
-        newVowelAtten = aidParams.vowelAtten - 20*log10(MaxLevelRatio0);
-        newNoiseAtten = aidParams.noiseAtten - 20*log10(MaxLevelRatio1);
-        newMixedAtten = aidParams.vowelAtten - 20*log10(MaxLevelRatio2);
-        
-    end %if ~isempty(vowel)
-end %if aidParams.strategy
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
