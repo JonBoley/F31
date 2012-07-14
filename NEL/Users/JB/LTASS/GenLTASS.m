@@ -1,6 +1,6 @@
 % Generate LTASS noise
 function Z=GenLTASS(sec,Fs,SaveWAV)
-addpath([fileparts(mfilename('fullpath')) filesep 'octave']);
+% addpath([fileparts(mfilename('fullpath')) filesep 'octave']);
 Z = IntLTASS(randn(sec*Fs,1),Fs);
 Z = Z/(max(abs(Z))+eps);
 
