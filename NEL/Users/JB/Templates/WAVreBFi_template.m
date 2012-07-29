@@ -126,7 +126,7 @@ if (exist('stimulus_vals','var') == 1)
            stratAttenIndex=1;
        end
        % the order will always be [none, linear, nonlinear], but may not include all
-       stratAttenIndex=max(stratAttenIndex,length(strategy));
+       stratAttenIndex=min(stratAttenIndex,length(strategy));
        
        if ~isempty(findstr(Llist{i},'F1'))
            featAttenIndex=1;
@@ -253,6 +253,26 @@ str{1} = sprintf('%d reps:', p.repetitions);
 str{1} = sprintf('%s %d files x %d CFs ', str{1}, length(unique(p.list)), length(p.Condition.OctShifts));
 % str{1} = sprintf('%s @THR+%1.1fdB,', str{1}, p.Condition.Thr_Offset);
 
+%%%
+for i=1:length(p.Condition.Signal_Level)
+    str{1} = sprintf('%s%1.1f|', str{1}, p.Condition.Signal_Level(i));
+end
+str{1} = sprintf('%sdB SPL[',str{1}(1:end-1));
+if strcmp(DAL.Inloop.params.Condition.use_F1,'yes')
+    str{1} = sprintf('%sF1,', str{1});
+end
+if strcmp(DAL.Inloop.params.Condition.use_F2,'yes')
+    str{1} = sprintf('%sF2,', str{1});
+end
+
+str{1} = sprintf('%s]', str{1}(1:end-1));
+if strcmp(stimulus_vals.Inloop.HearingAid_Linear,'yes')
+    str{1} = sprintf('%s+NAL-R', str{1});
+end
+if strcmp(stimulus_vals.Inloop.HearingAid_Nonlinear,'yes')
+    str{1} = sprintf('%s+DSL[i/o]', str{1});
+end
+
 %----------------------------------------------------------------------------------------
 function errstr = check_DAL_params(DAL,fieldname)
 % Some extra error checks
@@ -300,7 +320,7 @@ IO_def.Inloop.HearingAid_Linear     =  {'{no}|yes'};
 IO_def.Inloop.HearingAid_Nonlinear  =  {'{no}|yes'};
 
 % IO_def.Inloop.List_File             = { {['uigetfile(''' signals_dir 'Lists\JB\VowelLTASS\notVowelLTASS.m'')']} };
-IO_def.Inloop.Repetitions           = { 25                        ''      [1    Inf]      };
+IO_def.Inloop.Repetitions           = { 10                        ''      [1    Inf]      };
 IO_def.Inloop.BaseUpdateRate        = { 33000                  'Hz'      [1    NI6052UsableRate_Hz(Inf)]      };
 
 if (~isequal(current_unit_bf, prev_unit_bf) & isequal(fieldname,'Inloop'))
