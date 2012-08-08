@@ -92,6 +92,11 @@ elseif strcmp(ExpDate,'120511')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2011_12_05-Chin1148_AN_normal') ''''])
 elseif strcmp(ExpDate,'050412')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2012_05_04-Chin1149_AN_500OBN') ''''])
+elseif strcmp(ExpDate,'062312')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2012_06_23-Chin1202_AN_500OBN') ''''])
+elseif strcmp(ExpDate,'072112')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2012_07_21-Chin1206_AN_500OBN') ''''])
+    
     
     %%%%%%%%%%%%%%%%
 

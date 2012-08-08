@@ -3,7 +3,7 @@ setup_Vowel_STMP;
 
 %% Run all units for a given experiment
 if ~exist('date','var')
-    date = '050412';
+    date = '072112';
 end
 switch date
     case '041805'   % 04/18/05 fibers: (in noise, normal)
@@ -112,8 +112,16 @@ switch date
 
     case '050412' %JB-2012_05_04-Chin1149_AN_500OBN (with linear amplification)
         % 1.01, 1.02, 1.03, 1.05, 2.01, 2.03, 2.10
-        unitNums = {1.05};%{1.01, 1.02, 1.03, 1.05, 2.01, 2.03, 2.10};
-        colors = repmat({'r'},size(unitNums));
+        unitNums = {1.01, 1.02, 1.03, 1.05, 2.01, 2.03};
+        colors = repmat({'m'},size(unitNums));
+    case '062312' %JB-2012_06_23-Chin1202_AN_500OBN (with linear amplification)
+        % 1.04, 1.05, 1.07, 1.08, 1.09
+        unitNums = {1.04, 1.05, 1.07, 1.08, 1.09};
+        colors = repmat({'m'},size(unitNums));
+    case '072112' %JB-2012_07_21-Chin1206_AN_500OBN (with linear & nonlinear amplification)
+        % 1.04, 1.08, 1.12, 1.13, 3.01
+        unitNums = {1.04, 1.08, 1.12, 1.13, 3.01};
+        colors = repmat({'m'},size(unitNums));
 
     otherwise
         error('Invalid experiment date');
@@ -121,30 +129,35 @@ end
 dates=repmat({date},size(unitNums));
 
 %% Run a combo of experiments
-dates = {'041811','041811','041811','041811','041811','041811',...
-    '062711','062711','062711','062711','062711','062711',...
-    '072011','072011','072011','072011','072011','072011','072011',...
-    '062311','062311','062311','062311',...
-    '072111','072111','072111','072111','072111','072111',...
-    '080111','080111','080111','080111','080111',...
-    '080911','080911','080911','080911','080911','080911','080911','080911'...
-    };
-unitNums = {1.03,2.01,2.02,2.07,3.03,3.04,...
-    1.01,1.02,1.03,1.04,2.01,2.03,...
-    1.02,1.03,1.05,1.06,1.07,1.08,1.09...
-    1.01,1.09,1.11,1.14,...
-    1.01, 1.06, 1.11, 1.12, 1.15, 1.16,...
-    2.02, 4.01, 4.02, 4.03, 4.05,...
-    1.04, 1.05, 1.06, 1.07, 1.09, 1.11, 1.15, 1.16...
-    };
-colors = {'k','k','k','k','k','k',...
-    'k','k','k','k','k','k',...
-    'k','k','k','k','k','k','k',...
-    'r','r','r','r',...
-    'r','r','r','r','r','r',...
-    'r','r','r','r','r',...
-    'r','r','r','r','r','r','r','r'...
-    };
+if isempty(date) % if not any particular date, do a bunch
+    dates = {'041811','041811','041811','041811','041811','041811',...
+        '062711','062711','062711','062711','062711','062711',...
+        '072011','072011','072011','072011','072011','072011','072011',...
+        '062311','062311','062311','062311',...
+        '072111','072111','072111','072111','072111','072111',...
+        '080111','080111','080111','080111','080111',...
+        '080911','080911','080911','080911','080911','080911','080911','080911',...
+        '050412','050412','050412','050412','050412','050412'...
+        };
+    unitNums = {1.03,2.01,2.02,2.07,3.03,3.04,...
+        1.01,1.02,1.03,1.04,2.01,2.03,...
+        1.02,1.03,1.05,1.06,1.07,1.08,1.09...
+        1.01,1.09,1.11,1.14,...
+        1.01, 1.06, 1.11, 1.12, 1.15, 1.16,...
+        2.02, 4.01, 4.02, 4.03, 4.05,...
+        1.04, 1.05, 1.06, 1.07, 1.09, 1.11, 1.15, 1.16,...
+        1.01, 1.02, 1.03, 1.05, 2.01, 2.03...
+        };
+    colors = {'k','k','k','k','k','k',...
+        'k','k','k','k','k','k',...
+        'k','k','k','k','k','k','k',...
+        'r','r','r','r',...
+        'r','r','r','r','r','r',...
+        'r','r','r','r','r',...
+        'r','r','r','r','r','r','r','r',...
+        'm','m','m','m','m','m'...
+        };
+end
 
 %% The loop
 RecalcAll = 0;  % if enabled, this automatically recalculates everything,
@@ -153,7 +166,7 @@ LoadMAT = 1; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
 
 if LoadMAT
     [FileName,PathName,FilterIndex] = uigetfile('*.mat','Pick a file',...
-        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_051912.mat');
+        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_053112.mat');
     if FileName
         LoadMATbackup = LoadMAT;
         load(fullfile(PathName,FileName),'-regexp','[^h1]');
@@ -192,18 +205,24 @@ end
 CD_slope_bak = CD_slope;
 CD_slope = CD_slope2;
 
-if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
+if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
     figure;
     FeatureNums = [1 3]; %F1,F2
     
     arrayCDatHalfOct.nh = cell(length(FeatureNums),length(SNR{1})); %normal
     arrayCDatHalfOct.snhl = cell(length(FeatureNums),length(SNR{1})); %SNHL
+    arrayCDatHalfOct.linear = cell(length(FeatureNums),length(SNR{1})); %linear
+    arrayCDatHalfOct.nonlinear = cell(length(FeatureNums),length(SNR{1})); %nonlinear
     for i=1:length(FeatureNums)
         for j=1:length(SNR{1})
             arrayCDatHalfOct.nh{i,j} = NaN*ones(length(CDatHalfOct),2);
             arrayCDatHalfOct.snhl{i,j} = NaN*ones(length(CDatHalfOct),2);
+            arrayCDatHalfOct.linear{i,j} = NaN*ones(length(CDatHalfOct),2);
+            arrayCDatHalfOct.nonlinear{i,j} = NaN*ones(length(CDatHalfOct),2);
         end
     end
+    
+    
     
     for i=1:length(CDatHalfOct) % for each unit
         plotNum=0;
@@ -221,7 +240,7 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 end
                 
                 % convert from us to CF cycles
-                tempCD = CDatHalfOct{i}{FeatureNum,indx_snr};
+                tempCD = CDatHalfOct{i}{find(FeatureNum==FeatureNums),indx_snr};
                 CF_cycle_usec = 1e6/(UnitCF(i)*1e3);
                 tempCD = tempCD./CF_cycle_usec;
                 
@@ -233,13 +252,23 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                     case {'r'} % impaired
                         arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(i,:) =...
                             [UnitCF(i), tempCD];
+                    case {'m'} % impaired + linear amplification
+                        arrayCDatHalfOct.linear{find(FeatureNum==FeatureNums),indx_snr}(i,:) =...
+                            [UnitCF(i), tempCD];
+                    case {'g'} % impaired + nonlinear amplification
+                        arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(i,:) =...
+                            [UnitCF(i), tempCD];
                 end
                 
-                if exist('h1'), cla(h1); cla(h2); end
+                if exist('h1'), cla(h1); cla(h2); cla(h3); cla(h4); end
                 h1=semilogx(arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
                     arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,2),'k.');
                 h2=semilogx(arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
                     arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(:,2),'r.');
+                h3=semilogx(arrayCDatHalfOct.linear{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
+                    arrayCDatHalfOct.linear{find(FeatureNum==FeatureNums),indx_snr}(:,2),'m.');
+                h4=semilogx(arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
+                    arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(:,2),'g.');
                 
                 set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
                 xlim([0.1 10]); ylim([0 10]);
@@ -313,6 +342,40 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
 %                     plot(cfun2,'r'); drawnow;
                 end
                 
+                xData3 = arrayCDatHalfOct.linear{find(FeatureNum==FeatureNums),indx_snr}(:,1);
+                yData3 = arrayCDatHalfOct.linear{find(FeatureNum==FeatureNums),indx_snr}(:,2);
+                indexNaN = isnan(xData3); xData3 = xData3(~indexNaN); yData3 = yData3(~indexNaN);
+                indexNaN = isnan(yData3); xData3 = xData3(~indexNaN); yData3 = yData3(~indexNaN);
+                [xData3,IX]=unique(xData3); yData3=yData3(IX); %warning: this throws away duplicate CFs
+                if length(xData3)>2
+                    clear xData3_smoothed yData3_smoothed;
+                    xData3_smoothed = 100e-3*2.^(0:smoothOct/4:6); yData3_smoothed=NaN*ones(size(xData3_smoothed));
+                    for q=1:length(xData3_smoothed)
+                        temp_ind = xData3<=(xData3_smoothed(q)*2^(smoothOct/2)) & xData3>=(xData3_smoothed(q)*2^(-smoothOct/2));
+                        distance_oct = abs(log2(xData3(temp_ind)/xData3_smoothed(q)));
+                        triangular_weights=-(abs(distance_oct)-(smoothOct/2))/(smoothOct/2);
+                        yData3_smoothed(q) = median(yData3(temp_ind));
+                    end
+                    semilogx(xData3_smoothed,yData3_smoothed,'m');
+                end
+                
+                xData4 = arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(:,1);
+                yData4 = arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(:,2);
+                indexNaN = isnan(xData4); xData4 = xData4(~indexNaN); yData4 = yData4(~indexNaN);
+                indexNaN = isnan(yData4); xData4 = xData4(~indexNaN); yData4 = yData4(~indexNaN);
+                [xData4,IX]=unique(xData4); yData4=yData4(IX); %warning: this throws away duplicate CFs
+                if length(xData4)>2
+                    clear xData4_smoothed yData4_smoothed;
+                    xData4_smoothed = 100e-3*2.^(0:smoothOct/4:6); yData4_smoothed=NaN*ones(size(xData4_smoothed));
+                    for q=1:length(xData4_smoothed)
+                        temp_ind = xData4<=(xData4_smoothed(q)*2^(smoothOct/2)) & xData4>=(xData4_smoothed(q)*2^(-smoothOct/2));
+                        distance_oct = abs(log2(xData4(temp_ind)/xData4_smoothed(q)));
+                        triangular_weights=-(abs(distance_oct)-(smoothOct/2))/(smoothOct/2);
+                        yData4_smoothed(q) = median(yData4(temp_ind));
+                    end
+                    semilogx(xData4_smoothed,yData4_smoothed,'g');
+                end
+                
                 
                 if j==1 % apply ylabels
                     switch FeatureNum
@@ -338,13 +401,16 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                     case FeatureNums(end)
                         xlabel('CF (kHz)');
                 end %switch FeatureNum
+                
+                
             end
         end 
     end
+    save('C:\Research\MATLAB\Vowel_STMP\ExpData\regressionTest.mat','arrayCDatHalfOct');
 end
 
 
-if exist('SyncValues') % plot SyncValues as a function of CF & noise level
+if 0%exist('SyncValues') % plot SyncValues as a function of CF & noise level
     % SyncValues{featureNum,snrNum} = [FeatureFreqs;BFs;Synchs];
     array_syncPlotValsF1.nh = cell(length(FeatureNums),length(SNR{1}));
     array_syncPlotValsT1.nh = cell(length(FeatureNums),length(SNR{1}));
@@ -506,7 +572,7 @@ if exist('SyncValues') % plot SyncValues as a function of CF & noise level
 end
 
 
-if exist('array_syncPlotValsF1') % group sync by CF range
+if 0%exist('array_syncPlotValsF1') % group sync by CF range
     % array_syncPlotValsF1.snhl{find(FeatureNum==FeatureNums),j}(i)
     LocalSymbols = ['x','s','h'];
     centerCFs = [0.5 1 2 4]; %kHz
@@ -609,9 +675,9 @@ if exist('array_syncPlotValsF1') % group sync by CF range
         end
     end
 end
-set(gcf,'visible','off');
+% set(gcf,'visible','off');
 
-if exist('syncCFgroups') % plot sync as a function noise level (grouped by CF)
+if 0%exist('syncCFgroups') % plot sync as a function noise level (grouped by CF)
     % syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex)
     figure; 
     plotNum=0;
@@ -676,17 +742,19 @@ if exist('Rho_width') % plot Rho & CD as a function of CF & noise level
     figure;
     FeatureNum=3; %F2
     for i=1:length(Rho_width)
+        FeatureNum2 = min(FeatureNum,size(Rho_width{i},1));
+        
         subplot(231), hold on;
         indx = find(SNR{i}==max(SNR{i}));
-        semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum,indx)),[colors{i},'o']);
+        semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum2,indx)),[colors{i},'o']);
 
         subplot(232), hold on;
         indx = find(SNR{i}==0);
-        semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum,indx)),[colors{i},'o']);
+        semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum2,indx)),[colors{i},'o']);
 
         subplot(233), hold on;
         indx = find(SNR{i}~=max(SNR{i}) & SNR{i}~=0);
-        semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum,indx)),[colors{i},'o']);
+        semilogx(UnitCF(i),cell2mat(Rho_width{i}(FeatureNum2,indx)),[colors{i},'o']);
     end
     subplot(231), set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
     title('In Quiet');
@@ -698,17 +766,19 @@ if exist('Rho_width') % plot Rho & CD as a function of CF & noise level
 
 
     for i=1:length(CD_slope)
+        FeatureNum2 = min(FeatureNum,size(CD_slope{i},1));
+        
         subplot(234), hold on;
         indx = find(SNR{i}==max(SNR{i}));
-        semilogx(UnitCF(i),(CD_slope{i}(FeatureNum,indx)),[colors{i},'o']);
+        semilogx(UnitCF(i),(CD_slope{i}(FeatureNum2,indx)),[colors{i},'o']);
 
         subplot(235), hold on;
         indx = find(SNR{i}==0);
-        semilogx(UnitCF(i),(CD_slope{i}(FeatureNum,indx)),[colors{i},'o']);
+        semilogx(UnitCF(i),(CD_slope{i}(FeatureNum2,indx)),[colors{i},'o']);
 
         subplot(236), hold on;
         indx = find(SNR{i}~=max(SNR{i}) & SNR{i}~=0);
-        semilogx(UnitCF(i),(CD_slope{i}(FeatureNum,indx)),[colors{i},'o']);
+        semilogx(UnitCF(i),(CD_slope{i}(FeatureNum2,indx)),[colors{i},'o']);
     end
     subplot(234), set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
     xlabel('CF (kHz)');
@@ -724,36 +794,37 @@ if exist('Rho_width') % plot Rho & CD as a function of CF & noise level
     array_rho.snhl=cell(2,length(SNR{1}));
     array_cd.snhl=cell(2,length(SNR{1}));
     nhCFs=UnitCF(cell2mat(colors)=='k'); 
-    snhlCFs=UnitCF(cell2mat(colors)=='r');
+    snhlCFs=UnitCF(cell2mat(colors)~='k');
     FeatureIndex=0;
     for FeatureNum=[1 3]; %F1,F2
         FeatureIndex=FeatureIndex+1;
         for CFindex=1:length(Rho_width)
+            FeatureNum2 = min(FeatureNum,size(Rho_width{CFindex},1));
             indx = find(SNR{CFindex}==max(SNR{CFindex}));
             if colors{CFindex}=='k'
-                array_rho.nh{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
-                array_cd.nh{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+                array_rho.nh{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.nh{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
             else
-                array_rho.snhl{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
-                array_cd.snhl{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum,indx);                
+                array_rho.snhl{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.snhl{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);                
             end
 
             indx = find(SNR{CFindex}==0);
             if colors{CFindex}=='k'
-                array_rho.nh{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
-                array_cd.nh{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+                array_rho.nh{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.nh{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
             else
-                array_rho.snhl{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
-                array_cd.snhl{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+                array_rho.snhl{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.snhl{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
             end
 
             indx = find(SNR{CFindex}~=max(SNR{CFindex}) & SNR{CFindex}~=0);
             if colors{CFindex}=='k'
-                array_rho.nh{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
-                array_cd.nh{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+                array_rho.nh{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.nh{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
             else
-                array_rho.snhl{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum,indx));
-                array_cd.snhl{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum,indx);
+                array_rho.snhl{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.snhl{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
             end
         end
     end

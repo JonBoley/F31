@@ -94,10 +94,10 @@ xlabel('CF (kHz)'); ylabel('CD (CF cycles)');
 legend([nh.figHandle snhl.figHandle],{'NH (95% CI)','SNHL (95% CI)'});
   
 %% remove normal CF trend
-nh.CD = nh.CD - nh.yhat;
-snhl.CD = snhl.CD - interp1(nh.CF,nh.yhat,snhl.CF);
+% nh.CD = nh.CD - nh.yhat;
+% snhl.CD = snhl.CD - interp1(nh.CF,nh.yhat,snhl.CF);
 %% Non-parametric statistics on CD
-for testNum=[5]
+for testNum=[6]
     KWmatrix{testNum}=[];
     RSmatrix{testNum,1}=[]; RSmatrix{testNum,2}=[];
     switch testNum
@@ -232,9 +232,19 @@ for testNum=[5]
                 'Equal SL (NH)','Equal SL (SNHL)'};
             
             % Directly compare NH/SNHL @ SNRnum
-            SNRnum = 3;
-            RSmatrix{testNum,1} = KWmatrix{testNum}(~isnan(KWmatrix{testNum}(:,2*SNRnum-1)),2*SNRnum-1);
-            RSmatrix{testNum,2} = KWmatrix{testNum}(~isnan(KWmatrix{testNum}(:,2*SNRnum)),2*SNRnum);
+%             SNRnum = 3;
+%             RSmatrix{testNum,1} = KWmatrix{testNum}(~isnan(KWmatrix{testNum}(:,2*SNRnum-1)),2*SNRnum-1);
+%             RSmatrix{testNum,2} = KWmatrix{testNum}(~isnan(KWmatrix{testNum}(:,2*SNRnum)),2*SNRnum);
+            
+            % Directly compare 2 SNRs (NH)
+            SNRnum1 = 1;  SNRnum2 = 2;
+            RSmatrix{testNum,1} = KWmatrix{testNum}(~isnan(KWmatrix{testNum}(:,2*SNRnum1-1)),2*SNRnum1-1);
+            RSmatrix{testNum,2} = KWmatrix{testNum}(~isnan(KWmatrix{testNum}(:,2*SNRnum2-1)),2*SNRnum2-1);
+            
+            % Directly compare 2 SNRs (SNHL)
+%             SNRnum1 = 1;  SNRnum2 = 2;
+%             RSmatrix{testNum,1} = KWmatrix{testNum}(~isnan(KWmatrix{testNum}(:,2*SNRnum1)),2*SNRnum1);
+%             RSmatrix{testNum,2} = KWmatrix{testNum}(~isnan(KWmatrix{testNum}(:,2*SNRnum2)),2*SNRnum2);
 
     end
 
@@ -247,7 +257,15 @@ for testNum=[5]
     % if only two groups, do Wilcoxon rank sum test (aka, Mann-Whitney U-test)
     if ~isempty(RSmatrix{testNum,1})
         [p_rs{testNum},h_rs{testNum},stats_rs{testNum}] = ranksum(RSmatrix{testNum,1},RSmatrix{testNum,2});
+        
+%         figure, plot(RSmatrix{testNum,1},'k.'); hold on; plot(RSmatrix{testNum,2},'r.'); hold off;
+        if h_rs{testNum}
+            fprintf('Found significant difference (p=%1.5f)\n',p_rs{testNum});
+        else
+            fprintf('No significant difference (p=%1.5f)\n',p_rs{testNum});
+        end
     end
 end
-p_rs
+
+
 

@@ -13,10 +13,12 @@ end
 %     2.02, 4.01, 4.02, 4.03, 4.05,...
 %     1.04, 1.05, 1.06, 1.07, 1.09, 1.11, 1.15, 1.16...
 %     };
-dates = {'050412','050412','050412','050412','050412','050412'};
+date = '050412';
 unitNums = {1.01, 1.02, 1.03, 1.05, 2.01, 2.03};
+dates=repmat({date},size(unitNums));
 
-for i=3:length(dates)
+
+for i=1:length(dates)
     count=fprintf('%d of %d',i,length(dates));
     for FeatureIndices=1:2%4
         for AttenIndices=1:3
