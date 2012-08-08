@@ -86,7 +86,7 @@ end
 PIC=rmfield(PIC,'num');
 
 %% If Interleaved data, we need to know which condition to use
-if sum(strcmp(PIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','TrBFi','SACrlv'}))
+if sum(strcmp(PIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','WAVreBFi','TrBFi','SACrlv'}))
    PIC.CONDind = min(setdiff(1:excludeLines{1}(end),excludeLines{1}));
    PIC.CONDind = mod(PIC.CONDind,PIC.x.Stimuli.nstim); %wrap to nstim
    PIC.CONDind(~PIC.CONDind) = PIC.x.Stimuli.nstim; %mod=0 -> nstim
