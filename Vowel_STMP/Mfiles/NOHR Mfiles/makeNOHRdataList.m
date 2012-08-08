@@ -182,8 +182,12 @@ for UNITind=1:size(TUlist,1)
    %%% EHvLTASSrBFi Info
    %%%%%%%%%%%%%
    DataList=EHvLTASSrBFi_parse(DataList);  
+  
 
-
+   %%%%%%%%%%%%%
+   %%% WAVreBFi Info (assumes similar to EHvLTASSrBFi)
+   %%%%%%%%%%%%%
+   DataList=WAVreBFi_parse(DataList);  
 
 
    
@@ -940,6 +944,11 @@ if ~isempty(picList)
       else
          Temp.levels_dBSPL{ind}=x.Stimuli.Condition.Level_dBSPL;
       end
+      if any(x.Stimuli.Rattens>100 & x.Stimuli.Rattens<120)
+          % work-around for 120dB atten getting messed up
+          disp(sprintf('Warning: Atten %1.fdB adjusted to 120dB',x.Stimuli.Rattens(x.Stimuli.Rattens>100 & x.Stimuli.Rattens<120)));
+          x.Stimuli.Rattens(x.Stimuli.Rattens>100 & x.Stimuli.Rattens<120)=120;
+      end
       Temp.Nattens_dB{ind}=x.Stimuli.Rattens;%x.Stimuli.Used.NoiseAttens_dB_List;
       Temp.picNums(ind)=picList(ind);
       Temp.FormsAtHarmsIND(ind)=find(strcmp(deblank(x.Stimuli.Condition.FormsAtHarmonics),FormsAtHarmonicsText));
@@ -1008,11 +1017,12 @@ if ~isempty(picList)
                for FreqIND=1:NumF
                   
                   % Store exact freqs for ALL conditions for this Feature (will vary from feature to feature)
-                  CONDindFULL=[];
+                  CONDindFULL=[]; CONDfreq_kHz=[];
                   for PICind=TempINDs
-                     CONDindFULL=[CONDindFULL find((Temp.octshifts{PICind}==SORTocts(FreqIND))&(strcmp(deblank(Temp.FeaturesList{PICind}),FeaturesText{FeatIND})))];
+                     CONDindFULL=find((Temp.octshifts{PICind}==SORTocts(FreqIND))&(strcmp(deblank(Temp.FeaturesList{PICind}),FeaturesText{FeatIND})));
+                     CONDfreq_kHz=unique([CONDfreq_kHz Temp.freqs_Hz{PICind}(CONDindFULL)/1000]);
                   end
-                  CONDfreq_kHz=unique(Temp.freqs_Hz{PICind}(CONDindFULL)/1000);
+%                   CONDfreq_kHz=unique(Temp.freqs_Hz{PICind}(CONDindFULL)/1000);
                   if length(CONDfreq_kHz)~=1
                      error('Non-unique CONDfreq_kHz in TEH_reBFi, when looking at FreqIND=%d',FreqIND)
                   end
@@ -1020,14 +1030,15 @@ if ~isempty(picList)
                   
                   for AttenIND=1:NumA
                      % Verify unique conditions
-                     CONDindFULL=[];
+                     CONDindFULL=[]; CONDind=[];
                      for PICind=TempINDs
-                        CONDindFULL=[CONDindFULL find((Temp.octshifts{PICind}==SORTocts(FreqIND))&(Temp.Nattens_dB{PICind}==SORTattens(AttenIND))& ...
-                              (strcmp(deblank(Temp.FeaturesList{PICind}),FeaturesText{FeatIND})))];
+                         CONDindFULL=find((Temp.octshifts{PICind}==SORTocts(FreqIND))&(Temp.Nattens_dB{PICind}==SORTattens(AttenIND))& ...
+                             (strcmp(deblank(Temp.FeaturesList{PICind}),FeaturesText{FeatIND})));
+                         CONDind=unique([CONDind CONDindFULL]);
                      end
-                     CONDind=unique(CONDindFULL);
+%                      CONDind=unique(CONDindFULL);
                      if length(CONDind)>1
-                        error(sprintf('Non-unique CONDind in EHvLTASSeBFi, when looking at FreqIND=%d and AttenIND=%d',FreqIND,AttenIND))
+%                         error(sprintf('Non-unique CONDind in EHvLTASSeBFi, when looking at FreqIND=%d and AttenIND=%d',FreqIND,AttenIND))
                      end
                      
                      % Find relevant picture indices for each Freq/Level condition (1: yes, 0:no)
@@ -1045,7 +1056,7 @@ if ~isempty(picList)
                      for i=TempINDs2
                         ii=ii+1;
                         TOTALconds=length(xx{i}.Stimuli.Used.FeatureTarget_Hz_List);
-                        GOODlines=CONDind:TOTALconds:xx{i}.Stimuli.fully_presented_lines;
+                        GOODlines=CONDind(min(i,end)):TOTALconds:xx{i}.Stimuli.fully_presented_lines;
                         %% Take out any lines beyond badlines
                         GOODlines=GOODlines(find(GOODlines<Temp.FirstBADline(i)));
                         IGNORElines=setdiff(1:xx{i}.Stimuli.fully_presented_lines,GOODlines);
@@ -1062,6 +1073,201 @@ if ~isempty(picList)
 end 
 
 return; %EHvLTASSrBFi
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function DataList=WAVreBFi_parse(DataList) %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+global TUlist UNITind
+global FeaturesText FormsAtHarmonicsText InvertPolarityText
+
+picList=findPics('WAVreBFi',TUlist(UNITind,:));
+if ~isempty(picList)
+   DataList.Units{TUlist(UNITind,1),TUlist(UNITind,2)}.EHvLTASS_reBF.interleaved='yes';
+   
+   % FIRST, find all octshifts, Features, freqs 
+   clear Temp xx
+   Temp.octshifts=cell(1,length(picList));
+   Temp.FeatureINDs=cell(1,length(picList));
+   Temp.freqs_Hz=cell(1,length(picList));
+   Temp.FeaturesList=cell(1,length(picList));
+   Temp.levels_dBSPL=cell(1,length(picList));
+   Temp.Nattens_dB=cell(1,length(picList));
+   Temp.FirstBADline=Inf+ones(size(picList));
+   for ind=1:length(picList)
+      disp(sprintf('      ... Loading picture: %d',picList(ind)))
+      x=loadPic(picList(ind));
+      xx{ind}=x;
+      if (x.General.picture_number~=picList(ind))|(x.General.track~=TUlist(UNITind,1))|(x.General.unit~=TUlist(UNITind,2))
+         error(sprintf('EHvLTASSrBFi data Mismatch for Picture: %d',picList(ind)));
+      end
+      
+      %% Need to verify no bad-line errors, ow, counting will be off - SO FOR NOW, DISCARD ALL LINES AFTER THIS
+      if ~isempty(x.Stimuli.bad_lines)
+         Temp.FirstBADline(ind)=x.Stimuli.bad_lines(1);
+         disp(sprintf('EHvLTASSrBFi picture %d: LINE ERRORS, IGNORING ALL LINES STARTING at line #: %d',picList(ind),Temp.FirstBADline(ind)));
+      end
+      
+      Temp.octshifts{ind}=x.Stimuli.Used.OctShifts_List;
+      featIndex=1; x.Stimuli.Condition.Features=cell(0);
+      if strcmp(x.Stimuli.Condition.use_F1,'yes ')
+          x.Stimuli.Condition.Features{featIndex} = 'F1';
+          featIndex=featIndex+1;
+      end
+      if strcmp(x.Stimuli.Condition.use_F2,'yes ')
+          x.Stimuli.Condition.Features{featIndex} = 'F2';
+      end
+      Temp.FeatureINDs{ind}=find(strcmp(deblank(x.Stimuli.Condition.Features{1}),FeaturesText));
+      for i=2:length(x.Stimuli.Condition.Features)
+         Temp.FeatureINDs{ind}=[Temp.FeatureINDs{ind} find(strcmp(deblank(x.Stimuli.Condition.Features{i}),FeaturesText))];
+      end
+      Temp.freqs_Hz{ind}=x.Stimuli.Used.FeatureTarget_Hz_List;
+      for i=1:length(x.Stimuli.Used.Features_List)
+          featIndex = 12+strfind(x.Stimuli.Used.Features_List{i},'baseEHLTASS_F');
+          Temp.FeaturesList{ind}{i}=x.Stimuli.Used.Features_List{i}(featIndex:featIndex+1);
+      end
+      %          Temp.freqs_Hz(ind)=x.Stimuli.Condition.BaseFrequency_kHz*2^(OffsetSign*Offset_octs)*1000;
+      if isfield(x.Stimuli.Used,'Levels_dBSPL_List')
+         Temp.levels_dBSPL{ind}=x.Stimuli.Used.Levels_dBSPL_List;
+      elseif isfield(x.Stimuli.Condition,'Level_dBSPL')
+         Temp.levels_dBSPL{ind}=x.Stimuli.Condition.Level_dBSPL;
+      elseif isfield(x.Stimuli.Condition,'Signal_Level')
+         Temp.levels_dBSPL{ind}=x.Stimuli.Condition.Signal_Level;
+      end
+      for i=1:length(x.Stimuli.list)
+          x.Stimuli.Rattens(i)=...
+              str2num(x.Stimuli.list{i}(strfind(x.Stimuli.list{i},'dBLTASS')-3:strfind(x.Stimuli.list{i},'dBLTASS')-1));
+      end
+      if any(x.Stimuli.Rattens>100 & x.Stimuli.Rattens<120)
+          % work-around for 120dB atten getting messed up
+          disp(sprintf('Warning: Atten %1.fdB adjusted to 120dB',x.Stimuli.Rattens(x.Stimuli.Rattens>100 & x.Stimuli.Rattens<120)));
+          x.Stimuli.Rattens(x.Stimuli.Rattens>100 & x.Stimuli.Rattens<120)=120;
+      end
+      Temp.Nattens_dB{ind}=x.Stimuli.Rattens;%x.Stimuli.Used.NoiseAttens_dB_List;
+      Temp.picNums(ind)=picList(ind);
+      Temp.FormsAtHarmsIND(ind)=find(strcmp(deblank(x.Stimuli.Condition.FormsAtHarmonics),FormsAtHarmonicsText));
+      Temp.InvertPolarityIND(ind)=find(strcmp(deblank(x.Stimuli.Condition.InvertPolarity),InvertPolarityText));
+   end
+   
+   TempFeatureINDs=[];
+   Tempoctshifts=[];
+   Templevels_dBSPL=[];
+   TempNattens_dB=[];
+   for i=1:length(picList)
+      Tempoctshifts=[Tempoctshifts Temp.octshifts{i}];
+      TempFeatureINDs=[TempFeatureINDs Temp.FeatureINDs{i}];
+      Templevels_dBSPL=[Templevels_dBSPL Temp.levels_dBSPL{i}];
+      TempNattens_dB=[TempNattens_dB Temp.Nattens_dB{i}];
+   end
+   SORTocts=unique(Tempoctshifts);
+   SORTfeatures=unique(TempFeatureINDs);
+   SORTlevels=unique(Templevels_dBSPL);
+   
+%    SORTattens=unique(TempNattens_dB);
+   [b,m,n]=unique(TempNattens_dB); 
+   SORTattens=TempNattens_dB(sort(m)); % keep original order for now [quiet SL SPL ...]
+   SNR_EqualSL = SORTattens(2)-SORTattens(3);
+   EqualSL_index = find(b==SORTattens(2)); %second atten
+   EqualSPL_index = find(b==SORTattens(3)); %third atten
+   [SORTattens,SORTattens_indices] = sort(SORTattens);
+   
+   NumF=length(SORTocts);
+   NumL=length(SORTlevels);
+   NumA=length(SORTattens);
+
+   if NumL~=1
+      error('There is more than one vowel level in this EHvLTASSreBFI data, makeNOHRdataList NOT SETUP FOR THIS!')
+   end
+   
+   %    TONEfeatureIND=find(strcmp(FeaturesText,'TN'));
+   %% Do all NON-tone features first
+   for FeatIND=SORTfeatures
+      yTEMP=cell(length(FormsAtHarmonicsText),length(InvertPolarityText));
+      for FormsAtHarmsIND=1:length(FormsAtHarmonicsText)
+         for InvertPolarityIND=1:length(InvertPolarityText)
+            
+            % Find relevant picture indices for each condition (These are Masks [1: yes, 0:no] for each picture in picList)
+            clear TempFeatINDs TempHarmINDs TempPolINDs TempINDs
+            for i=1:length(picList)
+               TempFeatINDs(i)=sum(ismember(Temp.FeatureINDs{i},FeatIND));
+            end
+            TempHarmINDs=(Temp.FormsAtHarmsIND==FormsAtHarmsIND);
+            TempPolINDs=(Temp.InvertPolarityIND==InvertPolarityIND);
+            TempINDs=find(TempFeatINDs&TempHarmINDs&TempPolINDs);  % 1 for pictures with current: Feature, Harm, Polarity
+            
+            if ~isempty(TempINDs)
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.SORTattens_indices=SORTattens_indices;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.EqualSPL_index=EqualSPL_index;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.EqualSL_index=EqualSL_index;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.SNR_EqualSL=SNR_EqualSL;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.levels_dBSPL=SORTlevels;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.octshifts=SORTocts;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.freqs_kHz=[];
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.Nattens_dB=SORTattens;
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.picNums=cell(NumA,NumF);
+               yTEMP{FormsAtHarmsIND,InvertPolarityIND}.excludeLines=cell(NumA,NumF);
+               
+               %%%%%%%%%%% STORE picNUMS for each Freq and Level
+               for FreqIND=1:NumF
+                  
+                  % Store exact freqs for ALL conditions for this Feature (will vary from feature to feature)
+                  CONDindFULL=[]; CONDfreq_kHz=[];
+                  for PICind=TempINDs
+                     CONDindFULL=find((Temp.octshifts{PICind}==SORTocts(FreqIND))&(strcmp(deblank(Temp.FeaturesList{PICind}),FeaturesText{FeatIND})));
+                     CONDfreq_kHz=unique([CONDfreq_kHz Temp.freqs_Hz{PICind}(CONDindFULL)/1000]);
+                  end
+%                   CONDfreq_kHz=unique(Temp.freqs_Hz{PICind}(CONDindFULL)/1000);
+                  if length(CONDfreq_kHz)~=1
+                     error('Non-unique CONDfreq_kHz in WAV_reBFi, when looking at FreqIND=%d',FreqIND)
+                  end
+                  yTEMP{FormsAtHarmsIND,InvertPolarityIND}.freqs_kHz(FreqIND)=CONDfreq_kHz;
+                  
+                  for AttenIND=1:NumA
+                     % Verify unique conditions
+                     CONDindFULL=[]; CONDind=[];
+                     for PICind=TempINDs
+                         CONDindFULL=find((Temp.octshifts{PICind}==SORTocts(FreqIND))&(Temp.Nattens_dB{PICind}==SORTattens(AttenIND))& ...
+                             (strcmp(deblank(Temp.FeaturesList{PICind}),FeaturesText{FeatIND})));
+                         CONDind=unique([CONDind CONDindFULL]);
+                     end
+%                      CONDind=unique(CONDindFULL);
+                     if length(CONDind)>1
+%                         error(sprintf('Non-unique CONDind in EHvLTASSeBFi, when looking at FreqIND=%d and AttenIND=%d',FreqIND,AttenIND))
+                     end
+                     
+                     % Find relevant picture indices for each Freq/Level condition (1: yes, 0:no)
+                     clear TempOctINDs TempAttINDs
+                     for i=1:length(picList)
+                        TempOctINDs(i)=sum(ismember(Temp.octshifts{i},SORTocts(FreqIND)))>0;
+                        TempAttINDs(i)=sum(ismember(Temp.Nattens_dB{i},SORTattens(AttenIND)))>0;
+                     end
+                     TempINDs2=find(TempFeatINDs&TempHarmINDs&TempPolINDs&TempOctINDs&TempAttINDs);  % Mask for Feature,Harm,Polarity,Freq,Atten
+                     
+                     yTEMP{FormsAtHarmsIND,InvertPolarityIND}.picNums{AttenIND,FreqIND}=Temp.picNums(TempINDs2);
+                     % Store excludeLines for each picture, based on CONDind and TOTALconds
+                     yTEMP{FormsAtHarmsIND,InvertPolarityIND}.excludeLines{AttenIND,FreqIND}=cell(size(TempINDs2));
+                     ii=0;
+                     for i=TempINDs2
+                        ii=ii+1;
+                        TOTALconds=length(xx{i}.Stimuli.Used.FeatureTarget_Hz_List);
+                        GOODlines=CONDind(min(i,end)):TOTALconds:xx{i}.Stimuli.fully_presented_lines;
+                        %% Take out any lines beyond badlines
+                        GOODlines=GOODlines(find(GOODlines<Temp.FirstBADline(i)));
+                        IGNORElines=setdiff(1:xx{i}.Stimuli.fully_presented_lines,GOODlines);
+                        yTEMP{FormsAtHarmsIND,InvertPolarityIND}.excludeLines{AttenIND,FreqIND}{ii}=IGNORElines;
+                     end
+                  end
+               end
+            end
+         end % End Invert Polarity
+      end % End FormsatHarms
+      % HERE, 'TN' is saved in the same place
+      eval(['DataList.Units{TUlist(UNITind,1),TUlist(UNITind,2)}.EHvLTASS_reBF.' FeaturesText{FeatIND}(1:2) '=yTEMP;'])
+   end % End: FeatIND
+end 
+
+return; %WAVreBFi
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function DataList=EHrFF_parse(DataList) %%

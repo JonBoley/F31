@@ -159,6 +159,10 @@ for FeatIND=FeatINDs  % Step through each Feature we have data for
 							% Gather spikes from relevant pictures
                      PIC=concatPICS_NOHR(yTEMP.picNums{attenIND,freqIND},yTEMP.excludeLines{attenIND,freqIND});
                      % Calc Synch and Phase from PERIOD histogram
+                     if ~isfield(PIC,'FundamentalFreq_Hz')
+                         F0index=4+strfind(PIC.x.Stimuli.list{1},'F0at'); 
+                         PIC.FundamentalFreq_Hz = str2num(PIC.x.Stimuli.list{1}(F0index:F0index+2));
+                     end
                      PIC=calcSynchRate_PERhist(PIC);
                      
                      %                      yTEMP.rate(attenIND,freqIND)=PIC.PERhist.NumDrivenSpikes/PIC.x.Stimuli.fully_presented_lines/ ...
