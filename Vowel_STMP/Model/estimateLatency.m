@@ -9,7 +9,7 @@ function NeuralDelay_sec = estimateLatency(spikeTimes)
 plotPSTH=0;
 
 PSTHbinWidth_sec = 100e-6;
-spontDur = 0.001; %sec (use first 1ms... ending times will all be different for STMP)
+spontDur = 0.200; %sec
 nreps = length(unique(spikeTimes(:,1)));
 
 startIndices = 1+[0; find(max(0,diff(spikeTimes(:,1)==1)))];
@@ -23,7 +23,10 @@ for i=1:mreps
     
     psthPeakThresh(i) = 0.7 * max(localPSTH(:,i));
     
-    spontSpikes = localPSTH(1:round(spontDur/PSTHbinWidth_sec),i);
+    psthDur = max(spikeTimes(startIndices(i):endIndices(i),2));
+%     spontSpikes = localPSTH(1:round(spontDur/PSTHbinWidth_sec),i); % first N spikes
+    spontSpikes = localPSTH(round((psthDur-spontDur)/PSTHbinWidth_sec):...
+        round(psthDur/PSTHbinWidth_sec),i); % last N spikes
     psthDrivenThresh(i) = max(spontSpikes) + 2*std(spontSpikes);
 end
 
@@ -42,24 +45,28 @@ if length(PSTHnum)<2
         plot([0; max(spikeTimes(:,2))],[psthDrivenThresh(PSTHnum); psthDrivenThresh(PSTHnum)],'g'); hold off;
     end
     
-else %otherwise pool
-    localPSTH = sum(localPSTH(:,PSTHnum),2);
-    
-    psthPeakThresh = 0.7 * max(localPSTH);
-    
-    spontSpikes = localPSTH(1:round(spontDur/PSTHbinWidth_sec));
-    psthDrivenThresh = max(spontSpikes) + 2*std(spontSpikes);
-    
-    firstPeakDelay_sec = PSTHbinWidth_sec*...
-        find(localPSTH>psthPeakThresh,1,'first');
+else %otherwise combine PSTHs somehow
+%     localPSTH = sum(localPSTH(:,PSTHnum),2); %pool all PSTHs
+%     spontSpikes = localPSTH(1:round(spontDur/PSTHbinWidth_sec));
+%     psthDrivenThresh = max(spontSpikes) + 2*std(spontSpikes);
 
-    tempIndex = find(localPSTH>psthDrivenThresh,2,'first');
-    drivenResponseDelay_sec = PSTHbinWidth_sec*max(tempIndex);
+    for i=PSTHnum
+        localPSTH2 = localPSTH(:,i); %pick one PSTH
+
+        psthPeakThresh = 0.7 * max(localPSTH2);
+        psthDrivenThresh2 = psthDrivenThresh(i);
+
+        firstPeakDelay_sec(i) = PSTHbinWidth_sec*...
+            find(localPSTH2>psthPeakThresh,1,'first');
+
+        tempIndex = find(localPSTH2>psthDrivenThresh2,2,'first');
+        drivenResponseDelay_sec(i) = PSTHbinWidth_sec*max(tempIndex);
+    end
     
     if plotPSTH
         bar(0:PSTHbinWidth_sec:max(spikeTimes(:,2)),localPSTH); hold on;
-        plot([0; max(spikeTimes(:,2))],[psthPeakThresh; psthPeakThresh],'b');
-        plot([0; max(spikeTimes(:,2))],[psthDrivenThresh; psthDrivenThresh],'g'); hold off;
+        plot([0; max(spikeTimes(:,2))],[psthPeakThresh; psthPeakThresh]);
+        plot([0; max(spikeTimes(:,2))],[psthDrivenThresh; psthDrivenThresh]); hold off;
     end
 end
 
