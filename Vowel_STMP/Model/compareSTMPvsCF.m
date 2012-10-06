@@ -6,26 +6,22 @@
 % Add all subdirectories to the path
 addpath(genpath('C:\Research\MATLAB\Vowel_STMP\Model'));
 
-featureNum = 2; % [1 2 3 ...] = [F1 F2 F3 ...]
+featureNum = 3; % [1 2 3 ...] = [F1 F2 F3 ...]
 Levels = 65;%[60 70 80 90];
 SNRs = Inf;
 
-RunCFs = 0; % otherwise, load(CFfilename)
+RunCFs = 1; % otherwise, load(CFfilename)
 RunSTMP = 1; % otherwise, load(STMPfilename)
-CFfilename = 'STMPvsCF_CF_2012-08-03_100213.mat'; % default file to load
-STMPfilename = 'STMPvsCF_STMP_2012-08-03_100355.mat'; % default file to load
+CFfilename = 'STMPvsCF_CF_2012-09-14_193920.mat'; % default file to load
+STMPfilename = 'STMPvsCF_STMP_2012-09-14_194320.mat'; % default file to load
 
-midCF_kHz = 1.7*2.^(0);%(-2:0.5:2); %model this and surrounding CFs
+midCF_kHz = 1.7*2.^(0); %model this and surrounding CFs
 
 %% Initialize model parameters
-% model_init; % default params
-% initialize model parameters
-% midCF_kHz=formants(featureNum)/1000; %center on this feature
+numCFs = 10; % in addition to midCF_kHz
+numCFs = numCFs + mod(numCFs,2); % make this an even number
 
-numCFs=4; % in addition to midCF_kHz
-if mod(numCFs,2)==1, numCFs=numCFs+1; end % make this an even number
-
-spread=1; % total number of octaves (half in each direction)
+spread=2; % total number of octaves (half in each direction)
 lowCF_kHz=midCF_kHz*2^(-spread/2);
 CF_kHz=(lowCF_kHz*2.^(0:spread/(numCFs-1):spread));
 
@@ -57,7 +53,7 @@ ShiftFact=midCF_kHz*1e3/ORIGfreq;
 [time, vowel] = dovowl(formants*ShiftFact,BWs*ShiftFact,F0,dur,Fs);
 vowel=vowel-mean(vowel);  % Remove DC
 vowel=vowel./max(abs(vowel))*0.99; % normalize
-signal = vowel;
+signal = vowel;%sin(2*pi*midCF_kHz*1e3*(1:dur*Fs)/Fs)';
 
 %% Run model (actual CFs)
 if RunCFs
@@ -121,7 +117,10 @@ if RunCFs
 
                 PSTHbinWidth_sec = 40e-6;
                 PSTH{FiberNumber,LevelIndex,SNRindex}=...
-                    histc(LocalSpikeTimes(:,2),0:PSTHbinWidth_sec:dur_sec);
+                    histc(LocalSpikeTimes(:,2),0:PSTHbinWidth_sec:(dur_sec+1.00));
+                PSTH{FiberNumber,LevelIndex,SNRindex}=...
+                    PSTH{FiberNumber,LevelIndex,SNRindex}/...
+                    length(unique(LocalSpikeTimes(:,1)))/PSTHbinWidth_sec; %spikes/sec
                 
                 [PERhist_sps{FiberNumber,LevelIndex,SNRindex},...
                     binWidth_sec,NumDrivenSpikes] = ...
@@ -209,6 +208,20 @@ if RunSTMP
                 end
 %                 SpikeTrains_minus=cellfun(@(x) x*STMPfactor_time,SpikeTrains_minus,'UniformOutput',false);
                 Spikes_minus{FiberNumber,LevelIndex,SNRindex} = SpikeTrains_minus;
+                
+                
+                LocalSpikeTimes = [];
+                for i=1:length(Spikes_plus{FiberNumber,LevelIndex,SNRindex})
+                    LocalSpikeTimes = [LocalSpikeTimes;...
+                        repmat(i,length(Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}),1), ...
+                        Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}];
+                end
+                PSTHbinWidth_sec = 40e-6;
+                PSTH_preSTMP{FiberNumber,LevelIndex,SNRindex}=...
+                    histc(LocalSpikeTimes(:,2),0:PSTHbinWidth_sec:(dur_sec_STMP+1.00));
+                PSTH_preSTMP{FiberNumber,LevelIndex,SNRindex}=...
+                    PSTH_preSTMP{FiberNumber,LevelIndex,SNRindex}/...
+                    length(unique(LocalSpikeTimes(:,1)))/PSTHbinWidth_sec; %spikes/sec
 
                 if ~mod(FiberNumber,25)
                     fprintf('\n');
@@ -226,8 +239,8 @@ if RunSTMP
                         Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}];
                 end
             end
-            NeuralDelay_sec = estimateLatency(LocalSpikeTimes);
-            fprintf('[Using neural delay = %1.1fms]\n',NeuralDelay_sec*1000);
+            NeuralDelay_sec = 0.0025; %estimateLatency(LocalSpikeTimes);
+            fprintf('[Using neural delay = %1.1f - %1.1f - %1.1fms]\n',min(NeuralDelay_sec)*1000,NeuralDelay_sec(1)*1000,max(NeuralDelay_sec)*1000);
             %%%%%%%%%%%%
             
             fprintf('... Calculating STMP adjustments for %d fibers...\n',numCFs)
@@ -237,10 +250,21 @@ if RunSTMP
                 % adjust spike times (STMP)
                 STMPfactor_freq = 2^deltaCF(FiberNumber);
                 STMPfactor_time = 1/STMPfactor_freq;
+                    
+                %%%%%%%%%%%%%%%%%%%%%%%%%
+                % shift spikes (by NeuralDelay_sec(1)/STMPfactor_time ?)
+%                 if STMPfactor_time>1
+%                     spikeOffset_sec = NeuralDelay_sec(1)/STMPfactor_time;
+%                 else
+%                     spikeOffset_sec = NeuralDelay_sec(1)*STMPfactor_time;
+%                 end
+                spikeOffset_sec = NeuralDelay_sec(1)-NeuralDelay_sec(1)*STMPfactor_time;
+                %%%%%%%%%%%%%%%%%%%%%%%%%
+
                 for i=1:length(Spikes_plus{FiberNumber,LevelIndex,SNRindex})
                     % Scale all spikes times by x(FeatureFreq/BF) AFTER
                     % compensating for neural delay
-                    NDcompORIGspikes=Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}-NeuralDelay_sec;
+                    NDcompORIGspikes=Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i};%-spikeOffset_sec;
                     NEGATIVEinds=find(NDcompORIGspikes<0);
                     NDcompSCALEDspikes = NDcompORIGspikes*STMPfactor_time;
                     % Leave spikes before NeuralDelay AS IS since they must be spontaneous
@@ -248,12 +272,13 @@ if RunSTMP
                     if ~isempty(NEGATIVEinds)
                         NDcompSCALEDspikes(NEGATIVEinds)=NDcompORIGspikes(NEGATIVEinds);
                     end
-                    Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}=NDcompSCALEDspikes+NeuralDelay_sec;
+                    temp = NDcompSCALEDspikes + spikeOffset_sec;
+                    Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}=temp(temp>=0);
                 end
                 for i=1:length(Spikes_minus{FiberNumber,LevelIndex,SNRindex})
                     % Scale all spikes times by x(FeatureFreq/BF) AFTER
                     % compensating for neural delay
-                    NDcompORIGspikes=Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i}-NeuralDelay_sec;
+                    NDcompORIGspikes=Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i};%-spikeOffset_sec;
                     NEGATIVEinds=find(NDcompORIGspikes<0);
                     NDcompSCALEDspikes = NDcompORIGspikes*STMPfactor_time;
                     % Leave spikes before NeuralDelay AS IS since they must be spontaneous
@@ -261,7 +286,8 @@ if RunSTMP
                     if ~isempty(NEGATIVEinds)
                         NDcompSCALEDspikes(NEGATIVEinds)=NDcompORIGspikes(NEGATIVEinds);
                     end
-                    Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i}=NDcompSCALEDspikes+NeuralDelay_sec;
+                    temp = NDcompSCALEDspikes + spikeOffset_sec;
+                    Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i}=temp(temp>=0);
                 end
                 %%%%%%%%%%%%
                 dur_sec = dur_sec_STMP(FiberNumber) * STMPfactor_time;
@@ -274,10 +300,10 @@ if RunSTMP
                 end
 
                 PSTHbinWidth_sec = 40e-6;
-                PSTH{FiberNumber,LevelIndex,SNRindex}=...
-                    histc(LocalSpikeTimes(:,2),0:PSTHbinWidth_sec:1+dur_sec);
-                PSTH{FiberNumber,LevelIndex,SNRindex}=...
-                    PSTH{FiberNumber,LevelIndex,SNRindex}/...
+                PSTH_STMP{FiberNumber,LevelIndex,SNRindex}=...
+                    histc(LocalSpikeTimes(:,2),0:PSTHbinWidth_sec:(dur_sec+1.00));
+                PSTH_STMP{FiberNumber,LevelIndex,SNRindex}=...
+                    PSTH_STMP{FiberNumber,LevelIndex,SNRindex}/...
                     length(unique(LocalSpikeTimes(:,1)))/PSTHbinWidth_sec; %spikes/sec
                 
                 calc_xCF;
@@ -310,13 +336,8 @@ end
 
 
 %% Plot PerHist across CF
-% CFfilename = 'STMPvsCF_CF_2012-07-27_085342'; % F1 +/- 1oct
-% STMPfilename = 'STMPvsCF_STMP_2012-07-27_100701'; % F1 +/- 1oct
-% CFfilename = 'STMPvsCF_CF_2012-07-26_213815'; % F2 +/- 1oct
-% STMPfilename = 'STMPvsCF_STMP_2012-07-26_225211'; % F2 +/- 1oct
-
-% CFfilename = 'STMPvsCF_CF_2012-07-31_101231.mat'; % F2(@1700) +/- 1oct
-% STMPfilename = 'STMPvsCF_STMP_2012-07-31_112836.mat'; % F2(@1700) +/- 1oct
+% CFfilename = 'STMPvsCF_CF_2012-09-22_141530';
+% STMPfilename = 'STMPvsCF_STMP_2012-09-22_141713'; % 1ms
  
 load(CFfilename,'-regexp','[^CFfilename^STMPfilename]');
 for i=1:length(CF_kHz)
@@ -324,22 +345,26 @@ for i=1:length(CF_kHz)
 %     PSTH2(:,i) = PSTH{i,1,1};
 end
 
-figure(1), subplot(211),
-imagesc(1e3*binWidth_sec*(1:256),midCF_kHz*2.^deltaCF,PerHist2');
-% imagesc(0:PSTHbinWidth_sec:dur_sec,midCF_kHz*2.^deltaCF,PSTH');
-xlabel('Time (ms)'); ylabel('CF (kHz)');
-title('Actual CFs'); %colormap('bone');
-% PerHist_center(:,1) = PERhist_sps{ceil(end/2),1,1};
-
-if length(CF_kHz)<10
-    figure(2),
-    for i=1:length(CF_kHz)
-        subplot(length(CF_kHz),1,i), plot(1e3*binWidth_sec*(1:256),PerHist2(:,i),'b-'); hold on;
-        title(sprintf('Period Histogram (CF %1.2fkHz)',midCF_kHz*2.^deltaCF(i)));
+[temp,CFindices]=sort(CF_kHz);
+if length(CF_kHz)>=10
+    figure(1), subplot(211),
+    imagesc(1e3*binWidth_sec*(1:256),midCF_kHz*2.^deltaCF(CFindices),PerHist2(:,CFindices)');
+    % imagesc(0:PSTHbinWidth_sec:dur_sec,midCF_kHz*2.^deltaCF,PSTH');
+    xlabel('Time (ms)'); ylabel('CF (kHz)');
+    title('Actual CFs'); %colormap('bone');
+    % PerHist_center(:,1) = PERhist_sps{ceil(end/2),1,1};
+else
+    figure(1), plotIndex=1; scaleSize=1e-4;
+    for i=CFindices
+%         subplot(length(CF_kHz),1,plotIndex), plot(1e3*binWidth_sec*(1:256),PerHist2(:,i),'b-'); hold on;
+        hPerHist(1)=plot(1e3*binWidth_sec*(1:256),CF_kHz(i)+scaleSize*PerHist2(:,i),'b-'); hold on;
+%         title(sprintf('Period Histogram (CF %1.2fkHz)',midCF_kHz*2.^deltaCF(i)));
+        plotIndex=plotIndex+1;
     end
+    xlabel('Time (ms)'); ylabel('CF (kHz)');
 end
 
-figure(3)
+figure(2)
 hRho(1)=plot(deltaCF(2:end),squeeze(Rho_vDeltaCF(:,:,2:end)),'b'); hold on;
 plot([0 0],[min(min(Rho_vDeltaCF)) max(max(Rho_vDeltaCF))],'k:');
 text(0,max(max(Rho_vDeltaCF)),FeaturesText{featureNum},...
@@ -349,31 +374,56 @@ xlabel(['\DeltaCF (octaves re ' sprintf('%s)',FeaturesText{featureNum})]);
 ylabel(['\rho (re ' FeaturesText{featureNum} ')']);
 
 %%% LOAD STMPfilename
-load(STMPfilename,'-regexp','[^CFfilename^STMPfilename]');
+load(STMPfilename,'-regexp','[^CFfilename^STMPfilename^hRho]');
 for i=1:length(CF_kHz)
     PerHist3(:,i) = PERhist_sps{i,1,1};
 %     PSTH3(:,i) = PSTH{i,1,1};
 end
 
-figure(1), subplot(212),
-imagesc(1e3*binWidth_sec*(1:256),midCF_kHz*2.^deltaCF,PerHist2');
-% imagesc(0:PSTHbinWidth_sec:dur_sec,midCF_kHz*2.^deltaCF,PSTH2');
-xlabel('Time (ms)'); ylabel('CF (kHz)');
-title('STMP'); %colormap('bone');
-% PerHist_center(:,2) = PERhist_sps{ceil(end/2),1,1};
-
-if length(CF_kHz)<10
-    figure(2),
-    for i=1:length(CF_kHz)
-        subplot(length(CF_kHz),1,i), plot(1e3*binWidth_sec*(1:256),PerHist3(:,i),'r-'); hold off;
-        legend('Actual CF','STMP');
+[temp,CFindices]=sort(CF_kHz);
+if length(CF_kHz)>=10
+    figure(1), subplot(212),
+    imagesc(1e3*binWidth_sec*(1:256),midCF_kHz*2.^deltaCF(CFindices),PerHist3(:,CFindices)');
+    % imagesc(0:PSTHbinWidth_sec:dur_sec,midCF_kHz*2.^deltaCF,PSTH2');
+    xlabel('Time (ms)'); ylabel('CF (kHz)');
+    title('STMP'); %colormap('bone');
+    % PerHist_center(:,2) = PERhist_sps{ceil(end/2),1,1};
+else
+    figure(1), plotIndex=1; scaleSize=1e-4;
+    for i=CFindices
+%         subplot(length(CF_kHz),1,plotIndex), plot(1e3*binWidth_sec*(1:256),PerHist3(:,i),'r-'); hold off;
+        hPerHist(2)=plot(1e3*binWidth_sec*(1:256),CF_kHz(i)+scaleSize*PerHist3(:,i),'r-'); hold on;
+        plotIndex=plotIndex+1;
     end
-    xlabel('Time(ms)'); ylabel('Rate(sps)');
+    legend(hPerHist,{'Actual CF','STMP'});
+    xlabel('Time (ms)'); ylabel('CF (kHz)');
+%     xlabel('Time(ms)'); ylabel('Rate(sps)');
 end
 
-figure(3), hold on;
+figure(2), hold on;
 hRho(2)=plot(deltaCF(2:end),squeeze(Rho_vDeltaCF(:,:,2:end)),'g'); hold off;
 legend(hRho,{'Actual CF','STMP'});
 
 % figure, plot(1e3*binWidth_sec*(1:256),PerHist_center);
+
+%% Plot PSTH
+load(CFfilename,'-regexp','[^CFfilename^STMPfilename]');
+load(STMPfilename,'-regexp','[^CFfilename^STMPfilename^PSTH]');
+if length(CF_kHz)<10
+    [B,IX]=sort(CF_kHz);
+    maxTime = 0.030; %sec
+    count=0;
+    figure(3),
+    for index=IX
+        count=count+1;
+        subplot(length(CF_kHz),1,count), hold on;
+        hPSTH(1)=area(PSTHbinWidth_sec:PSTHbinWidth_sec:maxTime,PSTH{index}(1:round(maxTime/PSTHbinWidth_sec)),'FaceColor','b','EdgeColor','none');
+%         hPSTH(1)=area(PSTHbinWidth_sec:PSTHbinWidth_sec:maxTime,PSTH_STMP{1}(1:round(maxTime/PSTHbinWidth_sec)),'FaceColor','k','EdgeColor','none');
+        hPSTH(2)=area(PSTHbinWidth_sec:PSTHbinWidth_sec:maxTime,PSTH_preSTMP{index}(1:round(maxTime/PSTHbinWidth_sec)),'FaceColor','g','EdgeColor','none');
+        hPSTH(3)=area(PSTHbinWidth_sec:PSTHbinWidth_sec:maxTime,PSTH_STMP{index}(1:round(maxTime/PSTHbinWidth_sec)),'FaceColor','r','EdgeColor','none');
+        xlim([0 0.03]); ylim([0 3e3]); ylabel(sprintf('%1.2fkHz',CF_kHz(index)));
+    end
+    % legend('CF','BF (@ feature)','pre STMP','STMP');
+    legend(hPSTH,{'CF','pre STMP','STMP'});
+end
 
