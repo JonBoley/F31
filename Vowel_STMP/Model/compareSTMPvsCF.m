@@ -6,19 +6,19 @@
 % Add all subdirectories to the path
 addpath(genpath('C:\Research\MATLAB\Vowel_STMP\Model'));
 
-featureNum = 3; % [1 2 3 ...] = [F1 F2 F3 ...]
+featureNum = 2; % [1 2 3 ...] = [F1 F2 F3 ...]
 Levels = 65;%[60 70 80 90];
 SNRs = Inf;
 
-RunCFs = 1; % otherwise, load(CFfilename)
-RunSTMP = 1; % otherwise, load(STMPfilename)
-CFfilename = 'STMPvsCF_CF_2012-09-14_193920.mat'; % default file to load
-STMPfilename = 'STMPvsCF_STMP_2012-09-14_194320.mat'; % default file to load
+RunCFs = 0; % otherwise, load(CFfilename)
+RunSTMP = 0; % otherwise, load(STMPfilename)
+CFfilename = 'STMPvsCF_CF_2012-11-27_131415.mat'; % default file to load
+STMPfilename = 'STMPvsCF_STMP_2012-11-27_141514.mat'; % default file to load
 
 midCF_kHz = 1.7*2.^(0); %model this and surrounding CFs
 
 %% Initialize model parameters
-numCFs = 10; % in addition to midCF_kHz
+numCFs = 100; % in addition to midCF_kHz
 numCFs = numCFs + mod(numCFs,2); % make this an even number
 
 spread=2; % total number of octaves (half in each direction)
@@ -53,7 +53,7 @@ ShiftFact=midCF_kHz*1e3/ORIGfreq;
 [time, vowel] = dovowl(formants*ShiftFact,BWs*ShiftFact,F0,dur,Fs);
 vowel=vowel-mean(vowel);  % Remove DC
 vowel=vowel./max(abs(vowel))*0.99; % normalize
-signal = vowel;%sin(2*pi*midCF_kHz*1e3*(1:dur*Fs)/Fs)';
+signal = [-1; zeros(dur*Fs-1,1)];%vowel;%sin(2*pi*midCF_kHz*1e3*(1:dur*Fs)/Fs)';
 
 %% Run model (actual CFs)
 if RunCFs
@@ -168,7 +168,7 @@ if RunSTMP
                 Nfir=30;
                 signal_model=resample(signal,P,Q,Nfir);
                 dBSPL_after=20*log10(sqrt(mean(signal_model.^2))/(20e-6));
-                if abs(dBSPL_before-dBSPL_after)>2
+                if abs(dBSPL_before-dBSPL_after)>3
                     error('RESAMPLING CHANGED input by %f dB',dBSPL_before-dBSPL_after);
                 end
                 dur_sec_STMP(FiberNumber)=length(signal_model)/ANmodel_Fs_Hz;
@@ -239,7 +239,7 @@ if RunSTMP
                         Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}];
                 end
             end
-            NeuralDelay_sec = 0.0025; %estimateLatency(LocalSpikeTimes);
+            NeuralDelay_sec = 0.0032 - 0.0024*log10(midCF_kHz);%estimateLatency(LocalSpikeTimes);
             fprintf('[Using neural delay = %1.1f - %1.1f - %1.1fms]\n',min(NeuralDelay_sec)*1000,NeuralDelay_sec(1)*1000,max(NeuralDelay_sec)*1000);
             %%%%%%%%%%%%
             
@@ -259,12 +259,13 @@ if RunSTMP
 %                     spikeOffset_sec = NeuralDelay_sec(1)*STMPfactor_time;
 %                 end
                 spikeOffset_sec = NeuralDelay_sec(1)-NeuralDelay_sec(1)*STMPfactor_time;
+                fprintf('CF = %1.1fkHz; offset = %1.1fms\n',CF_kHz(FiberNumber),spikeOffset_sec*1e3);
                 %%%%%%%%%%%%%%%%%%%%%%%%%
 
                 for i=1:length(Spikes_plus{FiberNumber,LevelIndex,SNRindex})
                     % Scale all spikes times by x(FeatureFreq/BF) AFTER
                     % compensating for neural delay
-                    NDcompORIGspikes=Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i};%-spikeOffset_sec;
+                    NDcompORIGspikes=Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i};% -  NeuralDelay_sec;
                     NEGATIVEinds=find(NDcompORIGspikes<0);
                     NDcompSCALEDspikes = NDcompORIGspikes*STMPfactor_time;
                     % Leave spikes before NeuralDelay AS IS since they must be spontaneous
@@ -272,13 +273,13 @@ if RunSTMP
                     if ~isempty(NEGATIVEinds)
                         NDcompSCALEDspikes(NEGATIVEinds)=NDcompORIGspikes(NEGATIVEinds);
                     end
-                    temp = NDcompSCALEDspikes + spikeOffset_sec;
+                    temp = NDcompSCALEDspikes + spikeOffset_sec;% + NeuralDelay_sec;
                     Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}=temp(temp>=0);
                 end
                 for i=1:length(Spikes_minus{FiberNumber,LevelIndex,SNRindex})
                     % Scale all spikes times by x(FeatureFreq/BF) AFTER
                     % compensating for neural delay
-                    NDcompORIGspikes=Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i};%-spikeOffset_sec;
+                    NDcompORIGspikes=Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i};% - NeuralDelay_sec;
                     NEGATIVEinds=find(NDcompORIGspikes<0);
                     NDcompSCALEDspikes = NDcompORIGspikes*STMPfactor_time;
                     % Leave spikes before NeuralDelay AS IS since they must be spontaneous
@@ -286,7 +287,7 @@ if RunSTMP
                     if ~isempty(NEGATIVEinds)
                         NDcompSCALEDspikes(NEGATIVEinds)=NDcompORIGspikes(NEGATIVEinds);
                     end
-                    temp = NDcompSCALEDspikes + spikeOffset_sec;
+                    temp = NDcompSCALEDspikes + spikeOffset_sec;% + NeuralDelay_sec;
                     Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i}=temp(temp>=0);
                 end
                 %%%%%%%%%%%%
@@ -338,6 +339,12 @@ end
 %% Plot PerHist across CF
 % CFfilename = 'STMPvsCF_CF_2012-09-22_141530';
 % STMPfilename = 'STMPvsCF_STMP_2012-09-22_141713'; % 1ms
+if ~exist('CFfilename')
+    CFfiles=dir('STMPvsCF_CF_*.mat');
+    STMPfiles=dir('STMPvsCF_STMP_*.mat');
+    CFfilename = CFfiles(end).name;
+    STMPfilename = STMPfiles(end).name;
+end
  
 load(CFfilename,'-regexp','[^CFfilename^STMPfilename]');
 for i=1:length(CF_kHz)
@@ -426,4 +433,61 @@ if length(CF_kHz)<10
     % legend('CF','BF (@ feature)','pre STMP','STMP');
     legend(hPSTH,{'CF','pre STMP','STMP'});
 end
+
+%% plot CD error vs. CF
+if ~exist('CFfilename')
+    CFfiles=dir('STMPvsCF_CF_*.mat');
+    STMPfiles=dir('STMPvsCF_STMP_*.mat');
+    CFfilename = CFfiles(end-3).name;
+    STMPfilename = STMPfiles(end-3).name;
+end
+
+clear CD; 
+colors='gbr'; %[CF,STMP,error]
+for i=1:2
+    switch i
+        case 1
+            load(CFfilename,'CF_kHz','deltaCF','SCCdelays_usec','SCC','CD_vDeltaCF');
+        case 2
+            load(STMPfilename,'CF_kHz','deltaCF','SCCdelays_usec','SCC','CD_vDeltaCF');
+    end %switch i
+    
+    manualCD = 1; % manually pick CD?
+    if manualCD
+        CD(:,i) = calcCDreBF_manual(CF_kHz,squeeze(SCCdelays_usec),squeeze(SCC),squeeze(CD_vDeltaCF));
+    else
+        CD(:,i) = squeeze(CD_vDeltaCF);
+    end %if manualCD
+    
+end %for i=1:2
+
+T = 1e6/(CF_kHz(1)*1e3); % period (us)
+figure(99), hold on; 
+plot(deltaCF(2:end),CD(2:end,1)/T,[colors(1) '.:']);
+plot(deltaCF(2:end),CD(2:end,2)/T,[colors(2) '.:']);
+plot(deltaCF(2:end),(CD(2:end,1)-CD(2:end,2))/T,[colors(3) '.-']);
+hold off;
+legend('CF','STMP','error');
+xlabel('CF difference (octaves)'); ylabel('Characteristic delay (CF cycles)');
+
+figure(999), hold on;
+N= length(deltaCF);
+isort = [2:floor(N/2) 1 ceil(N/2):N];
+isort2 = [2:floor(N/2) 1 ceil(N/2):N-1];
+isort3 = [3:floor(N/2) 1 ceil(N/2):N];
+% xAxis = (deltaCF(isort2)+deltaCF(isort3))/2; % CFdiff (octaves)
+% yAxis1 = -diff(CD(isort,1)/T)./diff(deltaCF(isort)); % (-CF cycles/octave)
+% yAxis2 = -diff(CD(isort,2)/T)./diff(deltaCF(isort)); % (-CF cycles/octave)
+xAxis = (2.^deltaCF(isort2)*CF_kHz(1)+2.^deltaCF(isort3)*CF_kHz(1))/2; % CF (kHz)
+yAxis1 = -diff(CD(isort,1)*1e-6)./diff(2.^deltaCF(isort)*CF_kHz(1)*1e3)*1e6; % (us)
+yAxis2 = -diff(CD(isort,2)*1e-6)./diff(2.^deltaCF(isort)*CF_kHz(1)*1e3)*1e6; % (us)
+plot(xAxis,yAxis1,[colors(1) '.:']);
+plot(xAxis,yAxis2,[colors(2) '.:']);
+hold off;
+legend('CF','STMP');
+% xlabel('CF difference (octaves)'); ylabel('Group Delay (-CF cycles/octave)');
+xlabel('CF (kHz)'); ylabel('Group Delay (\mus)');
+set(gca,'XScale','log','XTick',[0.25 0.5 1 1.7 2 2.5 4],...
+    'XTickLabel',{'0.25','0.5','1.0','1.7','2.0','2.5','4.0'});
+title(sprintf('CF = %1.2fkHz',CF_kHz(1)));
 
