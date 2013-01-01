@@ -113,7 +113,9 @@ delaysTEMP_usec = handles.data.CHdata.Xdata{CFindexTEMP,1};
 % get user input
 set(handles.instructionsText,'Visible','on');
 % set(handles.CFlistbox,'Enable','off');
+set(handles.data.neurogramHandles(handles.data.selectedCFind),'Color','b');
 [x,y,button] = ginput(1);
+set(handles.data.neurogramHandles(handles.data.selectedCFind),'Color','k');
 % set(handles.CFlistbox,'Enable','on');
 set(handles.instructionsText,'Visible','off');
 if ~isempty(x) && button<2
@@ -296,7 +298,7 @@ cla(handles.axes1,'reset');
 PARAMInfo.param_values = reshape(repmat([99],2,1),1,2*length([99]));
 FIGinfo.title='SCC Plots';
 FIGinfo.CONDlabel_text='';
-neurogram(CHdata,FIGinfo,PARAMInfo);
+handles.data.neurogramHandles = neurogram(CHdata,FIGinfo,PARAMInfo);
 legend off
 
 

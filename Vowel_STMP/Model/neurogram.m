@@ -1,4 +1,4 @@
-function neurogram(CHdata,FIGinfo,PARAMInfo)
+function hData=neurogram(CHdata,FIGinfo,PARAMInfo)
 % FROM: ARO2005_replicate.m
 % M. Heinz Jun 09, 2007
 %
@@ -93,10 +93,11 @@ for CHind=1:length(CHdata.CHvals)
       % This normalization plots each signal the same size on a log scale
       if FIGinfo.Ylog==1
          NormFact=(10^(chGAIN*ch_logCHwidth)-1)*CHdata.CHvals(CHind)/Y_MAXval;
-         semilogy(CHdata.Xdata{CHind,Pind}, ...
+         hTemp=semilogy(CHdata.Xdata{CHind,Pind}, ...
             trifilt(CHdata.Ydata{CHind,Pind},CHdata.TriFiltWidth)*NormFact+CHdata.CHvals(CHind), ...
-            'LineWidth',LINEwidth,'LineStyle',PARAMlines{Pind},'Marker',PARAMmarkers{Pind},'Color',PARAMcolors{Pind})
+            'LineWidth',LINEwidth,'LineStyle',PARAMlines{Pind},'Marker',PARAMmarkers{Pind},'Color',PARAMcolors{Pind});
          hold on
+         if mod(Pind,2), hData(CHind)=hTemp; end
       else
          error('SETUP LINEAR PLOTTING!!!!')
       end
