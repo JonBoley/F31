@@ -97,5 +97,17 @@ else %otherwise combine PSTHs somehow
     end
 end
 
+if plotPSTH
+    sizeFactor = 50/max(max(localPSTH.^2));
+    thresh = 0^2;
+    figure, hold on;
+    for i=1:size(localPSTH,2)
+       localData = localPSTH(1:1000,i).^2;
+       localData(localData<=thresh)=NaN;
+       scatter((1:size(localData,1))*PSTHbinWidth_sec,i*ones(1,size(localData,1)),sizeFactor*localData,'k');
+       drawnow;
+    end
+end
+
 NeuralDelay_sec = drivenResponseDelay_sec;
 
