@@ -12,8 +12,8 @@ SNRs = Inf;
 
 RunCFs = 0; % otherwise, load(CFfilename)
 RunSTMP = 0; % otherwise, load(STMPfilename)
-CFfilename = 'STMPvsCF_CF_2012-11-27_131415.mat'; % default file to load
-STMPfilename = 'STMPvsCF_STMP_2012-11-27_141514.mat'; % default file to load
+CFfilename = 'STMPvsCF_CF_2012-12-25_164902_NH.mat'; % default file to load
+STMPfilename = 'STMPvsCF_STMP_2012-12-30_131541.mat'; % default file to load
 
 midCF_kHz = 1.7*2.^(0); %model this and surrounding CFs
 
@@ -31,8 +31,9 @@ numCFs = length(CF_kHz);
 deltaCF = log2(CF_kHz'/midCF_kHz);
 
 fibertype=3; %[1,2,3]=[low,med,high] spontaneous rate
-Cohc=1.0; %outer hair cell health
-Cihc=1.0; %inner hair cell health
+% Cohc=1.0; %outer hair cell health
+% Cihc=1.0; %inner hair cell health
+[Cohc,Cihc]=fitaudiogram(CF_kHz*1e3,0*ones(size(CF_kHz))); %flat loss
 Nreps=120; %number of repetitions
 ANmodel_Fs_Hz=100e3; %100kHz sampling
 
@@ -53,7 +54,7 @@ ShiftFact=midCF_kHz*1e3/ORIGfreq;
 [time, vowel] = dovowl(formants*ShiftFact,BWs*ShiftFact,F0,dur,Fs);
 vowel=vowel-mean(vowel);  % Remove DC
 vowel=vowel./max(abs(vowel))*0.99; % normalize
-signal = [-1; zeros(dur*Fs-1,1)];%vowel;%sin(2*pi*midCF_kHz*1e3*(1:dur*Fs)/Fs)';
+signal = vowel;%[-1; zeros(dur*Fs-1,1)];%sin(2*pi*midCF_kHz*1e3*(1:dur*Fs)/Fs)';
 
 %% Run model (actual CFs)
 if RunCFs
@@ -75,7 +76,7 @@ if RunCFs
 
                 % Run model
                 vihc = catmodel_IHC(signal_model.',midCF_kHz*2.^deltaCF(FiberNumber)*1e3,1,...
-                    1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
+                    1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc(FiberNumber),Cihc(FiberNumber));
                 [sout,psth]=catmodel_Synapse(vihc,midCF_kHz*2.^deltaCF(FiberNumber)*1e3,1,...
                     1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                 SynOut{FiberNumber,LevelIndex,SNRindex}=sout; % save the synapse output
@@ -88,7 +89,7 @@ if RunCFs
                 Spikes_plus{FiberNumber,LevelIndex,SNRindex} = SpikeTrains_plus;
 
                 vihc = catmodel_IHC(-signal_model.',midCF_kHz*2.^deltaCF(FiberNumber)*1e3,1,...
-                    1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc,Cihc);
+                    1/ANmodel_Fs_Hz,dur_sec+1.00,Cohc(FiberNumber),Cihc(FiberNumber));
                 [sout,psth]=catmodel_Synapse(vihc,midCF_kHz*2.^deltaCF(FiberNumber)*1e3,1,...
                     1/ANmodel_Fs_Hz,dur_sec+1.00,fibertype,1);
                 SynOut{FiberNumber,LevelIndex,SNRindex}=sout; % save the synapse output
@@ -181,7 +182,7 @@ if RunSTMP
 
                 % Run model
                 vihc = catmodel_IHC(signal_model.',midCF_kHz*1e3,1,...
-                    1/ANmodel_Fs_Hz,dur_sec_STMP(FiberNumber)+1.00,Cohc,Cihc);
+                    1/ANmodel_Fs_Hz,dur_sec_STMP(FiberNumber)+1.00,Cohc(FiberNumber),Cihc(FiberNumber));
                 [sout,psth]=catmodel_Synapse(vihc,midCF_kHz*1e3,1,...
                     1/ANmodel_Fs_Hz,dur_sec_STMP(FiberNumber)+1.00,fibertype,1);
                 SynOut{FiberNumber,LevelIndex,SNRindex}=sout; % save the synapse output
@@ -196,7 +197,7 @@ if RunSTMP
 
 
                 vihc = catmodel_IHC(-signal_model.',midCF_kHz*1e3,1,...
-                    1/ANmodel_Fs_Hz,dur_sec_STMP(FiberNumber)+1.00,Cohc,Cihc);
+                    1/ANmodel_Fs_Hz,dur_sec_STMP(FiberNumber)+1.00,Cohc(FiberNumber),Cihc(FiberNumber));
                 [sout,psth]=catmodel_Synapse(vihc,midCF_kHz*1e3,1,...
                     1/ANmodel_Fs_Hz,dur_sec_STMP(FiberNumber)+1.00,fibertype,1);
                 SynOut{FiberNumber,LevelIndex,SNRindex}=sout; % save the synapse output
