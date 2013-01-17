@@ -41,7 +41,9 @@ for z=1:length(filenames)
     for i=1:size(localPSTH,2)
         localData = localPSTH(1:300,i).^2;
         localData(localData<=thresh)=NaN;
-        h(z)=scatter((1:size(localData,1))*PSTHbinWidth_sec,CF_kHz(i)*ones(1,size(localData,1)),sizeFactor*localData,colors(z));
+        h(z)=scatter((1:size(localData,1))*PSTHbinWidth_sec,...
+            CF_kHz(i)*ones(1,size(localData,1)),sizeFactor*localData,...
+            colors(z),'MarkerFaceColor',colors(z));
         drawnow;
     end
 
