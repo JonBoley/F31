@@ -4,21 +4,24 @@
 % Written by Jon Boley
 
 % Add all subdirectories to the path
-addpath(genpath('C:\Research\MATLAB\Vowel_STMP\Model'));
+addpath(genpath(fileparts(mfilename('fullpath'))));
 
 featureNum = 2; % [1 2 3 ...] = [F1 F2 F3 ...]
 Levels = 65;%[60 70 80 90];
 SNRs = Inf;
 
-RunCFs = 0; % otherwise, load(CFfilename)
-RunSTMP = 0; % otherwise, load(STMPfilename)
-CFfilename = 'STMPvsCF_CF_2012-12-25_164902_NH.mat'; % default file to load
-STMPfilename = 'STMPvsCF_STMP_2012-12-30_131541.mat'; % default file to load
+RunCFs = 1; % otherwise, load(CFfilename)
+RunSTMP = 1; % otherwise, load(STMPfilename)
+
+CFfiles=dir('STMPvsCF_CF_*.mat');
+STMPfiles=dir('STMPvsCF_STMP_*.mat');
+CFfilename = CFfiles(end).name; % default file to load
+STMPfilename = STMPfiles(end).name; % default file to load
 
 midCF_kHz = 1.7*2.^(0); %model this and surrounding CFs
 
 %% Initialize model parameters
-numCFs = 100; % in addition to midCF_kHz
+numCFs = 20; % in addition to midCF_kHz
 numCFs = numCFs + mod(numCFs,2); % make this an even number
 
 spread=2; % total number of octaves (half in each direction)
@@ -232,15 +235,16 @@ if RunSTMP
             
             %%%%%%%%%%%%
             % Determine neural delay
-            LocalSpikeTimes = [];
-            for FiberNumber=1:numCFs %pool across simulated CF
-                for i=1:length(Spikes_plus{FiberNumber,LevelIndex,SNRindex})
-                    LocalSpikeTimes = [LocalSpikeTimes;...
-                        repmat(i,length(Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}),1), ...
-                        Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}];
-                end
-            end
-            NeuralDelay_sec = 0.0032 - 0.0024*log10(midCF_kHz);%estimateLatency(LocalSpikeTimes);
+%             LocalSpikeTimes = [];
+%             for FiberNumber=1:numCFs %pool across simulated CF
+%                 for i=1:length(Spikes_plus{FiberNumber,LevelIndex,SNRindex})
+%                     LocalSpikeTimes = [LocalSpikeTimes;...
+%                         repmat(i,length(Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}),1), ...
+%                         Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}];
+%                 end
+%             end
+%             NeuralDelay_sec = estimateLatency(LocalSpikeTimes);
+            NeuralDelay_sec = 0.0032 - 0.0024*log10(midCF_kHz); %empirical fit to actual CF data
             fprintf('[Using neural delay = %1.1f - %1.1f - %1.1fms]\n',min(NeuralDelay_sec)*1000,NeuralDelay_sec(1)*1000,max(NeuralDelay_sec)*1000);
             %%%%%%%%%%%%
             
@@ -259,14 +263,15 @@ if RunSTMP
 %                 else
 %                     spikeOffset_sec = NeuralDelay_sec(1)*STMPfactor_time;
 %                 end
-                spikeOffset_sec = NeuralDelay_sec(1)-NeuralDelay_sec(1)*STMPfactor_time;
-                fprintf('CF = %1.1fkHz; offset = %1.1fms\n',CF_kHz(FiberNumber),spikeOffset_sec*1e3);
+
+%                 spikeOffset_sec = NeuralDelay_sec(1)-NeuralDelay_sec(1)*STMPfactor_time;
+%                 fprintf('CF = %1.1fkHz; offset = %1.1fms\n',CF_kHz(FiberNumber),spikeOffset_sec*1e3);
                 %%%%%%%%%%%%%%%%%%%%%%%%%
 
                 for i=1:length(Spikes_plus{FiberNumber,LevelIndex,SNRindex})
                     % Scale all spikes times by x(FeatureFreq/BF) AFTER
                     % compensating for neural delay
-                    NDcompORIGspikes=Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i};% -  NeuralDelay_sec;
+                    NDcompORIGspikes=Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i} -  NeuralDelay_sec;
                     NEGATIVEinds=find(NDcompORIGspikes<0);
                     NDcompSCALEDspikes = NDcompORIGspikes*STMPfactor_time;
                     % Leave spikes before NeuralDelay AS IS since they must be spontaneous
@@ -274,13 +279,13 @@ if RunSTMP
                     if ~isempty(NEGATIVEinds)
                         NDcompSCALEDspikes(NEGATIVEinds)=NDcompORIGspikes(NEGATIVEinds);
                     end
-                    temp = NDcompSCALEDspikes + spikeOffset_sec;% + NeuralDelay_sec;
+                    temp = NDcompSCALEDspikes + NeuralDelay_sec;% + spikeOffset_sec;
                     Spikes_plus{FiberNumber,LevelIndex,SNRindex}{i}=temp(temp>=0);
                 end
                 for i=1:length(Spikes_minus{FiberNumber,LevelIndex,SNRindex})
                     % Scale all spikes times by x(FeatureFreq/BF) AFTER
                     % compensating for neural delay
-                    NDcompORIGspikes=Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i};% - NeuralDelay_sec;
+                    NDcompORIGspikes=Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i} - NeuralDelay_sec;
                     NEGATIVEinds=find(NDcompORIGspikes<0);
                     NDcompSCALEDspikes = NDcompORIGspikes*STMPfactor_time;
                     % Leave spikes before NeuralDelay AS IS since they must be spontaneous
@@ -288,7 +293,7 @@ if RunSTMP
                     if ~isempty(NEGATIVEinds)
                         NDcompSCALEDspikes(NEGATIVEinds)=NDcompORIGspikes(NEGATIVEinds);
                     end
-                    temp = NDcompSCALEDspikes + spikeOffset_sec;% + NeuralDelay_sec;
+                    temp = NDcompSCALEDspikes + NeuralDelay_sec;% + spikeOffset_sec;
                     Spikes_minus{FiberNumber,LevelIndex,SNRindex}{i}=temp(temp>=0);
                 end
                 %%%%%%%%%%%%
@@ -471,24 +476,25 @@ hold off;
 legend('CF','STMP','error');
 xlabel('CF difference (octaves)'); ylabel('Characteristic delay (CF cycles)');
 
-figure(999), hold on;
-N= length(deltaCF);
-isort = [2:floor(N/2) 1 ceil(N/2):N];
-isort2 = [2:floor(N/2) 1 ceil(N/2):N-1];
-isort3 = [3:floor(N/2) 1 ceil(N/2):N];
-% xAxis = (deltaCF(isort2)+deltaCF(isort3))/2; % CFdiff (octaves)
-% yAxis1 = -diff(CD(isort,1)/T)./diff(deltaCF(isort)); % (-CF cycles/octave)
-% yAxis2 = -diff(CD(isort,2)/T)./diff(deltaCF(isort)); % (-CF cycles/octave)
-xAxis = (2.^deltaCF(isort2)*CF_kHz(1)+2.^deltaCF(isort3)*CF_kHz(1))/2; % CF (kHz)
-yAxis1 = -diff(CD(isort,1)*1e-6)./diff(2.^deltaCF(isort)*CF_kHz(1)*1e3)*1e6; % (us)
-yAxis2 = -diff(CD(isort,2)*1e-6)./diff(2.^deltaCF(isort)*CF_kHz(1)*1e3)*1e6; % (us)
-plot(xAxis,yAxis1,[colors(1) '.:']);
-plot(xAxis,yAxis2,[colors(2) '.:']);
-hold off;
-legend('CF','STMP');
-% xlabel('CF difference (octaves)'); ylabel('Group Delay (-CF cycles/octave)');
-xlabel('CF (kHz)'); ylabel('Group Delay (\mus)');
-set(gca,'XScale','log','XTick',[0.25 0.5 1 1.7 2 2.5 4],...
-    'XTickLabel',{'0.25','0.5','1.0','1.7','2.0','2.5','4.0'});
-title(sprintf('CF = %1.2fkHz',CF_kHz(1)));
+% %plot group delay
+% figure(999), hold on;
+% N= length(deltaCF);
+% isort = [2:floor(N/2) 1 ceil(N/2):N];
+% isort2 = [2:floor(N/2) 1 ceil(N/2):N-1];
+% isort3 = [3:floor(N/2) 1 ceil(N/2):N];
+% % xAxis = (deltaCF(isort2)+deltaCF(isort3))/2; % CFdiff (octaves)
+% % yAxis1 = -diff(CD(isort,1)/T)./diff(deltaCF(isort)); % (-CF cycles/octave)
+% % yAxis2 = -diff(CD(isort,2)/T)./diff(deltaCF(isort)); % (-CF cycles/octave)
+% xAxis = (2.^deltaCF(isort2)*CF_kHz(1)+2.^deltaCF(isort3)*CF_kHz(1))/2; % CF (kHz)
+% yAxis1 = -diff(CD(isort,1)*1e-6)./diff(2.^deltaCF(isort)*CF_kHz(1)*1e3)*1e6; % (us)
+% yAxis2 = -diff(CD(isort,2)*1e-6)./diff(2.^deltaCF(isort)*CF_kHz(1)*1e3)*1e6; % (us)
+% plot(xAxis,yAxis1,[colors(1) '.:']);
+% plot(xAxis,yAxis2,[colors(2) '.:']);
+% hold off;
+% legend('CF','STMP');
+% % xlabel('CF difference (octaves)'); ylabel('Group Delay (-CF cycles/octave)');
+% xlabel('CF (kHz)'); ylabel('Group Delay (\mus)');
+% set(gca,'XScale','log','XTick',[0.25 0.5 1 1.7 2 2.5 4],...
+%     'XTickLabel',{'0.25','0.5','1.0','1.7','2.0','2.5','4.0'});
+% title(sprintf('CF = %1.2fkHz',CF_kHz(1)));
 

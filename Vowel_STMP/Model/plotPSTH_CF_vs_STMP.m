@@ -1,9 +1,10 @@
 %% plotPSTH_CF_vs_STMP
 
-filenames = {'STMPvsCF_CF_*NH.mat','STMPvsCF_STMP_*NH.mat','STMPvsCF_STMP_2012-12-30_131541.mat'};
+filenames = {'STMPvsCF_CF_*.mat','STMPvsCF_STMP_*.mat'};
 colors = 'kgr';
-legendText = {'CF','STMP','STMP (corrected)'};
+legendText = {'CF','STMP'};
 
+figure, hold on;
 for z=1:length(filenames)
     clear -regexp ^((?!\<filenames\>|\<z\>|\<h\>|\<colors\>|\<legendText\>).)*$ %keep CFfiles, z, colors
     home;
@@ -37,9 +38,8 @@ for z=1:length(filenames)
 
     sizeFactor = 50/max(max(localPSTH.^2));
     thresh = 500^2;
-    figure(1), hold on;
     for i=1:size(localPSTH,2)
-        localData = localPSTH(1:300,i).^2;
+        localData = localPSTH(1:1000,i).^2;
         localData(localData<=thresh)=NaN;
         h(z)=scatter((1:size(localData,1))*PSTHbinWidth_sec,...
             CF_kHz(i)*ones(1,size(localData,1)),sizeFactor*localData,...
