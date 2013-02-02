@@ -17,8 +17,8 @@ clear all; %close all; home;
 % STMPfilename = 'STMPvsCF_STMP_2012-10-13_205706';
 % CFfilename = 'STMPvsCF_CF_2012-10-13_204723';
 
-CFfiles=dir('STMPvsCF_CF_2012-11-24*.mat');
-STMPfiles=dir('STMPvsCF_STMP_2012-11-24*.mat');
+CFfiles=dir('STMPvsCF_CF_*.mat');
+STMPfiles=dir('STMPvsCF_STMP_*.mat');
 
 % fileNum=5;
 CFfilename = CFfiles(end).name;
