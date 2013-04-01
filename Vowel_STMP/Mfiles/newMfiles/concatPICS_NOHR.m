@@ -106,7 +106,11 @@ if sum(strcmp(PIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','WAVreBFi','TrBFi
    %% This allows all data to be handled the same, i.e., just as the first data set from 111804, where only 1 level was run and was stored conveniently here
    if ~isfield(PIC.x.Stimuli.Condition,'Level_dBSPL')
       if ~strcmp(PIC.TEMPLATE,'SACrlv')
-         PIC.x.Stimuli.Condition.Level_dBSPL=PIC.x.Stimuli.Used.Levels_dBSPL_List(PIC.CONDind);
+          if isfield(PIC.x.Stimuli.Used,'Levels_dBSPL_List')
+              PIC.x.Stimuli.Condition.Level_dBSPL=PIC.x.Stimuli.Used.Levels_dBSPL_List(PIC.CONDind);
+          elseif isfield(PIC.x.Stimuli.Condition,'Signal_Level')
+              PIC.x.Stimuli.Condition.Level_dBSPL=PIC.x.Stimuli.Condition.Signal_Level;
+          end
       end
    end
    
