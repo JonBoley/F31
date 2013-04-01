@@ -314,8 +314,19 @@ title(sprintf('     Exp%s, Unit %s: BF=%.2f kHz, Thr=%.f dB SPL, SR=%.1f sps, Q1
 % Label A_N - noise Atten for rest of data
 EHvNreBFi_piclist=findPics('EHvNrBFi',[TrackNum UnitNum]);
 EHvNreBFi_piclist=[EHvNreBFi_piclist findPics('EHvLTASSrBFi',[TrackNum UnitNum])];
+EHvNreBFi_piclist=[EHvNreBFi_piclist findPics('WAVreBFi',[TrackNum UnitNum])];
 if ~isempty(EHvNreBFi_piclist)
     x=loadPic(EHvNreBFi_piclist(1));
+    
+    if ~isfield(x.Stimuli.Condition,'NoiseAttens_dB')
+        index = strfind(x.Stimuli.list{1}, 'dBEH_');
+        signalAttens = cellfun(@(blah) str2num(blah(index-3:index-1)), x.Stimuli.list);
+        index = strfind(x.Stimuli.list{1}, 'dBLTASS_');
+        noiseAttens = cellfun(@(blah) str2num(blah(index-3:index-1)), x.Stimuli.list);
+        
+        [b,m,n] = unique(noiseAttens);
+        x.Stimuli.Condition.NoiseAttens_dB = noiseAttens(sort(m));
+    end
 
     % get SNR for equal sensation level
     SNR_dB=x.Stimuli.Condition.NoiseAttens_dB(2)+dBAtt_2_SNR;
@@ -339,6 +350,7 @@ ylim([0 ymax])
 set(EHINrlf_FIG,'vis','off');
 
 if isempty(EHvNreBFi_piclist)
+    disp('Returning early (no EHvNreBFi pics)');
     return;
 end
 clear x
@@ -588,6 +600,32 @@ if ~loadBOOL
                         if ~isempty(yTEMP.picNums{ATTind,BFind})
 
                             PIC=concatPICS_NOHR(yTEMP.picNums{ATTind,BFind},yTEMP.excludeLines{ATTind,BFind});
+                            
+                            %%%%%%%%%%%%%%%%%%%%%%%%%%
+                            %%% Take care of a few variables that may not have
+                            %%% been saved the same way in a different template
+                            if ~isfield(PIC,'FeatureFreqs_Hz')
+                                PIC.FeatureFreqs_Hz = unique(PIC.x.Stimuli.Computed.FeatureTarget_Hz_List);
+                            end
+                            if ~isfield(PIC,'FundamentalFreq_Hz')
+                                %                          disp('       ^^^^^ ASSUMING F0 = 100Hz ^^^^^');
+                                PIC.FundamentalFreq_Hz = 100;
+                            end
+                            if ~isfield(PIC.x.Stimuli.Condition,'BaseFrequency_kHz')
+                                PIC.x.Stimuli.Condition.BaseFrequency_kHz = PIC.x.Stimuli.Condition.BaseFrequency;
+                            end
+                            if ~isfield(PIC.x.Stimuli,'BASELINE')
+                                PIC.x.Stimuli.BASELINE.F0_Hz = PIC.FundamentalFreq_Hz;
+                                PIC.x.Stimuli.BASELINE.TargetFreq_Hz = PIC.x.Stimuli.Condition.BaseFrequency*1000;
+
+                                %                          disp('       ^^^^^ ASSUMING FORMANTS = [500    1700    2500    3300   3750] ^^^^^');
+                                PIC.x.Stimuli.BASELINE.FormFreqs_Hz = [500    1700    2500    3300   3750];
+
+                                PIC.x.Stimuli.BASELINE.Fs_Hz = PIC.x.Stimuli.Condition.BaseUpdateRate;
+                                PIC.x.Stimuli.BASELINE.FeatFreqs_Hz = PIC.x.Stimuli.BASELINE.FormFreqs_Hz;
+                            end
+                            %%%%%%%%%%%%%%%%%%%%%%%%%%
+                            
                             % Shift spikes and frequencies to simulate shifted-BF neuron with stimulus at nominal-BF
                             PIC=simFF_PICshift(PIC);
                             PIC=calcSynchRate_PERhist(PIC);  % Calculates PERIOD histogram as well
@@ -3654,4 +3692,10 @@ end
 UnitCF=unit.Info.BF_kHz;
 UnitThresh=unit.Info.Threshold_dBSPL;
 UnitQ10=unit.Info.Q10;
+
+if isempty(Rate_failpoint), Rate_failpoint=NaN; end
+if isempty(Rate_fail_limit), Rate_fail_limit=NaN; end
+if isempty(ALSR_failpoint), ALSR_failpoint=NaN; end
+if isempty(ALSR_fail_limit), ALSR_fail_limit=NaN; end
+
 return;
