@@ -52,7 +52,7 @@ switch config
             };
 end
 
-binWidth_sec = 100e-6; %assume this matches value in calcPST.m
+binWidth_sec = 100e-6;
 PSTdur_sec = 10.0;
 numPSTsamples = round(PSTdur_sec/binWidth_sec);
 PSTH = NaN*ones(10*length(unitNums),numPSTsamples);
@@ -121,7 +121,7 @@ for i=1:length(unitNums)
         j=j+1;
         PIC=concatPICS_NOHR(yTEMP.picNums{ATTind,BFind},yTEMP.excludeLines{ATTind,BFind});
         PIC=simFF_PICshift(PIC);
-        PIC=calcSynchRate_PST(PIC);
+        PIC=calcPST(PIC,binWidth_sec);
         PSTH(j,:)=[PIC.PST.pst_Y_sps zeros(1,numPSTsamples-length(PIC.PST.pst_Y_sps))]; %pad to PSTdur_sec
         PSTH_BF_kHz(j) = yTEMP.BFs_kHz(BFind);%unit.Info.BF_kHz;
     end
