@@ -146,7 +146,7 @@ elseif strcmp(PIC.TEMPLATE,'EHrBFi');
       PIC.x.Stimuli.Condition.FormsAtHarmonics, ...
       PIC.x.Stimuli.Condition.InvertPolarity, ...
       PIC.x.Stimuli.Used.Levels_dBSPL_List(PIC.CONDind));
-elseif strcmp(PIC.TEMPLATE,'EHvNrBFi');
+elseif sum(strcmp(PIC.TEMPLATE,{'EHvNrBFi','EHvLTASSrBFi'}));
    ConditionString = sprintf('Template: %s\n\nBF = %.3f kHz\nOffset = %.2f octaves\nFeature: %s\nForms at Harmonics: %s\nPolarity Inverted: %s\nLevel= %.f dB SPL\nNoise Atten= %.f dB\n', ...
       PIC.TEMPLATE, ...
       PIC.BF_Hz/1000, ...
@@ -197,7 +197,7 @@ ylim([0 FIG.raster.ymax]);
 set(gca, 'FontSize', FIG.fontSize);
 set(gca,'XDir','reverse')
 set(gca,'YTick',0:10:FIG.raster.ymax)
-YLabel('Rep Number');
+ylabel('Rep Number');
 FIG.rate.hx=xlabel('(sp/s)');
 set(FIG.rate.hx,'units','norm','pos',[-0.2   -0.018         0])
 
@@ -326,7 +326,7 @@ elseif sum(strcmp(PIC.TEMPLATE,{'TrBF','TrFF','TrBFi'}))
       PIC.FundamentalFreq_Hz,PIC.SynchRate_PERhist.FeatureSynchs(1), ...
       SigText{PIC.SynchRate_PERhist.FeatureRaySig(1)+1},PIC.SynchRate_PERhist.FeaturePhases(1));
    FeatIND=1;
-elseif sum(strcmp(PIC.TEMPLATE,{'EHrBFi','EHvNrBFi'}))
+elseif sum(strcmp(PIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi'}))
    FeatIND=find(strcmp(FeaturesText,deblank(PIC.x.Stimuli.Used.Features_List{PIC.CONDind})));
    SynchText=sprintf('Nsps=%d, %s =%.2f Hz, Synch=%.2f[%s], Ph= %.2f rad',PIC.PERhist.NumDrivenSpikes, ...
       FeaturesText{FeatIND},PIC.FeatureFreqs_Hz(FeatIND),PIC.SynchRate_PERhist.FeatureSynchs(FeatIND), ...
