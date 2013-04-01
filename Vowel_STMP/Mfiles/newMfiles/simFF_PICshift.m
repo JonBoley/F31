@@ -102,8 +102,8 @@ elseif strcmp(newPIC.TEMPLATE,'EHrBF')
 	%	OLD_SCALEDspikes = PIC.x.spikes{1}(:,2)*TimeFact;
 	newPIC.x.spikes{1}(:,2)=SCALEDspikes;
    
-elseif sum(strcmp(newPIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','TrBFi'}))
-   
+elseif sum(strcmp(newPIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','WAVreBFi','TrBFi'}))
+    
    FreqFact=PIC.BF_Hz/PIC.x.Stimuli.Used.FeatureTarget_Hz_List(PIC.CONDind);
    TimeFact=1/FreqFact;
     
@@ -139,6 +139,21 @@ elseif sum(strcmp(newPIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','TrBFi'}))
    newPIC.x.Hardware.Trigger.StmOn=PIC.x.Hardware.Trigger.StmOn*TimeFact;
    newPIC.x.Hardware.Trigger.StmOff=PIC.x.Hardware.Trigger.StmOff*TimeFact;
    
+   
+    % calculate NeuralDelay_sec
+%     NeuralDelay_sec = 0.0032 - 0.0024*log10(PIC.BF_Hz/1e3);
+%     spikeOffset_sec = NeuralDelay_sec-NeuralDelay_sec*TimeFact;
+    % Greenwood Function:
+    A = 163.5; k = 0.85; a = 2.1; % Chinchilla
+    x = 0:0.001:1; %proportion of cochlear length
+    F_Hz = A * (10.^(a*x) - k);
+    [B,IX] = sort(PSTH_BF_kHz);
+    dist = interp1(F_Hz,x,B*1e3);
+    NeuralDelay_sec = 0.005228*dist.^2 - 0.01203*dist + 0.008404; %from clickResponse.m
+    
+    % apply offset based on result from findDelay.m
+    % normal=0.014; impaired=0.0135; amplified=0.0115;
+    NeuralDelay_sec = NeuralDelay_sec + 0.014; 
 	
 	%%% COMPENSATE for Neural Delay
 	ORIGspikes=PIC.x.spikes{1}(:,2);
