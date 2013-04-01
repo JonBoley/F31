@@ -1,4 +1,4 @@
-function PIC=calcPST(PIC)
+function PIC=calcPST(PIC,binWidth_sec)
 % M.Heinz 13Sep2004.  Taken from PSTview.m
 % Calculates PST histogram from PIC.
 %
@@ -6,13 +6,11 @@ function PIC=calcPST(PIC)
 % Input PIC: has PIC.x with stimulus parameters and spikes
 % Output PIC: Stores calcs in PIC.PST, with paramaters used
 
-
-% binWidth_sec = 100e-6; % matches Miller et al 1999a,b
-binWidth_sec = 20e-6; % matches Wong et al 1998, Miller et al 1997
-
-
-binWidth_sec = 500e-6 % for Ian
-
+if nargin<2
+    % binWidth_sec = 100e-6; % matches Miller et al 1999a,b
+    % binWidth_sec = 20e-6; % matches Wong et al 1998, Miller et al 1997
+    binWidth_sec = 500e-6; % for Ian
+end
 
 lastBin_sec = (PIC.x.Hardware.Trigger.StmOn + PIC.x.Hardware.Trigger.StmOff) / 1000;
 pst_X_sec = [0:binWidth_sec:lastBin_sec];
