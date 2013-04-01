@@ -163,6 +163,9 @@ for FeatIND=FeatINDs  % Step through each Feature we have data for
                          F0index=4+strfind(PIC.x.Stimuli.list{1},'F0at'); 
                          PIC.FundamentalFreq_Hz = str2num(PIC.x.Stimuli.list{1}(F0index:F0index+2));
                      end
+                     if ~isfield(PIC,'FeatureFreqs_Hz')  
+                         PIC.FeatureFreqs_Hz = unique(PIC.x.Stimuli.Computed.FeatureTarget_Hz_List);
+                     end
                      PIC=calcSynchRate_PERhist(PIC);
                      
                      %                      yTEMP.rate(attenIND,freqIND)=PIC.PERhist.NumDrivenSpikes/PIC.x.Stimuli.fully_presented_lines/ ...
@@ -174,6 +177,9 @@ for FeatIND=FeatINDs  % Step through each Feature we have data for
                      yTEMP.RaySig{attenIND,freqIND}=PIC.SynchRate_PERhist.FeatureRaySig;
                      
                      yTEMP.FeatureFreqs_Hz{freqIND}=PIC.FeatureFreqs_Hz;
+                     if ~isfield(PIC,'FeatureLevels_dB')
+                        PIC.FeatureLevels_dB = NaN;
+                     end
                      yTEMP.FeatureLevels_dB=[NaN PIC.FeatureLevels_dB];
                   end
                end

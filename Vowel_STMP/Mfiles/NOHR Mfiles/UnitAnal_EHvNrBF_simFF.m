@@ -204,6 +204,31 @@ for FeatIND=FeatINDs  % Step through each Feature we have data for
                      % Gather spikes from relevant pictures
                      PIC=concatPICS_NOHR(yTEMP.picNums{attenIND,freqIND},yTEMP.excludeLines{attenIND,freqIND});
                      
+                     %%%%%%%%%%%%%%%%%%%%%%%%%%
+                     %%% Take care of a few variables that may not have
+                     %%% been saved the same way in a different template
+                     if ~isfield(PIC,'FeatureFreqs_Hz')  
+                         PIC.FeatureFreqs_Hz = unique(PIC.x.Stimuli.Computed.FeatureTarget_Hz_List);
+                     end
+                     if ~isfield(PIC,'FundamentalFreq_Hz')  
+%                          disp('       ^^^^^ ASSUMING F0 = 100Hz ^^^^^');
+                         PIC.FundamentalFreq_Hz = 100;
+                     end
+                     if ~isfield(PIC.x.Stimuli.Condition,'BaseFrequency_kHz')  
+                         PIC.x.Stimuli.Condition.BaseFrequency_kHz = PIC.x.Stimuli.Condition.BaseFrequency;
+                     end
+                     if ~isfield(PIC.x.Stimuli,'BASELINE')  
+                         PIC.x.Stimuli.BASELINE.F0_Hz = PIC.FundamentalFreq_Hz;
+                         PIC.x.Stimuli.BASELINE.TargetFreq_Hz = PIC.x.Stimuli.Condition.BaseFrequency*1000;
+                         
+%                          disp('       ^^^^^ ASSUMING FORMANTS = [500    1700    2500    3300   3750] ^^^^^');
+                         PIC.x.Stimuli.BASELINE.FormFreqs_Hz = [500    1700    2500    3300   3750];
+                         
+                         PIC.x.Stimuli.BASELINE.Fs_Hz = PIC.x.Stimuli.Condition.BaseUpdateRate;
+                         PIC.x.Stimuli.BASELINE.FeatFreqs_Hz = PIC.x.Stimuli.BASELINE.FormFreqs_Hz;
+                     end
+                     %%%%%%%%%%%%%%%%%%%%%%%%%%
+                     
                      % Shift spikes and frequencies to simulate shifted-BF neuron with stimulus at nominal-BF
                      PIC=simFF_PICshift(PIC);
                      yTEMP.BFs_kHz(freqIND)=PIC.BF_Hz/1000;
@@ -221,6 +246,9 @@ for FeatIND=FeatINDs  % Step through each Feature we have data for
                      yTEMP.TimeFact{attenIND,freqIND}=PIC.simFF_PICshift.TimeFact;
                      
                      yTEMP.FeatureFreqs_Hz{freqIND}=PIC.FeatureFreqs_Hz;
+                     if ~isfield(PIC,'FeatureLevels_dB')
+                        PIC.FeatureLevels_dB = NaN*ones(size(PIC.FeatureFreqs_Hz));
+                     end
                      yTEMP.FeatureLevels_dB=[NaN PIC.FeatureLevels_dB];
                   end
                end
