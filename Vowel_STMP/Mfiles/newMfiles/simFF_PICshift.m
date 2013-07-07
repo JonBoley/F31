@@ -15,7 +15,26 @@ function newPIC=simFF_PICshift(PIC)
 
 newPIC=PIC;
 
-NeuralDelay_sec = 0.001;   % Neural Delay to compensate for before scaling
+% calculate NeuralDelay_sec
+% Greenwood Function:
+A = 163.5; k = 0.85; a = 2.1; % Chinchilla
+x = 0:0.001:1; %proportion of cochlear length
+F_Hz = A * (10.^(a*x) - k);
+[B,IX] = sort(PIC.BF_Hz/1e3);%PSTH_BF_kHz);
+dist = interp1(F_Hz,x,B*1e3);
+NeuralDelay_sec = 0.005228*dist.^2 - 0.01203*dist + 0.008404; %from clickResponse.m
+% switch PIC.x.General.date
+%     values from findDelay.m
+%     case {'18-Apr-2011 ','27-Jun-2011 ','20-Jul-2011 '} % normal
+%         NeuralDelay_sec = NeuralDelay_sec + 0.014;
+%     case {'23-Jun-2011 ','21-Jul-2011 ','01-Aug-2011 ','09-Aug-2011 '} % impaired
+%         NeuralDelay_sec = NeuralDelay_sec + 0.0135;
+%     case {'04-May-2011 '} % amplified
+%         NeuralDelay_sec = NeuralDelay_sec + 0.0115;
+%     otherwise
+%         NeuralDelay_sec = 0.001;   % Neural Delay to compensate for before scaling
+% end
+% fprintf('Neural delay = %1.1fms\n',NeuralDelay_sec*1e3);
 
 if strcmp(newPIC.TEMPLATE,'TrBF')
    
@@ -140,20 +159,6 @@ elseif sum(strcmp(newPIC.TEMPLATE,{'EHrBFi','EHvNrBFi','EHvLTASSrBFi','WAVreBFi'
    newPIC.x.Hardware.Trigger.StmOff=PIC.x.Hardware.Trigger.StmOff*TimeFact;
    
    
-    % calculate NeuralDelay_sec
-%     NeuralDelay_sec = 0.0032 - 0.0024*log10(PIC.BF_Hz/1e3);
-%     spikeOffset_sec = NeuralDelay_sec-NeuralDelay_sec*TimeFact;
-    % Greenwood Function:
-    A = 163.5; k = 0.85; a = 2.1; % Chinchilla
-    x = 0:0.001:1; %proportion of cochlear length
-    F_Hz = A * (10.^(a*x) - k);
-    [B,IX] = sort(PSTH_BF_kHz);
-    dist = interp1(F_Hz,x,B*1e3);
-    NeuralDelay_sec = 0.005228*dist.^2 - 0.01203*dist + 0.008404; %from clickResponse.m
-    
-    % apply offset based on result from findDelay.m
-    % normal=0.014; impaired=0.0135; amplified=0.0115;
-    NeuralDelay_sec = NeuralDelay_sec + 0.014; 
 	
 	%%% COMPENSATE for Neural Delay
 	ORIGspikes=PIC.x.spikes{1}(:,2);
