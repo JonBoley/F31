@@ -5,7 +5,7 @@
 % clear all; close all; home;
 setup_Vowel_STMP;
 
-config = 'amplified'; %{'normal','impaired','amplified'}
+config = 'normal'; %{'normal','impaired','amplified'}
 
 global ROOT_dir
 global SavedPICS SavedPICnums SavedPICSuse

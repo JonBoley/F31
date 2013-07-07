@@ -3,7 +3,7 @@ setup_Vowel_STMP;
 
 %% Run all units for a given experiment
 if ~exist('date','var')
-    date = '072112';
+    date = '';%072112';
 end
 switch date
     case '041805'   % 04/18/05 fibers: (in noise, normal)
@@ -123,10 +123,12 @@ switch date
         unitNums = {1.04, 1.08, 1.12, 1.13, 3.01};
         colors = repmat({'m'},size(unitNums));
 
-    otherwise
-        error('Invalid experiment date');
+%     otherwise
+%         error('Invalid experiment date');
 end
-dates=repmat({date},size(unitNums));
+if ~isempty(date)
+    dates=repmat({date},size(unitNums));
+end
 
 %% Run a combo of experiments
 if isempty(date) % if not any particular date, do a bunch
@@ -162,7 +164,7 @@ end
 %% The loop
 RecalcAll = 0;  % if enabled, this automatically recalculates everything,
                 % but loads previous characteristic delays
-LoadMAT = 1; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
+LoadMAT = 0; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
 
 if LoadMAT
     [FileName,PathName,FilterIndex] = uigetfile('*.mat','Pick a file',...
@@ -180,6 +182,9 @@ if ~LoadMAT
         date = dates{i};
         disp(sprintf('%d of %d) [%s] Calculating unit %1.2f...',i,length(unitNums),date,unitNums{i}));
 
+        %recalculate STMP
+%         UnitAnal_EHvNrBF_simFF(date,num2str(unitNums{i}),0);
+        
         % Use this for SNR conditions:
         [UnitCF(i),UnitThresh(i),UnitQ10(i),...
             Rate_failpoint(i),Rate_fail_limit(i),...
