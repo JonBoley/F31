@@ -1,7 +1,6 @@
 % initialize model parameters
-midCF_kHz=formants(featureNum)/1000; %center on this feature
 
-numCFs=20;
+numCFs=2;
 if mod(numCFs,2)==1, numCFs=numCFs+1; end % make this an even number
 
 spread=2; %number of octaves
