@@ -1,6 +1,7 @@
-function [H0, H1, H2, H1null] = compute_wienerKernels(spikeTrain, stimWav, sFreq, Nreps)
+function [H1spec,freqs] = revcor(spikeTrains,stimWav,sFreq)
 
-% sFreq=50000;
+spikeTrain = cell2mat(spikeTrains')';
+Nreps = numel(spikeTrains);
 
 stimWav=resample(stimWav,1,2);
 stimPower=mean(stimWav.^2);
@@ -61,10 +62,13 @@ H1null=R1null*stimRMS/stimPower;
 % figure(100); plot(delay, H1);
 % figure(101); imagesc(delay, delay,H2);
 
+
 freqs = (0:Npoints-1)/(Npoints-1)*sFreq;
 H1spec = fft(H1);
 H1spec = H1spec(2:floor(end/2));
 freqs = freqs(2:floor(end/2));
-figure, semilogx(freqs,abs(H1spec),'b');
-% hold on; semilogx(angle(H1spec),'k'); hold off;
+if nargout<1
+    figure, semilogx(freqs,abs(H1spec),'b');
+    hold on; semilogx(freqs,unwrap(angle(H1spec)),'k:'); hold off;
+end
 

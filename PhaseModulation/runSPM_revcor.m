@@ -1,34 +1,41 @@
 %% SPM - spatiotemporal phase modulation
+% revcor to find best frequency, then apply SPM
 
 % Add all subdirectories to the path
-addpath(genpath('C:\Research\MATLAB\PhaseMod'));
+addpath(genpath('C:\Research\MATLAB\PhaseModulation'));
 
-impaired = 1; % yes/no
-featureNum = 2; % [1 2 3 ...] = [F1 F2 F3 ...]
+impaired = 0; % yes/no0
 Levels = 65;
 SNRs = Inf;
 
-GenEh;              % create vowel
+% GenEh;              % create vowel
+% actually, just use noise for now
+dur = 0.5;
+F0=100;
+Fs=24414.062500;
+vowel = randn(round(dur*Fs),1);
+vowel=vowel./max(abs(vowel))*0.99; % normalize
 
-midCF_kHz=formants(featureNum)/1000; %center on this feature
+midCF_kHz = 1; %center on this feature
 model_init;         % Initialize model parameters
 impairment_init;    % Set up impairment
 analysis_init;      % Initialize analysis variables
 
 % create filters
-fPeak = formants(featureNum); %Hz
-numFilters = 5;
-numStages = 2;
+fPeak = midCF_kHz*1e3; %Hz
+numFilters = 3;
+numStages = 1;
 GD=0.005*Fs; % group delay (samples)
 k0=(GD-2)/(GD+2);
 k2=1;
 % note that phase delay (~0.2ms/section) is independent of group delay
-% also note that max phase delay may not be at center freq
+% also note that max phase delay may not necessarily be at center freq
 k1=-cos(2*pi*fPeak/Fs);
 B=[k0 k1*(1+k0*k2) k2];
 A=fliplr(B);
 % figure(999), plot(1:Fs/2,grpdelay(B,A,Fs/2,Fs));
 H=dfilt.df2t(B,A);
+Hcas=dfilt.scalar;
 for i=1:numFilters
     Hcas(i)=dfilt.scalar;
     for j=1:numStages
@@ -82,7 +89,9 @@ for LevelIndex = 1:numel(Levels)
                 
                 get_spikes;
                 calc_xCF;
-                blah=1;
+                
+                Revcors{LevelIndex,SNRindex,FilterIndex,FiberNumber} = ...
+                    revcor(SpikeTrains_plus, signal, Fs);
                 
             end
             fprintf('\n');
@@ -97,25 +106,27 @@ for LevelIndex = 1:numel(Levels)
             figure(1)
             plot(deltaCF,squeeze(CD_vDeltaCF),'.-');
             title('CD vs \DeltaCF');
-            xlabel(['\DeltaCF (octaves re ' sprintf('%s)',FeaturesText{featureNum})]);
-            ylabel(['CD (re ' FeaturesText{featureNum} ')']);
+            xlabel(['\DeltaCF (octaves re ' sprintf('%1.1fkHz)',fPeak/1e3)]);
+            ylabel(['CD (re 0 octaves)']);
             drawnow;
         end
     end
 end
 
+%% lots of plots
+
 % plot CD vs. CF cycles
 figure,
-cycles = (squeeze(CD_vDeltaCF)/1e6)*formants(featureNum);
+cycles = (squeeze(CD_vDeltaCF)/1e6)*fPeak;
 plot(deltaCF,cycles,'.-');
 title('CD vs \DeltaCF');
-xlabel(['\DeltaCF (octaves re ' sprintf('%s)',FeaturesText{featureNum})]);
-ylabel(['CD (cycles re ' FeaturesText{featureNum} ')']);
+xlabel(['\DeltaCF (octaves re ' sprintf('%1.1fkHz)',fPeak/1e3)]);
+ylabel(['CD (cycles re ' sprintf('%1.1fkHz)',fPeak/1e3)]);
 
 figure, 
 plot(0:numFilters,interp1(deltaCF,cycles',-0.5),'o-');
 xlabel('Number of all-pass filters');
-ylabel(['CD @ -0.5 octaves (cycles re ' FeaturesText{featureNum} ')']);
+ylabel(['CD @ -0.5 octaves (cycles re ' sprintf('%1.1fkHz)',fPeak/1e3)]);
 
 
 % plot response of filters
@@ -123,17 +134,19 @@ maxPhi = NaN*ones(numel(Hcas),1);
 figure, hold on;
 for i=1:numel(Hcas)
     [gd,w_gd] = grpdelay(Hcas(i)); % group delay
-    [phi,w_phi] = phasedelay(Hcas(i)); % phase delay
-    maxPhi(i) = max(phi)/Fs*formants(featureNum);
-    plot(Fs*w_gd/(2*pi),gd/Fs*formants(featureNum),'Linewidth',3,'Color','b');
-    plot(Fs*w_phi/(2*pi),phi/Fs*formants(featureNum),'Linewidth',3,'Color','k');
+    [phid,w_phid] = phasedelay(Hcas(i)); % phase delay
+    [phi,w_phi] = phasez(Hcas(i)); % phase
+    maxPhi(i) = max(phid)/Fs*fPeak;
+    plot(Fs*w_gd/(2*pi),gd/Fs*fPeak,'Linewidth',3,'Color','b');
+    plot(Fs*w_phid/(2*pi),phid/Fs*fPeak,'Linewidth',3,'Color','g');
+    plot(Fs*w_phi/(2*pi),phi/Fs*fPeak,'Linewidth',3,'Color','k');
 end
 xlabel('Frequency (Hz)');
-ylabel('Delay (F2 cycles)');
+ylabel('Delay (CF cycles)');
 set(gca,'XLim',[100 10e3],...
         'XTick',[100 250 500 1e3 2500 5e3 10e3],...
         'XScale','log');
-legend('Group Delay','Phase Delay');
+legend('Group Delay','Phase Delay','Phase');
 
 figure,
 plot(mod(maxPhi,1),'o-');
@@ -141,7 +154,41 @@ xlabel('Number of all-pass filters');
 ylabel(['max phase delay (F2 cycles)']);
 
 figure,
-plot([0 mod(maxPhi,1)],interp1(deltaCF,cycles',-0.5),'o');
+plot([0; mod(maxPhi,1)],interp1(deltaCF,cycles',-0.5),'o');
 xlabel('filter delay (cycles)');
 ylabel('characteristic delay (cycles)');
+
+%plot revcor
+Npoints=numel(Revcors{1,1,1,1}); 
+freqs = (1:Npoints)/Npoints*Fs/2;
+figure,
+for ii=1:(numel(Hcas)+1)
+    plot(freqs,20*log10(ThirdOctSmoothing(...
+        abs(Revcors{1,1,ii,1}),freqs)),'b');
+    hold on;
+end
+hold off;
+ax1 = gca;
+set(ax1,'XColor','r','YColor','r','XScale','log','xlim',[100 10e3]);
+xlabel('Frequency (Hz)');
+ylabel('Revcor Magnitude (dB)');
+ax2 = axes('Position',get(ax1,'Position'),...
+           'XAxisLocation','top',...
+           'YAxisLocation','right',...
+           'XScale','log',...
+           'xlim',[100 10e3],...
+           'Color','none',...
+           'XColor','k','YColor','k');
+for ii=1:(numel(Hcas)+1)
+    line(freqs,...
+       ThirdOctSmoothing(unwrap(angle(Revcors{1,1,ii,1}))/(2*pi),freqs),...
+       'Color','k','Parent',ax2);
+%    line(freqs,...
+%        ThirdOctSmoothing(unwrap(angle(Revcors{1,1,ii,1}))./...
+%        (2*pi*freqs)'*1e3,freqs),...
+%        'Color','k','Parent',ax2);
+   hold(ax2,'on');
+end
+hold(ax2,'off');
+ylabel('Revcor Phase (CF cycles)');
 
