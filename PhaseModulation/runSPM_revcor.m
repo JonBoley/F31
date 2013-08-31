@@ -2,9 +2,9 @@
 % revcor to find best frequency, then apply SPM
 
 % Add all subdirectories to the path
-addpath(genpath('C:\Research\MATLAB\PhaseModulation'));
+addpath(genpath(fileparts(mfilename('fullpath'))));
 
-impaired = 0; % yes/no0
+impaired = 0; % yes/no
 Levels = 65;
 SNRs = Inf;
 
@@ -12,7 +12,7 @@ SNRs = Inf;
 % actually, just use noise for now
 dur = 0.5;
 F0=100;
-Fs=24414.062500;
+Fs=24414;
 vowel = randn(round(dur*Fs),1);
 vowel=vowel./max(abs(vowel))*0.99; % normalize
 
@@ -25,11 +25,9 @@ analysis_init;      % Initialize analysis variables
 fPeak = midCF_kHz*1e3; %Hz
 numFilters = 3;
 numStages = 1;
-GD=0.005*Fs; % group delay (samples)
+GD=0.001*Fs; % group delay (samples)
 k0=(GD-2)/(GD+2);
 k2=1;
-% note that phase delay (~0.2ms/section) is independent of group delay
-% also note that max phase delay may not necessarily be at center freq
 k1=-cos(2*pi*fPeak/Fs);
 B=[k0 k1*(1+k0*k2) k2];
 A=fliplr(B);
@@ -165,6 +163,7 @@ figure,
 for ii=1:(numel(Hcas)+1)
     plot(freqs,20*log10(ThirdOctSmoothing(...
         abs(Revcors{1,1,ii,1}),freqs)),'b');
+%     plot(freqs,20*log10(abs(Revcors{1,1,ii,1})),'b');
     hold on;
 end
 hold off;
@@ -183,6 +182,8 @@ for ii=1:(numel(Hcas)+1)
     line(freqs,...
        ThirdOctSmoothing(unwrap(angle(Revcors{1,1,ii,1}))/(2*pi),freqs),...
        'Color','k','Parent',ax2);
+%     line(freqs,unwrap(angle(Revcors{1,1,ii,1}))/(2*pi),...
+%        'Color','k','Parent',ax2);
 %    line(freqs,...
 %        ThirdOctSmoothing(unwrap(angle(Revcors{1,1,ii,1}))./...
 %        (2*pi*freqs)'*1e3,freqs),...
