@@ -59,7 +59,7 @@ else
    ch_YMAX=(NumCH-1+chGAIN)*ch_CHwidth+lowCH;    % sets an extra (GAIN-1) channel widths (to allow for chGAIN>1)
 end
 YLIMITS=[lowCH ch_YMAX];  % Used for all plots
-YTICKS=sort(round(CHdata.CHvals*100)/100);
+YTICKS=unique(round(CHdata.CHvals*100)/100);
 
 %% Find maximum value acros all Ydata o be plotted - FOR SCALING
 Y_MAXval=-Inf;

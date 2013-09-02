@@ -1,9 +1,9 @@
 % initialize model parameters
 
-numCFs=2;
+numCFs=40;
 if mod(numCFs,2)==1, numCFs=numCFs+1; end % make this an even number
 
-spread=2; %number of octaves
+spread=0.5; %number of octaves
 lowCF_kHz=midCF_kHz*2^(-spread/2);
 CF_kHz=(lowCF_kHz*2.^(0:spread/(numCFs-1):spread));
 

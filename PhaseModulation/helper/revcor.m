@@ -3,12 +3,11 @@ function [H1spec,freqs] = revcor(spikeTrains,stimWav,sFreq)
 spikeTrain = cell2mat(spikeTrains')';
 Nreps = numel(spikeTrains);
 
-stimWav=resample(stimWav,1,2);
+% stimWav=resample(stimWav,1,2);
 stimPower=mean(stimWav.^2);
 stimRMS=sqrt(stimPower);
-stimPSD=stimPower/16500;
 
-timeVector=[0:length(stimWav)-1]/sFreq;
+timeVector=(0:length(stimWav)-1)/sFreq;
 endOnset=0.030;
 stimEnd=max(timeVector);
 
