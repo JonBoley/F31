@@ -1,6 +1,6 @@
 % initialize model parameters
 
-numCFs=40;
+numCFs=20;
 if mod(numCFs,2)==1, numCFs=numCFs+1; end % make this an even number
 
 spread=0.5; %number of octaves
