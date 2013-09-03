@@ -13,6 +13,7 @@ SNRs = Inf;
 dur = 0.5;
 F0=100;
 Fs=24414;
+rng(1); % always use the same seed for random noise generator
 vowel = randn(round(dur*Fs),1);
 vowel=vowel./max(abs(vowel))*0.99; % normalize
 
@@ -22,9 +23,9 @@ impairment_init;    % Set up impairment
 analysis_init;      % Initialize analysis variables
 
 % create filters
-fPeak = 1.9*midCF_kHz*1e3; %Hz
-numFilters = 3;
-numStages = 3;
+fPeak = midCF_kHz*1e3; %Hz
+numFilters = 5;
+numStages = 1;
 GD=0.005*Fs; % group delay (samples)
 k0=(GD-2)/(GD+2);
 k2=1;
@@ -92,7 +93,7 @@ for LevelIndex = 1:numel(Levels)
                 end
                 
                 Revcors{LevelIndex,SNRindex,FilterIndex,FiberNumber} = ...
-                    revcor(SpikeTrains_plus, signal, Fs);
+                    revcor(SpikeTrains_plus, vowel, Fs);
                 
             end
             fprintf('\n');
