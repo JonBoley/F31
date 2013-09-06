@@ -77,7 +77,7 @@ for LevelIndex = 1:numel(Levels)
             signal_model = window_waveform(signal_model,ANmodel_Fs_Hz,dur_sec*1000);
             
             fprintf('Calculating %d fibers...\n',numCFs)
-            numCFs = 1; % for testing subset of fibers
+%             numCFs = 1; % for testing subset of fibers
             for FiberNumber=1:numCFs
                 fprintf('.');
                 
@@ -169,6 +169,7 @@ end
 
 %% plot revcor
 doSmoothing = 1;
+CFindex = 2;%numel(CF_kHz);
 Npoints=numel(Revcors{1,1,1,1}); 
 freqs = (1:Npoints)/Npoints*Fs/2;
 lineWidth=numel(Hcas)+1;
@@ -177,9 +178,9 @@ figure,
 for ii=1:(numel(Hcas)+1)
     if doSmoothing
         plot(freqs,20*log10(ThirdOctSmoothing(...
-            abs(Revcors{1,1,ii,1}),freqs)),'b','LineWidth',lineWidth);
+            abs(Revcors{1,1,ii,CFindex}),freqs)),'b','LineWidth',lineWidth);
     else
-        plot(freqs,20*log10(abs(Revcors{1,1,ii,1})),'b',...
+        plot(freqs,20*log10(abs(Revcors{1,1,ii,CFindex})),'b',...
             'LineWidth',lineWidth);
     end
     hold on;
@@ -202,10 +203,10 @@ lineWidth=numel(Hcas)+1;
 for ii=1:(numel(Hcas)+1)
     if doSmoothing
         line(freqs,...
-            ThirdOctSmoothing(unwrap(angle(Revcors{1,1,ii,1}))/(2*pi),freqs),...
+            ThirdOctSmoothing(unwrap(angle(Revcors{1,1,ii,CFindex}))/(2*pi),freqs),...
             'Color','k','Parent',ax2,'LineWidth',lineWidth);
     else
-        line(freqs,unwrap(angle(Revcors{1,1,ii,1}))/(2*pi),...
+        line(freqs,unwrap(angle(Revcors{1,1,ii,CFindex}))/(2*pi),...
             'Color','k','Parent',ax2,'LineWidth',lineWidth);
     end
     % phase delay
@@ -219,3 +220,96 @@ end
 hold(ax2,'off');
 ylabel('Revcor Phase (cycles)');
 
+
+
+%% plot phase difference (re no filter) as a function of CF
+% (phases at each CF)
+doSmoothing = 0;
+Npoints=numel(Revcors{1,1,1,1}); 
+freqs = (1:Npoints)/Npoints*Fs/2;
+[sortedCF_kHz,ix] = sort(CF_kHz);
+
+refPhase = zeros(numCFs,1);
+for FiberNumber=1:numCFs
+    if doSmoothing
+        phaseArray = ThirdOctSmoothing(...
+            unwrap(angle(Revcors{1,1,1,FiberNumber})),freqs);
+    else
+        phaseArray = unwrap(angle(Revcors{1,1,1,FiberNumber}));
+    end
+    refPhase(FiberNumber) = phaseArray(find(freqs<=1e3*CF_kHz(FiberNumber),1,'last'));
+end
+
+lineWidth=numel(Hcas)+1;
+figure, 
+phaseDiff = zeros(numCFs,numel(Hcas));
+for ii=1:numel(Hcas)
+    for FiberNumber=1:numCFs
+        if doSmoothing
+            phaseArray = ThirdOctSmoothing(...
+                unwrap(angle(Revcors{1,1,ii,FiberNumber})),freqs);
+        else
+            phaseArray = unwrap(angle(Revcors{1,1,ii,FiberNumber}));
+        end
+        phaseDiff(FiberNumber,ii) = ...
+            phaseArray(find(freqs<=1e3*CF_kHz(FiberNumber),1,'last'));
+    end   
+    
+    plot(sortedCF_kHz,unwrap(phaseDiff(ix,ii))/(2*pi),'LineWidth',lineWidth);
+    hold on;
+    lineWidth = lineWidth - 1;
+end
+title('phase difference (re no filter) at CF');
+xlabel('characteristic frequency (kHz)');
+ylabel('\Delta\phi (cycles)');
+
+
+%% plot phase difference (re no filter) as a function of CF
+% (phase at common frequency)
+doSmoothing = 0;
+Npoints=numel(Revcors{1,1,1,1}); 
+freqs = (1:Npoints)/Npoints*Fs/2;
+[sortedCF_kHz,ix] = sort(CF_kHz);
+
+refPhase = zeros(numCFs,1);
+for FiberNumber=1:numCFs
+    if doSmoothing
+        phaseArray = ThirdOctSmoothing(...
+            unwrap(angle(Revcors{1,1,1,FiberNumber})),freqs);
+    else
+        phaseArray = unwrap(angle(Revcors{1,1,1,FiberNumber}));
+    end
+    refPhase(FiberNumber) = phaseArray(find(freqs<=1e3*CF_kHz(1),1,'last'));
+end
+
+lineWidth=numel(Hcas)+1;
+figure, 
+phaseDiff = zeros(numCFs,numel(Hcas));
+for ii=1:numel(Hcas)
+    for FiberNumber=1:numCFs
+        if doSmoothing
+            phaseArray = ThirdOctSmoothing(...
+                unwrap(angle(Revcors{1,1,ii,FiberNumber})),freqs);
+        else
+            phaseArray = unwrap(angle(Revcors{1,1,ii,FiberNumber}));
+        end
+        phaseDiff(FiberNumber,ii) = ...
+            phaseArray(find(freqs<=1e3*CF_kHz(1),1,'last'));
+    end   
+    
+%     plot(sortedCF_kHz,unwrap(phaseDiff(ix,ii)),'LineWidth',lineWidth);
+%     plot(sortedCF_kHz,unwrap(mod(unwrap(phaseDiff(ix,ii))/(2*pi),1),-0.5),'LineWidth',lineWidth);
+
+    plotVals = mod(unwrap(phaseDiff(ix,ii))/(2*pi),1);
+    jumpIndx = 1+find(diff(plotVals)<-0.5);
+    plotVals(jumpIndx:end) = plotVals(jumpIndx:end) + 1;
+    if min(plotVals)>0.5
+        plotVals = plotVals - 0.5;
+    end
+    plot(sortedCF_kHz,plotVals,'LineWidth',lineWidth);
+    hold on;
+    lineWidth = lineWidth - 1;
+end
+title('phase difference (re no filter) at 1kHz');
+xlabel('characteristic frequency (kHz)');
+ylabel('\Delta\phi (cycles)');
