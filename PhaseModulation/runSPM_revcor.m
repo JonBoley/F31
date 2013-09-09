@@ -45,6 +45,7 @@ for i=2:numFilters
     Hcas(i)=dfilt.cascade(Hcas(i-1),Hcas(i));
 end
 
+binSize_sec = 20e-6; % for PSTH
 
 % get spikes
 Rho_vDeltaCF = NaN*ones(numel(Hcas)+1,numel(Levels),numel(SNRs),numCFs);
@@ -91,6 +92,9 @@ for LevelIndex = 1:numel(Levels)
                 if numCFs>1
                     calc_xCF;
                 end
+                
+                PSTH{LevelIndex,SNRindex,FilterIndex,FiberNumber} = ...
+                    getPSTH(SpikeTrains_plus,binSize_sec);
                 
                 Revcors{LevelIndex,SNRindex,FilterIndex,FiberNumber} = ...
                     revcor(SpikeTrains_plus, vowel, Fs);
@@ -167,6 +171,7 @@ if numCFs>1
     ylabel('characteristic delay (cycles)');
 end
 
+
 %% plot revcor
 doSmoothing = 1;
 CFindex = 2;%numel(CF_kHz);
@@ -219,7 +224,6 @@ for ii=1:(numel(Hcas)+1)
 end
 hold(ax2,'off');
 ylabel('Revcor Phase (cycles)');
-
 
 
 %% plot phase difference (re no filter) as a function of CF
@@ -313,3 +317,40 @@ end
 title('phase difference (re no filter) at 1kHz');
 xlabel('characteristic frequency (kHz)');
 ylabel('\Delta\phi (cycles)');
+
+
+%% plot coincidence detection
+cWinLen_sec = 0.1e-3; % 0.1msec (as in Wang & Delgutte 2012)
+L = 2; % min input spikes for output spike
+w = 0.5; % CF range (octaves)
+N = numCFs; % number of input fibers
+
+maxBins = (dur_sec+1.00)/binSize_sec;
+
+% get PSTH for each CF
+CDprob = zeros(numel(Hcas)+1,maxBins);
+for FilterIndex=1:(numel(Hcas)+1)
+    PSTHmat = zeros(numCFs,maxBins);
+    for FiberNumber=1:N
+        PSTHmat(FiberNumber,1:numel(PSTH{1,1,FilterIndex,FiberNumber})) = ...
+            PSTH{1,1,FilterIndex,FiberNumber};%/Nreps;
+    end
+    
+    % calculate coincidence probability
+    % count # of CFs with spikes in each small (20us) bin
+    CFcount = sum(PSTHmat>0,1);
+    % for sliding window of 100us, count # of CFs with spikes
+    CFcount = filter(ones(round(cWinLen_sec/binSize_sec),1),1,CFcount);
+    % threshold (any bin with <L spikes gets no output)
+    CDprob(FilterIndex,:) = CFcount - L;
+    CDprob(CDprob<0)=0;
+end
+% figure, plot(CDprob');
+
+totalCDprob = mean(CDprob(:,1:round(dur_sec/binSize_sec)),2)' / Nreps;
+figure, plot(0:numel(Hcas),totalCDprob,'-o');
+ylim([0 1]);
+xlabel('number of all-pass filters');
+ylabel('probability of coincidence');
+
+
