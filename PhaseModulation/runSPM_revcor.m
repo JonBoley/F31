@@ -45,7 +45,7 @@ for i=2:numFilters
     Hcas(i)=dfilt.cascade(Hcas(i-1),Hcas(i));
 end
 
-binSize_sec = 20e-6; % for PSTH
+binSize_sec = 10e-6; % for PSTH
 
 % get spikes
 Rho_vDeltaCF = NaN*ones(numel(Hcas)+1,numel(Levels),numel(SNRs),numCFs);
@@ -92,6 +92,10 @@ for LevelIndex = 1:numel(Levels)
                 if numCFs>1
                     calc_xCF;
                 end
+                
+                
+                Spikes{LevelIndex,SNRindex,FilterIndex,FiberNumber} = ...
+                    SpikeTrains_plus;
                 
                 PSTH{LevelIndex,SNRindex,FilterIndex,FiberNumber} = ...
                     getPSTH(SpikeTrains_plus,binSize_sec);
@@ -259,7 +263,9 @@ for ii=1:numel(Hcas)
             phaseArray(find(freqs<=1e3*CF_kHz(FiberNumber),1,'last'));
     end   
     
-    plot(sortedCF_kHz,unwrap(phaseDiff(ix,ii))/(2*pi),'LineWidth',lineWidth);
+    phaseToPlot = unwrap(phaseDiff(ix,ii))/(2*pi);
+    phaseToPlot = phaseToPlot - phaseToPlot(ceil(end/2));
+    plot(sortedCF_kHz,phaseToPlot,'LineWidth',lineWidth);
     hold on;
     lineWidth = lineWidth - 1;
 end
@@ -320,7 +326,7 @@ ylabel('\Delta\phi (cycles)');
 
 
 %% plot coincidence detection
-cWinLen_sec = 0.1e-3; % 0.1msec (as in Wang & Delgutte 2012)
+cWinLen_sec = 0.010e-3; % (0.1msec in Wang & Delgutte 2012)
 L = 2; % min input spikes for output spike
 w = 0.5; % CF range (octaves)
 N = numCFs; % number of input fibers
@@ -331,26 +337,101 @@ maxBins = (dur_sec+1.00)/binSize_sec;
 CDprob = zeros(numel(Hcas)+1,maxBins);
 for FilterIndex=1:(numel(Hcas)+1)
     PSTHmat = zeros(numCFs,maxBins);
-    for FiberNumber=1:N
+    for FiberNumber=2:2:N
+        % probability of a spike in each bin
         PSTHmat(FiberNumber,1:numel(PSTH{1,1,FilterIndex,FiberNumber})) = ...
-            PSTH{1,1,FilterIndex,FiberNumber};%/Nreps;
+            PSTH{1,1,FilterIndex,FiberNumber}/Nreps;
     end
     
     % calculate coincidence probability
-    % count # of CFs with spikes in each small (20us) bin
-    CFcount = sum(PSTHmat>0,1);
-    % for sliding window of 100us, count # of CFs with spikes
-    CFcount = filter(ones(round(cWinLen_sec/binSize_sec),1),1,CFcount);
+    % sliding window of cWinLen_sec
+    CDhist = filter(ones(round(cWinLen_sec/binSize_sec),1),1,PSTHmat);
+    % count # of CFs with spikes
+%     CFcount = sum(CDhist>0,1); 
     % threshold (any bin with <L spikes gets no output)
-    CDprob(FilterIndex,:) = CFcount - L;
-    CDprob(CDprob<0)=0;
+    CDprob(FilterIndex,:) = sum(CDhist,1);
+    CDprob(FilterIndex,CDprob(FilterIndex,:)<(L/numCFs))=0;
+%     CDprob(FilterIndex,:) = CDprob(FilterIndex,:)/numCFs;
 end
-% figure, plot(CDprob');
+figure, plot((1:maxBins)*binSize_sec,CDprob');
+% 
 
-totalCDprob = mean(CDprob(:,1:round(dur_sec/binSize_sec)),2)' / Nreps;
-figure, plot(0:numel(Hcas),totalCDprob,'-o');
+totalCDprob = mean(CDprob(:,1:round(dur_sec/binSize_sec)),2)'/binSize_sec;
+% figure, plot(0:numel(Hcas),totalCDprob,':o');
+% % ylim([0 1]);
+% xlabel('number of all-pass filters');
+% ylabel('coincidence spikes/sec');
+
+
+% figure, 
+% for FilterIndex=1:(numel(Hcas)+1)
+%     subplot((numel(Hcas)+1),1,FilterIndex)
+%     temp = abs(fft(CDprob(FilterIndex,:)));
+%     temp = temp(2:(end/2));
+%     semilogx(temp);
+% end
+%
+
+% period histogram of CD cell
+ignoreDur = 20e-3;
+perBins = round(1/F0/binSize_sec);
+numPer = round((dur_sec-ignoreDur)/binSize_sec/perBins);
+CDperHist = NaN*ones(1,perBins);
+for FilterIndex=1:(numel(Hcas)+1)
+    temp = CDprob(FilterIndex,1+round(ignoreDur/binSize_sec):round(dur_sec/binSize_sec));
+    CDperHist(FilterIndex,:) = sum(reshape(temp,numPer,perBins),1);
+end
+figure,plot((0:(1/F0/binSize_sec))*binSize_sec,CDperHist);
+
+%% FFT of CD cell PSTH
+CDfft = NaN*ones(1,round((dur_sec-ignoreDur)/binSize_sec)/2);
+for FilterIndex=1:(numel(Hcas)+1)
+    temp = CDprob(FilterIndex,1+round(ignoreDur/binSize_sec):round(dur_sec/binSize_sec));
+    temp = abs(fft(temp));
+    temp = temp(1:end/2);
+    CDfft(FilterIndex,:) = temp;
+end
+figure,plot(CDfft(:,2:end)');
+
+
+
+%% more coincidence detection
+cWinLen_sec = 0.1e-3; % 0.1msec (as in Wang & Delgutte 2012)
+L = 2; % min input spikes for output spike
+w = 0.5; % CF range (octaves)
+N = numCFs; % number of input fibers
+
+cWinDiv = 10; % divider for PSTH
+maxBins = (dur_sec+1.00)/(cWinLen_sec/cWinDiv);
+
+CDinputs = zeros(numel(Hcas)+1,maxBins);
+CDoutputs = zeros(size(CDinputs));
+for FilterIndex=1:(numel(Hcas)+1)
+    for repNum=1:Nreps
+        spikes = cell(1,numCFs);
+        for FiberNumber=1:(round(numCFs/N)):numCFs
+            spikes{FiberNumber} = Spikes{1,1,FilterIndex,FiberNumber}{repNum};
+        end
+        
+        % inputPSTH = numFibers firing per bin
+        % (assumes binSize << refractory period)
+        inputPSTH = getPSTH(spikes,cWinLen_sec/cWinDiv)';
+        CDhist = zeros(1,size(CDinputs,2));
+        CDhist(1:numel(inputPSTH)) = ...
+            filter(ones(cWinDiv,1),1,inputPSTH);
+        CDinputs(FilterIndex,:) = CDinputs(FilterIndex,:) + CDhist;
+        
+        % threshold (any bin with <L spikes gets no output)
+        CDoutputs(FilterIndex,CDinputs(FilterIndex,:)>=L) = ...
+            1 + CDoutputs(FilterIndex,CDinputs(FilterIndex,:)>=L);
+    end
+    
+end
+% figure, plot(CDoutputs'/Nreps/binSize_sec);
+
+totalCDprob = mean(CDoutputs(:,1:round(dur_sec/(cWinLen_sec/cWinDiv))),2)'/Nreps;
+figure, plot(0:numel(Hcas),totalCDprob,':o');
 ylim([0 1]);
 xlabel('number of all-pass filters');
-ylabel('probability of coincidence');
-
+ylabel('coincidence probability');
 
