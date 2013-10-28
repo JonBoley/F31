@@ -3,7 +3,7 @@ setup_Vowel_STMP;
 
 %% Run all units for a given experiment
 if ~exist('date','var')
-    date = '';%072112';
+    date = '';%'072812';
 end
 switch date
     case '041805'   % 04/18/05 fibers: (in noise, normal)
@@ -120,8 +120,12 @@ switch date
         colors = repmat({'m'},size(unitNums));
     case '072112' %JB-2012_07_21-Chin1206_AN_500OBN (with linear & nonlinear amplification)
         % 1.04, 1.08, 1.12, 1.13, 3.01
-        unitNums = {1.04, 1.08, 1.12, 1.13, 3.01};
-        colors = repmat({'m'},size(unitNums));
+        unitNums = {1.04, 1.08, 1.12, 3.01};
+        colors = repmat({'g'},size(unitNums));
+    case '072812' %JB-2012_07_28-Chin1204_AN_500OBN (with linear & nonlinear amplification)
+        % 1.11, 1.12, 1.15, 1.18, 1.21, 1.30, 1.31
+        unitNums = {1.15, 1.18, 1.21};
+        colors = repmat({'g'},size(unitNums));
 
 %     otherwise
 %         error('Invalid experiment date');
@@ -139,7 +143,9 @@ if isempty(date) % if not any particular date, do a bunch
         '072111','072111','072111','072111','072111','072111',...
         '080111','080111','080111','080111','080111',...
         '080911','080911','080911','080911','080911','080911','080911','080911',...
-        '050412','050412','050412','050412','050412','050412'...
+        '050412','050412','050412','050412','050412','050412',...
+        '072112','072112','072112','072112',...
+        '072812','072812','072812'...
         };
     unitNums = {1.03,2.01,2.02,2.07,3.03,3.04,...
         1.01,1.02,1.03,1.04,2.01,2.03,...
@@ -148,7 +154,9 @@ if isempty(date) % if not any particular date, do a bunch
         1.01, 1.06, 1.11, 1.12, 1.15, 1.16,...
         2.02, 4.01, 4.02, 4.03, 4.05,...
         1.04, 1.05, 1.06, 1.07, 1.09, 1.11, 1.15, 1.16,...
-        1.01, 1.02, 1.03, 1.05, 2.01, 2.03...
+        1.01, 1.02, 1.03, 1.05, 2.01, 2.03,...
+        1.04, 1.08, 1.12, 3.01,...
+        1.15, 1.18, 1.21...
         };
     colors = {'k','k','k','k','k','k',...
         'k','k','k','k','k','k',...
@@ -157,18 +165,20 @@ if isempty(date) % if not any particular date, do a bunch
         'r','r','r','r','r','r',...
         'r','r','r','r','r',...
         'r','r','r','r','r','r','r','r',...
-        'm','m','m','m','m','m'...
+        'm','m','m','m','m','m',...
+        'g','g','g','g',...
+        'g','g','g'...
         };
 end
 
 %% The loop
 RecalcAll = 0;  % if enabled, this automatically recalculates everything,
                 % but loads previous characteristic delays
-LoadMAT = 0; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
+LoadMAT = 1; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
 
 if LoadMAT
     [FileName,PathName,FilterIndex] = uigetfile('*.mat','Pick a file',...
-        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_053112.mat');
+        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_092913.mat');
     if FileName
         LoadMATbackup = LoadMAT;
         load(fullfile(PathName,FileName),'-regexp','[^h1]');
@@ -178,7 +188,7 @@ if LoadMAT
     end
 end
 if ~LoadMAT
-    for i=1:length(unitNums)
+    for i=43%1:length(unitNums)
         date = dates{i};
         disp(sprintf('%d of %d) [%s] Calculating unit %1.2f...',i,length(unitNums),date,unitNums{i}));
 
@@ -187,8 +197,8 @@ if ~LoadMAT
         
         % Use this for SNR conditions:
         [UnitCF(i),UnitThresh(i),UnitQ10(i),...
-            Rate_failpoint(i),Rate_fail_limit(i),...
-            ALSR_failpoint(i),ALSR_fail_limit(i),...
+            SMP_rate{i},Rate_failpoint(i),Rate_fail_limit(i),...
+            SMP_alsr{i},ALSR_failpoint(i),ALSR_fail_limit(i),...
             Nscc_CD_pos_failpoint(i),Nscc_CD_pos_fail_limit(i),...
             Nscc_CD_neg_failpoint(i),Nscc_CD_neg_fail_limit(i),...
             Nscc0_pos_failpoint(i),Nscc0_pos_fail_limit(i),...
@@ -206,11 +216,13 @@ if ~LoadMAT
     end
 end
 
+
+%%
 % use CD_slope2
 CD_slope_bak = CD_slope;
 CD_slope = CD_slope2;
 
-if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
+if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
     figure;
     FeatureNums = [1 3]; %F1,F2
     
@@ -265,7 +277,9 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                             [UnitCF(i), tempCD];
                 end
                 
-                if exist('h1'), cla(h1); cla(h2); cla(h3); cla(h4); end
+                if exist('h1','var') && ishandle(h1)
+                    cla(h1); cla(h2); cla(h3); cla(h4); 
+                end
                 h1=semilogx(arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
                     arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,2),'k.');
                 h2=semilogx(arrayCDatHalfOct.snhl{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
@@ -275,8 +289,9 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 h4=semilogx(arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(:,1),...
                     arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(:,2),'g.');
                 
-                set(gca,'XScale','log'); set(gca,'XTick',[1 2 4]);
-                xlim([0.1 10]); ylim([0 10]);
+                set(gca,'XScale','log'); set(gca,'XTick',[0.25 0.5 1 2 4]);
+%                 xlim([0.1 10]); ylim([0 10]);
+                xlim([0.25 2]); ylim([0 4]);
                 
                 if i==1
                     h_text(plotNum)=text(1,9,'[empty]');
@@ -284,7 +299,7 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 end
                 
                 % smooth the data
-                smoothOct = 0.7; % number of octaves to smooth over
+                smoothOct = 1; % number of octaves to smooth over
                 xData = arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,1);
                 yData = arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,2);
                 indexNaN = isnan(xData); xData = xData(~indexNaN); yData = yData(~indexNaN);
@@ -292,14 +307,16 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 [xData,IX]=unique(xData); yData=yData(IX); %warning: this throws away duplicate CFs
                 if length(xData)>2
                     clear xData_smoothed yData_smoothed;
-                    xData_smoothed = 100e-3*2.^(0:smoothOct/4:6); yData_smoothed=NaN*ones(size(xData_smoothed));
+                    xData_smoothed = 100e-3*2.^(0:smoothOct/4:6); 
+                    yData_smoothed=NaN*ones(size(xData_smoothed));
                     for q=1:length(xData_smoothed)
-                        temp_ind = xData<=(xData_smoothed(q)*2^(smoothOct/2)) & xData>=(xData_smoothed(q)*2^(-smoothOct/2));
+                        temp_ind = xData<=(xData_smoothed(q)*2^(smoothOct/2)) & ...
+                            xData>=(xData_smoothed(q)*2^(-smoothOct/2));
                         distance_oct = abs(log2(xData(temp_ind)/xData_smoothed(q)));
                         triangular_weights=-(abs(distance_oct)-(smoothOct/2))/(smoothOct/2);
                         yData_smoothed(q) = median(yData(temp_ind));
                     end
-                    semilogx(xData_smoothed,yData_smoothed,'k');
+                    semilogx(xData_smoothed,yData_smoothed,'k','Linewidth',2);
                     
 %                     cfun1 = fit(xData,yData,'linearinterp');
 %                     plot(cfun1,'k'); drawnow;
@@ -311,18 +328,20 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 [xData2,IX]=unique(xData2); yData2=yData2(IX); %warning: this throws away duplicate CFs
                 if length(xData2)>2
                     clear xData2_smoothed yData2_smoothed;
-                    xData2_smoothed = 100e-3*2.^(0:smoothOct/4:6); yData2_smoothed=NaN*ones(size(xData2_smoothed));
+                    xData2_smoothed = 100e-3*2.^(0:smoothOct/4:6); 
+                    yData2_smoothed=NaN*ones(size(xData2_smoothed));
                     for q=1:length(xData2_smoothed)
-                        temp_ind = xData2<=(xData2_smoothed(q)*2^(smoothOct/2)) & xData2>=(xData2_smoothed(q)*2^(-smoothOct/2));
+                        temp_ind = xData2<=(xData2_smoothed(q)*2^(smoothOct/2)) & ...
+                            xData2>=(xData2_smoothed(q)*2^(-smoothOct/2));
                         distance_oct = abs(log2(xData2(temp_ind)/xData2_smoothed(q)));
                         triangular_weights=-(abs(distance_oct)-(smoothOct/2))/(smoothOct/2);
                         yData2_smoothed(q) = median(yData2(temp_ind));
                     end
-                    semilogx(xData2_smoothed,yData2_smoothed,'r');
+                    semilogx(xData2_smoothed,yData2_smoothed,'r','Linewidth',2);
                     
-                    % avg CD within a half-octave of 1.4kHz
-                    avgCD_nh = yData_smoothed(abs(log2(xData2_smoothed/1.414))<0.5);
-                    avgCD_snhl = yData2_smoothed(abs(log2(xData2_smoothed/1.414))<0.5);
+                    % avg CD within an octave of 1kHz
+                    avgCD_nh = yData_smoothed(abs(log2(xData2_smoothed/1.0))<1.0);
+                    avgCD_snhl = yData2_smoothed(abs(log2(xData2_smoothed/1.0))<1.0);
                     deltaCD = avgCD_snhl - avgCD_nh;
                     set(h_text(plotNum),'Interpreter','latex');
                     set(h_text(plotNum),'String',[sprintf('From 1kHz to 2kHz: \n'),...
@@ -336,8 +355,8 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                     avgCD2_snhl(FeatureNum,j) = mean(avgCD_snhl(~isnan(avgCD_snhl)));
                     
                     % stderr [of actual points]
-                    temp = yData(abs(log2(xData/1.414))<0.5);
-                    temp2 = yData(abs(log2(xData2/1.414))<0.5);
+                    temp = yData(abs(log2(xData/1.0))<1.0);
+                    temp2 = yData(abs(log2(xData2/1.0))<1.0);
                     stderrCD_nh(FeatureNum,j) = ...
                         sqrt(sum((temp(~isnan(temp))-mean(temp(~isnan(temp)))).^2/length(temp)))/sqrt(length(temp));
                     stderrCD_snhl(FeatureNum,j) = ...
@@ -354,14 +373,28 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 [xData3,IX]=unique(xData3); yData3=yData3(IX); %warning: this throws away duplicate CFs
                 if length(xData3)>2
                     clear xData3_smoothed yData3_smoothed;
-                    xData3_smoothed = 100e-3*2.^(0:smoothOct/4:6); yData3_smoothed=NaN*ones(size(xData3_smoothed));
+                    xData3_smoothed = 100e-3*2.^(0:smoothOct/4:6); 
+                    yData3_smoothed=NaN*ones(size(xData3_smoothed));
                     for q=1:length(xData3_smoothed)
-                        temp_ind = xData3<=(xData3_smoothed(q)*2^(smoothOct/2)) & xData3>=(xData3_smoothed(q)*2^(-smoothOct/2));
+                        temp_ind = xData3<=(xData3_smoothed(q)*2^(smoothOct/2)) & ...
+                            xData3>=(xData3_smoothed(q)*2^(-smoothOct/2));
                         distance_oct = abs(log2(xData3(temp_ind)/xData3_smoothed(q)));
                         triangular_weights=-(abs(distance_oct)-(smoothOct/2))/(smoothOct/2);
                         yData3_smoothed(q) = median(yData3(temp_ind));
                     end
-                    semilogx(xData3_smoothed,yData3_smoothed,'m');
+                    semilogx(xData3_smoothed,yData3_smoothed,'m','Linewidth',2);
+                    
+                    % avg CD within an octave of 1.0kHz
+                    avgCD_lin = yData3_smoothed(abs(log2(xData3_smoothed/1.0))<1.0);
+                    
+                    % avg [of trend line]...
+                    avgCD2_lin(FeatureNum,j) = mean(avgCD_lin(~isnan(avgCD_lin)));
+                    
+                    % stderr [of actual points]
+                    temp3 = yData3(abs(log2(xData3/1.0))<1.0);
+                    stderrCD_lin(FeatureNum,j) = ...
+                        sqrt(sum((temp3(~isnan(temp3))-mean(temp3(~isnan(temp3)))).^2/length(temp3)))/sqrt(length(temp3));
+                   
                 end
                 
                 xData4 = arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(:,1);
@@ -371,14 +404,28 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 [xData4,IX]=unique(xData4); yData4=yData4(IX); %warning: this throws away duplicate CFs
                 if length(xData4)>2
                     clear xData4_smoothed yData4_smoothed;
-                    xData4_smoothed = 100e-3*2.^(0:smoothOct/4:6); yData4_smoothed=NaN*ones(size(xData4_smoothed));
+                    xData4_smoothed = 100e-3*2.^(0:smoothOct/4:6); 
+                    yData4_smoothed=NaN*ones(size(xData4_smoothed));
                     for q=1:length(xData4_smoothed)
-                        temp_ind = xData4<=(xData4_smoothed(q)*2^(smoothOct/2)) & xData4>=(xData4_smoothed(q)*2^(-smoothOct/2));
+                        temp_ind = xData4<=(xData4_smoothed(q)*2^(smoothOct/2)) & ...
+                            xData4>=(xData4_smoothed(q)*2^(-smoothOct/2));
                         distance_oct = abs(log2(xData4(temp_ind)/xData4_smoothed(q)));
                         triangular_weights=-(abs(distance_oct)-(smoothOct/2))/(smoothOct/2);
                         yData4_smoothed(q) = median(yData4(temp_ind));
                     end
-                    semilogx(xData4_smoothed,yData4_smoothed,'g');
+                    semilogx(xData4_smoothed,yData4_smoothed,'g','Linewidth',2);
+                    
+                    % avg CD within an octave of 1.0kHz
+                    avgCD_nonlin = yData4_smoothed(abs(log2(xData4_smoothed/1.0))<1.0);
+                    
+                    % avg [of trend line]...
+                    avgCD2_nonlin(FeatureNum,j) = mean(avgCD_nonlin(~isnan(avgCD_nonlin)));
+                    
+                    % stderr [of actual points]
+                    temp4 = yData4(abs(log2(xData4/1.0))<1.0);
+                    stderrCD_nonlin(FeatureNum,j) = ...
+                        sqrt(sum((temp4(~isnan(temp4))-mean(temp4(~isnan(temp4)))).^2/length(temp4)))/sqrt(length(temp4));
+                   
                 end
                 
                 
@@ -414,7 +461,7 @@ if 0%exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
     save('C:\Research\MATLAB\Vowel_STMP\ExpData\regressionTest.mat','arrayCDatHalfOct');
 end
 
-
+%%
 if 0%exist('SyncValues') % plot SyncValues as a function of CF & noise level
     % SyncValues{featureNum,snrNum} = [FeatureFreqs;BFs;Synchs];
     array_syncPlotValsF1.nh = cell(length(FeatureNums),length(SNR{1}));
@@ -576,7 +623,7 @@ if 0%exist('SyncValues') % plot SyncValues as a function of CF & noise level
     end
 end
 
-
+%%
 if 0%exist('array_syncPlotValsF1') % group sync by CF range
     % array_syncPlotValsF1.snhl{find(FeatureNum==FeatureNums),j}(i)
     LocalSymbols = ['x','s','h'];
@@ -682,6 +729,7 @@ if 0%exist('array_syncPlotValsF1') % group sync by CF range
 end
 % set(gcf,'visible','off');
 
+%%
 if 0%exist('syncCFgroups') % plot sync as a function noise level (grouped by CF)
     % syncCFgroups.F2.snhl{FeatureIndex,SNRIndex}(centerCFIndex)
     figure; 
@@ -742,7 +790,7 @@ if 0%exist('syncCFgroups') % plot sync as a function noise level (grouped by CF)
     
 end
 
-
+%%
 if exist('Rho_width') % plot Rho & CD as a function of CF & noise level
     figure;
     FeatureNum=3; %F2
@@ -798,8 +846,14 @@ if exist('Rho_width') % plot Rho & CD as a function of CF & noise level
     array_cd.nh=cell(2,length(SNR{1}));
     array_rho.snhl=cell(2,length(SNR{1}));
     array_cd.snhl=cell(2,length(SNR{1}));
+    array_rho.lin=cell(2,length(SNR{1}));
+    array_cd.lin=cell(2,length(SNR{1}));
+    array_rho.nonlin=cell(2,length(SNR{1}));
+    array_cd.nonlin=cell(2,length(SNR{1}));
     nhCFs=UnitCF(cell2mat(colors)=='k'); 
-    snhlCFs=UnitCF(cell2mat(colors)~='k');
+    snhlCFs=UnitCF(cell2mat(colors)=='r');
+    linCFs=UnitCF(cell2mat(colors)=='m');
+    nonlinCFs=UnitCF(cell2mat(colors)=='g');
     FeatureIndex=0;
     for FeatureNum=[1 3]; %F1,F2
         FeatureIndex=FeatureIndex+1;
@@ -809,27 +863,45 @@ if exist('Rho_width') % plot Rho & CD as a function of CF & noise level
             if colors{CFindex}=='k'
                 array_rho.nh{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
                 array_cd.nh{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
-            else
+            elseif colors{CFindex}=='r'
                 array_rho.snhl{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
                 array_cd.snhl{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);                
+            elseif colors{CFindex}=='m'
+                array_rho.lin{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.lin{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);                
+            elseif colors{CFindex}=='g'
+                array_rho.nonlin{FeatureIndex,1}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.nonlin{FeatureIndex,1}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);                
             end
 
             indx = find(SNR{CFindex}==0);
             if colors{CFindex}=='k'
                 array_rho.nh{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
                 array_cd.nh{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
-            else
+            elseif colors{CFindex}=='r'
                 array_rho.snhl{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
                 array_cd.snhl{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
+            elseif colors{CFindex}=='m'
+                array_rho.lin{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.lin{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
+            elseif colors{CFindex}=='g'
+                array_rho.nonlin{FeatureIndex,2}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.nonlin{FeatureIndex,2}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
             end
 
             indx = find(SNR{CFindex}~=max(SNR{CFindex}) & SNR{CFindex}~=0);
             if colors{CFindex}=='k'
                 array_rho.nh{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
                 array_cd.nh{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
-            else
+            elseif colors{CFindex}=='r'
                 array_rho.snhl{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
                 array_cd.snhl{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
+            elseif colors{CFindex}=='m'
+                array_rho.lin{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.lin{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
+            elseif colors{CFindex}=='g'
+                array_rho.nonlin{FeatureIndex,3}(end+1) = cell2mat(Rho_width{CFindex}(FeatureNum2,indx));
+                array_cd.nonlin{FeatureIndex,3}(end+1) = CD_slope{CFindex}(FeatureNum2,indx);
             end
         end
     end
@@ -884,25 +956,69 @@ if exist('array_rho') % plot Rho & CD as a function noise level (grouped by CF)
                     std(array_cd.snhl{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.snhl{FeatureNum,SNRindex})),CFindices2)))/...
                     numel(array_cd.snhl{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.snhl{FeatureNum,SNRindex})),CFindices2)));
                 tmpCD_snhl(SNRindex,:) = cdCFgroups.snhl{FeatureNum,SNRindex}(centerCFIndex,:);
+                
+                %Linear Amplification
+                CFindices3 = find(linCFs>=CFranges(centerCFIndex,1) &...
+                    linCFs<CFranges(centerCFIndex,2));
+                
+                rhoCFgroups.lin{FeatureNum,SNRindex}(centerCFIndex,1) = ...
+                    mean(array_rho.lin{FeatureNum,SNRindex}(CFindices3));
+                rhoCFgroups.lin{FeatureNum,SNRindex}(centerCFIndex,2) = ...
+                    std(array_rho.lin{FeatureNum,SNRindex}(CFindices3))/...
+                    numel(array_rho.lin{FeatureNum,SNRindex}(CFindices3));
+                tmpRho_lin(SNRindex,:) = rhoCFgroups.lin{FeatureNum,SNRindex}(centerCFIndex,:);
+                
+                cdCFgroups.lin{FeatureNum,SNRindex}(centerCFIndex,1) = ...
+                    mean(array_cd.lin{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.lin{FeatureNum,SNRindex})),CFindices2)));
+                cdCFgroups.lin{FeatureNum,SNRindex}(centerCFIndex,2) = ...
+                    std(array_cd.lin{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.lin{FeatureNum,SNRindex})),CFindices2)))/...
+                    numel(array_cd.lin{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.lin{FeatureNum,SNRindex})),CFindices2)));
+                tmpCD_lin(SNRindex,:) = cdCFgroups.lin{FeatureNum,SNRindex}(centerCFIndex,:);
+                
+                %NonLinear Amplification
+                CFindices4 = find(nonlinCFs>=CFranges(centerCFIndex,1) &...
+                    nonlinCFs<CFranges(centerCFIndex,2));
+                
+                rhoCFgroups.nonlin{FeatureNum,SNRindex}(centerCFIndex,1) = ...
+                    mean(array_rho.nonlin{FeatureNum,SNRindex}(CFindices4));
+                rhoCFgroups.nonlin{FeatureNum,SNRindex}(centerCFIndex,2) = ...
+                    std(array_rho.nonlin{FeatureNum,SNRindex}(CFindices4))/...
+                    numel(array_rho.nonlin{FeatureNum,SNRindex}(CFindices4));
+                tmpRho_nonlin(SNRindex,:) = rhoCFgroups.nonlin{FeatureNum,SNRindex}(centerCFIndex,:);
+                
+                cdCFgroups.nonlin{FeatureNum,SNRindex}(centerCFIndex,1) = ...
+                    mean(array_cd.nonlin{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.nonlin{FeatureNum,SNRindex})),CFindices2)));
+                cdCFgroups.nonlin{FeatureNum,SNRindex}(centerCFIndex,2) = ...
+                    std(array_cd.nonlin{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.nonlin{FeatureNum,SNRindex})),CFindices2)))/...
+                    numel(array_cd.nonlin{FeatureNum,SNRindex}(intersect(find(~isnan(array_cd.nonlin{FeatureNum,SNRindex})),CFindices2)));
+                tmpCD_nonlin(SNRindex,:) = cdCFgroups.nonlin{FeatureNum,SNRindex}(centerCFIndex,:);
             end
             
             figure(998), subplot(size(array_rho.nh,1),length(centerCFs),plotNum), hold on;
             errorbar(tmpRho_nh(:,1),tmpRho_nh(:,2),'k-');
             errorbar(tmpRho_snhl(:,1),tmpRho_snhl(:,2),'r-');
+            errorbar(tmpRho_lin(:,1),tmpRho_lin(:,2),'m-');
+            errorbar(tmpRho_nonlin(:,1),tmpRho_nonlin(:,2),'g-');
             set(gca,'XTick',[1 2 3]);
             set(gca,'XTickLabel',{'Quiet','SPL','SL'});
             ylim([0 0.5]);
             legend(sprintf('%d NH units',length(CFindices1)),...
-                sprintf('%d SNHL units',length(CFindices2)));
+                sprintf('%d SNHL units',length(CFindices2)),...
+                sprintf('%d LIN units',length(CFindices3)),...
+                sprintf('%d NONLIN units',length(CFindices4)));
             
             figure(999), subplot(size(array_rho.nh,1),length(centerCFs),plotNum), hold on;
             errorbar(tmpCD_nh(:,1),tmpCD_nh(:,2),'k-');
             errorbar(tmpCD_snhl(:,1),tmpCD_snhl(:,2),'r-');
+            errorbar(tmpCD_lin(:,1),tmpCD_lin(:,2),'m-');
+            errorbar(tmpCD_nonlin(:,1),tmpCD_nonlin(:,2),'g-');
             set(gca,'XTick',[1 2 3]);
             set(gca,'XTickLabel',{'Quiet','SPL','SL'});
             ylim([0 50]);
             legend(sprintf('%d NH units',length(CFindices1)),...
-                sprintf('%d SNHL units',length(CFindices2)));
+                sprintf('%d SNHL units',length(CFindices2)),...
+                sprintf('%d LIN units',length(CFindices3)),...
+                sprintf('%d NONLIN units',length(CFindices4)));
             
             if centerCFIndex==1 % apply ylabels
                 switch FeatureNum
@@ -947,7 +1063,7 @@ if exist('array_rho') % plot Rho & CD as a function noise level (grouped by CF)
     end
 end
 
-
+%%
 if exist('UnitCF') % Plot Thresholds/Q10s & Failpoints
     figure, subplot(211),
     load normema % load normal thresholds
@@ -1084,22 +1200,27 @@ if exist('UnitCF') % Plot Thresholds/Q10s & Failpoints
     end
 end
 
+xOffset = 0.05;
 figure, subplot(121),
-errorbar([1:3],avgCD2_nh(1,:),stderrCD_nh(1,:),'ko-'); hold on;
-errorbar([1:3],avgCD2_snhl(1,:),stderrCD_snhl(1,:),'ro-');
+errorbar([1:3]-xOffset,avgCD2_nh(1,:),stderrCD_nh(1,:),'ko-'); hold on;
+errorbar([1:3]+0,avgCD2_snhl(1,:),stderrCD_snhl(1,:),'ro-');
+errorbar([1:3]+xOffset,avgCD2_lin(1,:),stderrCD_lin(1,:),'mo-');
+errorbar([1:3]+2*xOffset,avgCD2_nonlin(1,:),stderrCD_nonlin(1,:),'go-');
 set(gca,'XTick',[1 2 3]);
 set(gca,'XTickLabel',{'Quiet','SPL','SL'});
-ylabel('CD re Normal (CF cycles) [0.5 oct re F1]');
-title('Strength of Spatiotemporal Coding (CF=1-2kHz)');
-legend('Normal','Impaired'); ylim([0 3]);
+ylabel('CD (CF cycles) [0.5 oct re F1]');
+title('Strength of Spatiotemporal Coding (CF=0.5-2kHz)');
+legend('Normal','Impaired','Linear Gain','NonLinear Gain'); ylim([0 3]);
 subplot(122),
-errorbar([1:3],avgCD2_nh(3,:),stderrCD_nh(3,:),'ko-'); hold on;
-errorbar([1:3],avgCD2_snhl(3,:),stderrCD_snhl(3,:),'ro-');
+errorbar([1:3]-xOffset,avgCD2_nh(3,:),stderrCD_nh(3,:),'ko-'); hold on;
+errorbar([1:3]-0,avgCD2_snhl(3,:),stderrCD_snhl(3,:),'ro-');
+errorbar([1:3]+xOffset,avgCD2_lin(3,:),stderrCD_lin(3,:),'mo-');
+errorbar([1:3]+2*xOffset,avgCD2_nonlin(3,:),stderrCD_nonlin(3,:),'go-');
 set(gca,'XTick',[1 2 3]);
 set(gca,'XTickLabel',{'Quiet','SPL','SL'});
 ylabel('CD (CF cycles) [0.5 oct re F2]');
-title('Strength of Spatiotemporal Coding (CF=1-2kHz)');
-legend('Normal','Impaired'); ylim([0 3]);
+title('Strength of Spatiotemporal Coding (CF=0.5-2kHz)');
+legend('Normal','Impaired','Linear Gain','NonLinear Gain'); ylim([0 3]);
 
 figure
 plot([1:3],avgCD2_snhl(1,:)-avgCD2_nh(1,:),'ro-'); hold on;

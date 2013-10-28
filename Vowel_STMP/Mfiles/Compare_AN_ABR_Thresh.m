@@ -2,7 +2,7 @@
 
 switch lower(getenv('computername'))
     case {'m4500'}
-        addpath('C:\Research\MATLAB\Vowel_STMP\Mfiles');
+        addpath(genpath('C:\Research\MATLAB\Vowel_STMP\Mfiles'));
         addpath('C:\Research\MATLAB\NEL\Users\JB\ABR_analysis');
     otherwise %e.g., {'1353-neurophys'}
         addpath('C:\JonBoley\Vowel_STMP');
@@ -42,5 +42,5 @@ ylabel('threshold shift (dB)');
 set(gca,'XScale','log'); xlim([min(freqs_all) max(freqs_all)]);
 
 % dock all windows
-set(findobj('WindowStyle','normal'),'WindowStyle','docked')
+% set(findobj('WindowStyle','normal'),'WindowStyle','docked')
 

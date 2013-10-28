@@ -1,6 +1,6 @@
 function [UnitCF,UnitThresh,UnitQ10,...
-    Rate_failpoint,Rate_fail_limit,...
-    ALSR_failpoint,ALSR_fail_limit,...
+    SMP_rate,Rate_failpoint,Rate_fail_limit,...
+    SMP_alsr,ALSR_failpoint,ALSR_fail_limit,...
     Nscc_CD_pos_failpoint,Nscc_CD_pos_fail_limit,...
     Nscc_CD_neg_failpoint,Nscc_CD_neg_fail_limit,...
     Nscc0_pos_failpoint,Nscc0_pos_fail_limit,...
@@ -96,6 +96,8 @@ elseif strcmp(ExpDate,'062312')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2012_06_23-Chin1202_AN_500OBN') ''''])
 elseif strcmp(ExpDate,'072112')
     eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2012_07_21-Chin1206_AN_500OBN') ''''])
+elseif strcmp(ExpDate,'072812')
+    eval(['cd ''' fullfile(ROOT_dir,filesep,'ExpData',filesep,'JB-2012_07_28-Chin1204_AN_500OBN') ''''])
     
     
     %%%%%%%%%%%%%%%%
@@ -319,10 +321,14 @@ if ~isempty(EHvNreBFi_piclist)
     x=loadPic(EHvNreBFi_piclist(1));
     
     if ~isfield(x.Stimuli.Condition,'NoiseAttens_dB')
-        index = strfind(x.Stimuli.list{1}, 'dBEH_');
-        signalAttens = cellfun(@(blah) str2num(blah(index-3:index-1)), x.Stimuli.list);
-        index = strfind(x.Stimuli.list{1}, 'dBLTASS_');
-        noiseAttens = cellfun(@(blah) str2num(blah(index-3:index-1)), x.Stimuli.list);
+        signalAttens = NaN*ones(size(x.Stimuli.list));
+        noiseAttens  = NaN*ones(size(x.Stimuli.list));
+        for ii=1:numel(x.Stimuli.list)
+            index = strfind(x.Stimuli.list{ii}, 'dBEH_');
+            signalAttens(ii) = str2num(x.Stimuli.list{ii}(index-3:index-1));
+            index = strfind(x.Stimuli.list{ii}, 'dBLTASS_');
+            noiseAttens(ii) = str2num(x.Stimuli.list{ii}(index-3:index-1));
+        end
         
         [b,m,n] = unique(noiseAttens);
         x.Stimuli.Condition.NoiseAttens_dB = noiseAttens(sort(m));
@@ -527,7 +533,7 @@ if ~loadBOOL
         NSAC_peaks=cell(NUMrows,length(Nattens_dB));
     end
 
-    for ATTEN=Nattens_dB'
+    for ATTEN=Nattens_dB(:)'
         % beep
         % disp('***** HARD CODED FOR ONLY 1 (highest) ATTEN *****')
         % for ATTEN=Nattens_dB(end)
@@ -870,7 +876,9 @@ if ~loadBOOL
                                     SCCsMAX=max(NSCCs{ROWind,ATTind}{SCCind});
                                 end
                                 NSCC_BFs_kHz{ROWind,ATTind}{SCCind}=[yTEMP.BFs_kHz(NSCC_BFinds{SCCind}(1)),yTEMP.BFs_kHz(NSCC_BFinds{SCCind}(2))];
-                                NSCC_0delay{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}(find(NSCC_delays_usec{ROWind,ATTind}{SCCind}==0));
+                                if ~isempty(NSCCs{ROWind,ATTind}{SCCind})
+                                    NSCC_0delay{ROWind,ATTind}{SCCind}=NSCCs{ROWind,ATTind}{SCCind}(find(NSCC_delays_usec{ROWind,ATTind}{SCCind}==0));
+                                end
 
                                 F0per_us=1/yTEMP.FeatureFreqs_Hz{1}(1)*1e6;
 
@@ -878,7 +886,7 @@ if ~loadBOOL
                                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                                 % Automatically select characteristic delay
                                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                                if ~loadBOOL2
+                                if ~loadBOOL2 && ~isempty(NSCCs{ROWind,ATTind}{SCCind})
                                     [NSCC_CDs_usec{ROWind,ATTind}{SCCind},NSCC_peaks{ROWind,ATTind}{SCCind}] =...
                                         calcCD(NSCCs{ROWind,ATTind}{SCCind},NSCC_delays_usec{ROWind,ATTind}{SCCind},F0per_us);
                                 end
@@ -1174,7 +1182,7 @@ if isempty(unit.Info.Q10)
     unit.Info.Q10=NaN;
 end
 
-for ATTEN=Nattens_dB'
+for ATTEN=Nattens_dB(:)'
     % beep
     % disp('***** HARD CODED FOR ONLY 1 (highest) ATTEN *****')
     % for ATTEN=Nattens_dB(end)
@@ -1432,7 +1440,8 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
                     if ismember(BFind,find(abs(log2(BFs_kHz{ROWind,ATTind}/unit.Info.BF_kHz))<BFoctCRIT))
                         LEGtext{length(LEGtext)+1}=sprintf('%.f dB',Nattens_dB(ATTind)+dBAtt_2_SNR);
                     end
-                    for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))'
+                    ATTind_temp = fliplr(find(Nattens_dB~=max(Nattens_dB)));
+                    for ATTind2=ATTind_temp(:)'
                         if ~isempty(PERhistXs_sec{ROWind,ATTind2}{BFind})
                             semilogy(PERhistXs_sec{ROWind,ATTind2}{BFind}*1000, ...
                                 trifilt(PERhists_Smoothed{ROWind,ATTind2}{BFind},ALLlevelsTriFilt)*NormFact+BFs_kHz{ROWind,ATTind2}(BFind), ...
@@ -1496,7 +1505,8 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             hold on
             %                semilogy(Nsps{ROWind,ATTind}/10,BFs_kHz{ROWind,ATTind},'m+','MarkerSize',4,'Color',ATTENcolors{ATTind})
             semilogy(ALSRs{ROWind,ATTind},unit.Info.BF_kHz,'go','MarkerSize',6,'Color',ATTENcolors{ATTind})
-            for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))'
+            ATTind_temp = fliplr(find(Nattens_dB~=max(Nattens_dB)));
+            for ATTind2=ATTind_temp(:)'
                 semilogy(Rates{ROWind,ATTind2},BFs_kHz{ROWind,ATTind2},'Marker','*','LineStyle','-','Color',ATTENcolors{ATTind2})
                 %                   semilogy(Nsps{ROWind,ATTind2}/10,BFs_kHz{ROWind,ATTind2},'m+','MarkerSize',4,'Color',ATTENcolors{ATTind2})
                 semilogy(ALSRs{ROWind,ATTind2},unit.Info.BF_kHz,'go','MarkerSize',6,'Color',ATTENcolors{ATTind2})
@@ -1523,7 +1533,8 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
             semilogy(Synchs{ROWind,ATTind}(:,1),BFs_kHz{ROWind,ATTind},'*-','Color',ATTENcolors{ATTind})
             hold on
-            for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))'
+            ATTind_temp = fliplr(find(Nattens_dB~=max(Nattens_dB)));
+            for ATTind2=ATTind_temp(:)'
                 semilogy(Synchs{ROWind,ATTind2}(:,1),BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
             end
             semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
@@ -1548,7 +1559,8 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             eval(['h' num2str(PLOTnum) '=subplot(NUMrows,NUMcols,PLOTnum);'])
             semilogy(Phases{ROWind,ATTind},BFs_kHz{ROWind,ATTind},'*-','Color',ATTENcolors{ATTind})
             hold on
-            for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))'
+            ATTind_temp = fliplr(find(Nattens_dB~=max(Nattens_dB)));
+            for ATTind2=ATTind_temp(:)'
                 semilogy(Phases{ROWind,ATTind2},BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
             end
             semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')
@@ -1627,7 +1639,7 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     XLIMITS_dft=[0 10];
 
-    for ATTEN=Nattens_dB'
+    for ATTEN=Nattens_dB(:)'
         % beep
         % disp('***** HARD CODED FOR ONLY 1 (highest) ATTEN *****')
         % for ATTEN=Nattens_dB(end)
@@ -1887,7 +1899,8 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
                         if ismember(BFind,find(abs(log2(BFs_kHz{ROWind,ATTind}/unit.Info.BF_kHz))<BFoctCRIT))
                             LEGtext{length(LEGtext)+1}=sprintf('%.f dB',Nattens_dB(ATTind)+dBAtt_2_SNR);
                         end
-                        for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))'
+                        ATTind_temp = fliplr(find(Nattens_dB~=max(Nattens_dB)));
+                        for ATTind2=ATTind_temp(:)'
                             if ~isempty(PERhistXs_sec{ROWind,ATTind2}{BFind})
                                 %                            plot(DFTfreqs_Hz{ROWind,ATTind2}{BFind}/1000, ...
                                 %                               abs(DFTs{ROWind,ATTind2}{BFind})*NormFact+BFs_kHz{ROWind,ATTind2}(BFind),'-x', ...
@@ -2698,7 +2711,7 @@ if doSCC && exist('SensitivitySlopes_nscc0_pos')
         else
             ARBdelay_msec=temp;
 
-            for ATTEN=Nattens_dB'
+            for ATTEN=Nattens_dB(:)'
                 ROWind=0;
 
                 %%%%%%%%%%%%%%%%%%%% EH_reBF Calcs
@@ -3323,7 +3336,8 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
                         LEGtext{length(LEGtext)+1}='In Quiet';%sprintf('%.f dB',Nattens_dB(ATTind)+dBAtt_2_SNR);
 %                         LEGtext{length(LEGtext)+1}=sprintf('%.f dB SNR',Nattens_dB(ATTind)-Nattens_dB(yTEMP.EqualSPL_index));
                     end
-                    for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))'
+                    ATTind_temp = fliplr(find(Nattens_dB~=max(Nattens_dB)));
+                    for ATTind2=ATTind_temp(:)'
                         if ~isempty(PERhistXs_sec{ROWind,ATTind2}{BFind})
                             semilogy(PERhistXs_sec{ROWind,ATTind2}{BFind}*1000, ...
                                 trifilt(PERhists_Smoothed{ROWind,ATTind2}{BFind},ALLlevelsTriFilt)*NormFact+BFs_kHz{ROWind,ATTind2}(BFind), ...
@@ -3399,7 +3413,8 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
             hold on
             %                semilogy(Nsps{ROWind,ATTind}/10,BFs_kHz{ROWind,ATTind},'m+','MarkerSize',4,'Color',ATTENcolors{ATTind})
             semilogy(ALSRs{ROWind,ATTind},unit.Info.BF_kHz,'go','MarkerSize',6,'Color',ATTENcolors{ATTind})
-            for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))'
+            ATTind_temp = fliplr(find(Nattens_dB~=max(Nattens_dB)));
+            for ATTind2=ATTind_temp(:)'
                 semilogy(Rates{ROWind,ATTind2},BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
                 %                   semilogy(Nsps{ROWind,ATTind2}/10,BFs_kHz{ROWind,ATTind2},'m+','MarkerSize',4,'Color',ATTENcolors{ATTind2})
                 semilogy(ALSRs{ROWind,ATTind2},unit.Info.BF_kHz,'go','MarkerSize',6,'Color',ATTENcolors{ATTind2})
@@ -3427,7 +3442,8 @@ if isfield(unit,'EHvN_reBF_simFF') || isfield(unit,'EHvLTASS_reBF_simFF')
 
             semilogy(Synchs{ROWind,ATTind}(:,1),BFs_kHz{ROWind,ATTind},'*-','Color',ATTENcolors{ATTind})
             hold on
-            for ATTind2=fliplr(find(Nattens_dB~=max(Nattens_dB)))'
+            ATTind_temp = fliplr(find(Nattens_dB~=max(Nattens_dB)));
+            for ATTind2=ATTind_temp(:)'
                 semilogy(Synchs{ROWind,ATTind2}(:,1),BFs_kHz{ROWind,ATTind2},'*-','Color',ATTENcolors{ATTind2})
             end
             semilogy([-1000 1000],unit.Info.BF_kHz*[1 1],'k:')

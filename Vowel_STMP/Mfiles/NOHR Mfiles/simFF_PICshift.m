@@ -15,7 +15,17 @@ function newPIC=simFF_PICshift(PIC)
 
 newPIC=PIC;
 
-NeuralDelay_sec = 0.001;   % Neural Delay to compensate for before scaling
+% NeuralDelay_sec = 0.001;   % Neural Delay to compensate for before scaling
+% Greenwood Function:
+A = 163.5; k = 0.85; a = 2.1; % Chinchilla
+x = 0:0.001:1; %proportion of cochlear length
+F_Hz = A * (10.^(a*x) - k);
+[B,IX] = sort(PIC.BF_Hz/1e3);%PSTH_BF_kHz);
+dist = interp1(F_Hz,x,B*1e3);
+% manually picked latencies (from clickResponse.m)
+y_latency = [0.001	0.00116 0.0014  0.00168 0.00196 0.00232 0.00264 0.00300];
+x_dist    = [0.8	0.7     0.6     0.5     0.4     0.3     0.2     0.1];
+NeuralDelay_sec = interp1(x_dist,y_latency,dist);
 
 if strcmp(newPIC.TEMPLATE,'TrBF')
    
