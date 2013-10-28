@@ -47,7 +47,7 @@ end
 FIG.handles.main = figure(FIG.num); clf;
 set(gcf,figure_prop_name,figure_prop_val);
 
-NameText=sprintf('picture: %04d; filename: %s', PIC.num,getfileName(PIC.num));
+NameText=sprintf('picture: %04d; filename: %s', PIC.num,getFileName(PIC.num));
 set(gcf, 'Name', NameText);
 
 % Yshift=0.05;

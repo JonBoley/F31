@@ -5,8 +5,8 @@ setup_Vowel_STMP;
 
 % Normal: 041811, 051211, 062711, 072011, 100611, 101111, 101711
 % Impaired: 062311, 072111, 080111, 080911, 081511
-% Aided: 050412, 062312, 072112
-date='072112';
+% Aided: 050412, 062312, 072112, 072812
+date='050412';
 
 %% initial data processing
 makeNOHRdataList(date);

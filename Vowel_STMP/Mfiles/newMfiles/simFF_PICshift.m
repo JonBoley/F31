@@ -22,7 +22,11 @@ x = 0:0.001:1; %proportion of cochlear length
 F_Hz = A * (10.^(a*x) - k);
 [B,IX] = sort(PIC.BF_Hz/1e3);%PSTH_BF_kHz);
 dist = interp1(F_Hz,x,B*1e3);
-NeuralDelay_sec = 0.005228*dist.^2 - 0.01203*dist + 0.008404; %from clickResponse.m
+% manually picked latencies (from clickResponse.m)
+y_latency = [0.001	0.00116 0.0014  0.00168 0.00196 0.00232 0.00264 0.00300];
+x_dist    = [0.8	0.7     0.6     0.5     0.4     0.3     0.2     0.1];
+NeuralDelay_sec = interp1(x_dist,y_latency,dist);
+
 % switch PIC.x.General.date
 %     values from findDelay.m
 %     case {'18-Apr-2011 ','27-Jun-2011 ','20-Jul-2011 '} % normal

@@ -97,11 +97,11 @@ end
 
 for PICind=PIClist
 	if isempty(find(DataList.IgnorePicNums==PICind))  % don't bother with IgnorePICS
-		if ~sum(strcmp(getTAG(getfileName(PICind)),...
+		if ~sum(strcmp(getTAG(getFileName(PICind)),...
                 {'calib','tc','500','1000','2000','4000','8000','dpoae'}))  % only process RASTER data files
 
 			x=loadPic(PICind);
-			disp(sprintf('Picture #: %d, filename: %s',PICind,getfileName(PICind)))
+			disp(sprintf('Picture #: %d, filename: %s',PICind,getFileName(PICind)))
 
 			if isfield(x.General,'trigger')
 				disp(sprintf('   Trigger: %s',upper(x.General.trigger)))
@@ -161,7 +161,7 @@ for PICind=PIClist
 			end
 			
 		else
-			disp(sprintf('\n**  Skipping PIC = %d (%s) because it is not a raster data file\n',PICind,getFilename(PICind)))
+			disp(sprintf('\n**  Skipping PIC = %d (%s) because it is not a raster data file\n',PICind,getFileName(PICind)))
 		end
 	else
 		disp(sprintf('\n*****   Skipping PIC = %d because it is in IgnorePIClist\n',PICind))
