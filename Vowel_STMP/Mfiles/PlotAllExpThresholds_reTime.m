@@ -1,4 +1,4 @@
-%% plot all AN thresholds
+%% plot all AN thresholds as a function of time (since start of experiment)
 switch lower(getenv('computername'))
     case {'m4500'}
         ExpDataDir = 'C:\Research\MATLAB\Vowel_STMP\ExpData';
@@ -6,11 +6,41 @@ switch lower(getenv('computername'))
     otherwise
         ExpDataDir = 'C:\NEL\ExpData\';
 end
+load normema;
 cd(ExpDataDir);
 
 % search for all AN experiments
 % Experiments = dir(fullfile(ExpDataDir,'JB-2011*AN*'));
-Experiments = dir(fullfile(ExpDataDir,'JB*AN*'));
+Experiments = dir(fullfile(ExpDataDir,'*AN*'));
+
+% or just look at these specific experiments
+runGoodDate = 1; % just run untis with good data?
+expDirs = {'JB-2011_04_18-AN_Normal',...
+    'JB-2011_06_27-Chin1133_AN_Normal',...
+    'JB-2011_07_20-Chin1132_AN_normal',...
+    'JB-2011_06_23-Chin1119_AN_500OBN',...
+    'JB-2011_07_21-Chin1124_AN_500OBN',...
+    'JB-2011_08_01-Chin1125_AN_500OBN',...
+    'JB-2011_08_09-Chin1135_AN_500OBN',...
+    'JB-2012_05_04-Chin1149_AN_500OBN',...
+    'JB-2012_07_21-Chin1206_AN_500OBN',...
+    'JB-2012_07_28-Chin1204_AN_500OBN'};
+clear Experiments;
+for ii=1:numel(expDirs)
+    Experiments(ii).name = expDirs{ii};
+end
+unitNums = {...
+    [1.03,2.01,2.02,2.07,3.03,3.04],...
+    [1.01,1.02,1.03,1.04,2.01,2.03],...
+    [1.02,1.03,1.05,1.06,1.07,1.08,1.09]...
+    [1.01,1.09,1.11,1.14],...
+    [1.01, 1.06, 1.11, 1.12, 1.15, 1.16],...
+    [2.02, 4.01, 4.02, 4.03, 4.05],...
+    [1.04, 1.05, 1.06, 1.07, 1.09, 1.11, 1.15, 1.16],...
+    [1.01, 1.02, 1.03, 1.05, 2.01, 2.03],...
+    [1.04, 1.08, 1.12, 3.01],...
+    [1.15, 1.18, 1.21]...
+    };
 
 %%% experiment dates by exposure type
 % 500Hz OBN 117dB SPL (2 hrs)
@@ -39,7 +69,6 @@ SNHL_116 = {...
     'JB-2011_09_19-Chin1134_AN_500OBN'};
 
 figure(1); clf;
-load normema;
 
 ThirdOctaveskHz = 0.2*2.^(0:1/3:6);
 MinThresh = NaN*ones(length(ThirdOctaveskHz),1);
@@ -60,6 +89,7 @@ QhighM97(:,2)=10^.7989*QlowM97(:,1).^.1416;
 Thrs_dbSPL = cell(length(Experiments),1);
 BFs_kHz = cell(length(Experiments),1);
 Q10s = cell(length(Experiments),1);
+times = cell(length(Experiments),1);
 for ExpNum=1:length(Experiments)
     if isdir(fullfile(ExpDataDir,Experiments(ExpNum).name))
         cd(fullfile(ExpDataDir,Experiments(ExpNum).name));
@@ -70,6 +100,7 @@ for ExpNum=1:length(Experiments)
         Thrs_dbSPL{ExpNum} = -999+zeros(NUMunits,1);
         BFs_kHz{ExpNum} = -999+zeros(NUMunits,1);
         Q10s{ExpNum} = -999+zeros(NUMunits,1);
+        times{ExpNum} = NaN*ones(NUMunits,1);
         for ind = 1:NUMunits
             % Plot TC
             TCpics=findPics('tc',TrackUnitList(ind,:));
@@ -79,18 +110,39 @@ for ExpNum=1:length(Experiments)
                 Q10s_TEMP=[];
                 for TCind=1:length(TCpics)
                     CALIB_PIC = CALIBpics(max(find((CALIBpics<TCpics(TCind)))));
-                    try
-                        [Thrs_dbSPL_TEMP(TCind) BFs_kHz_TEMP(TCind) Q10s_TEMP(TCind)] = plotTCs(TCpics(TCind),CALIB_PIC,0);
-                        % [Thrs_dbSPL_TEMP(TCind) BFs_kHz_TEMP(TCind) Q10s_TEMP(TCind)] = plotTCs_BFbyhand(TCpics(TCind),CALIB_PIC,0);
-                    catch
-                        Thrs_dbSPL_TEMP(TCind)=NaN;
-                        BFs_kHz_TEMP(TCind)=NaN;
-                        Q10s_TEMP(TCind)=NaN;
+                    if runGoodDate
+                        if any(find(unitNums{ExpNum}==TrackUnitList(end,1)+0.01*TrackUnitList(end,2)))
+                            try
+                                [Thrs_dbSPL_TEMP(TCind) BFs_kHz_TEMP(TCind) Q10s_TEMP(TCind)] = plotTCs(TCpics(TCind),CALIB_PIC,0);
+                                % [Thrs_dbSPL_TEMP(TCind) BFs_kHz_TEMP(TCind) Q10s_TEMP(TCind)] = plotTCs_BFbyhand(TCpics(TCind),CALIB_PIC,0);
+                            catch
+                                Thrs_dbSPL_TEMP(TCind)=NaN;
+                                BFs_kHz_TEMP(TCind)=NaN;
+                                Q10s_TEMP(TCind)=NaN;
+                            end
+                        else
+                            Thrs_dbSPL_TEMP(TCind)=NaN;
+                            BFs_kHz_TEMP(TCind)=NaN;
+                            Q10s_TEMP(TCind)=NaN;
+                        end
+                    else
+                        try
+                            [Thrs_dbSPL_TEMP(TCind) BFs_kHz_TEMP(TCind) Q10s_TEMP(TCind)] = plotTCs(TCpics(TCind),CALIB_PIC,0);
+                            % [Thrs_dbSPL_TEMP(TCind) BFs_kHz_TEMP(TCind) Q10s_TEMP(TCind)] = plotTCs_BFbyhand(TCpics(TCind),CALIB_PIC,0);
+                        catch
+                            Thrs_dbSPL_TEMP(TCind)=NaN;
+                            BFs_kHz_TEMP(TCind)=NaN;
+                            Q10s_TEMP(TCind)=NaN;
+                        end
                     end
                 end
                 [Thrs_dbSPL{ExpNum}(ind) index_TC] = min(Thrs_dbSPL_TEMP);
                 BFs_kHz{ExpNum}(ind) = BFs_kHz_TEMP(index_TC);
                 Q10s{ExpNum}(ind) = Q10s_TEMP(index_TC);
+                
+                firstFileInfo = dir('p0001*.m');
+                tcFileInfo = dir(sprintf('p%04d_*_tc.m',TCpics(TCind)));
+                times{ExpNum}(ind) = (tcFileInfo.datenum - firstFileInfo.datenum)*24; %hours
             end %if ~isempty(TCpics)
         end %for ind = 1:NUMunits
 
@@ -128,6 +180,11 @@ for ExpNum=1:length(Experiments)
                 hThresh3 = semilogx(ThirdOctaveskHz*2^(1/3),AvgThresh_Normal,'k:','Linewidth',2);
                 hThresh4 = semilogx(ThirdOctaveskHz*2^(1/3),MinThresh_Normal,'k','Linewidth',2); hold off;
             end
+            
+            figure(123), hold on;
+            plot(times{ExpNum},Thrs_dbSPL{ExpNum},'k.','MarkerSize',3);
+            xlabel('Time (hours)');
+            ylabel('Threshold (dBSPL)');
             
         % Impaired
         elseif (~isempty(strfind(lower(Experiments(ExpNum).name),'impaired')) | ~isempty(strfind(lower(Experiments(ExpNum).name),'obn')))
@@ -179,6 +236,9 @@ for ExpNum=1:length(Experiments)
                     hThresh = semilogx(ThirdOctaveskHz*2^(1/3),AvgThresh,'r:','Linewidth',2);
                     hThresh2 = semilogx(ThirdOctaveskHz*2^(1/3),MinThresh,'r','Linewidth',2); hold off;
                 end
+                
+                figure(123), hold on;
+                plot(times{ExpNum},Thrs_dbSPL{ExpNum},marker);
             end %if ~isempty(marker)
         end % if normal, else impaired
 
