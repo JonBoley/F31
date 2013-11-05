@@ -178,7 +178,7 @@ LoadMAT = 1; % load mat file instead of running UnitLook_EHIN_CoincDet2_JB
 
 if LoadMAT
     [FileName,PathName,FilterIndex] = uigetfile('*.mat','Pick a file',...
-        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_092913.mat');
+        'C:\Research\MATLAB\Vowel_STMP\ExpData\batch_102313b.mat');
     if FileName
         LoadMATbackup = LoadMAT;
         load(fullfile(PathName,FileName),'-regexp','[^h1]');
@@ -188,7 +188,7 @@ if LoadMAT
     end
 end
 if ~LoadMAT
-    for i=43%1:length(unitNums)
+    for i=1:length(unitNums)
         date = dates{i};
         disp(sprintf('%d of %d) [%s] Calculating unit %1.2f...',i,length(unitNums),date,unitNums{i}));
 
@@ -257,7 +257,8 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 end
                 
                 % convert from us to CF cycles
-                tempCD = CDatHalfOct{i}{find(FeatureNum==FeatureNums),indx_snr};
+%                 tempCD = CDatHalfOct{i}{find(FeatureNum==FeatureNums),indx_snr};
+                tempCD = CDatHalfOct{i}{FeatureNum,indx_snr};
                 CF_cycle_usec = 1e6/(UnitCF(i)*1e3);
                 tempCD = tempCD./CF_cycle_usec;
                 
@@ -290,8 +291,8 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                     arrayCDatHalfOct.nonlinear{find(FeatureNum==FeatureNums),indx_snr}(:,2),'g.');
                 
                 set(gca,'XScale','log'); set(gca,'XTick',[0.25 0.5 1 2 4]);
-%                 xlim([0.1 10]); ylim([0 10]);
-                xlim([0.25 2]); ylim([0 4]);
+                xlim([0.1 10]); ylim([0 10]);
+%                 xlim([0.25 2]); ylim([0 4]);
                 
                 if i==1
                     h_text(plotNum)=text(1,9,'[empty]');
@@ -299,7 +300,7 @@ if exist('CDatHalfOct') % plot CD (@0.5 oct) as a function of CF
                 end
                 
                 % smooth the data
-                smoothOct = 1; % number of octaves to smooth over
+                smoothOct = 0.7; % number of octaves to smooth over
                 xData = arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,1);
                 yData = arrayCDatHalfOct.nh{find(FeatureNum==FeatureNums),indx_snr}(:,2);
                 indexNaN = isnan(xData); xData = xData(~indexNaN); yData = yData(~indexNaN);
